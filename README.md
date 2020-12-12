@@ -1,2 +1,3 @@
 # bnreplah.github.io
-pages site
+page to test and show working web design projects
+more coming soon
