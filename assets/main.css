@@ -80,3 +80,12 @@ strong{
 	position:relative;
 	left:40%;
 }
+a{
+	color:white;
+	text-decoration:none;
+	
+}
+a:hover{
+	text-decoration:underline;
+	transition:1s;
+}
