@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS — Unified Comms Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --bg2: #0f1218;
+    --bg3: #151923;
+    --border: #1e2530;
+    --border2: #252d3a;
+    --text: #e8edf5;
+    --text2: #7a8899;
+    --text3: #4a5568;
+    --accent: #00d4ff;
+    --accent2: #0098b8;
+    --slack: #4a154b;
+    --slack-light: #e01e5a;
+    --jira: #0052cc;
+    --jira-light: #2684ff;
+    --outlook: #0078d4;
+    --outlook-light: #40a9f3;
+    --red: #ff4757;
+    --yellow: #ffa502;
+    --green: #2ed573;
+    --purple: #9b59b6;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID NOISE BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* TOP NAV */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: rgba(10,12,16,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    z-index: 100;
+    gap: 24px;
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-logo span {
+    color: var(--text2);
+    font-size: 10px;
+    letter-spacing: 1px;
+    font-weight: 400;
+  }
+
+  .nav-divider { width: 1px; height: 24px; background: var(--border2); }
+
+  .nav-status {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+  }
+
+  .status-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text2);
+    padding: 4px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .status-chip:hover { border-color: var(--accent2); color: var(--text); }
+
+  .status-chip.connected { color: var(--green); border-color: rgba(46,213,115,0.3); }
+  .status-chip.disconnected { color: var(--text3); }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .dot.pulse {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+  }
+
+  .nav-btn {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    padding: 6px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+  }
+
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+    font-weight: 700;
+  }
+  .nav-btn.primary:hover { background: var(--accent2); }
+
+  .notif-bell {
+    position: relative;
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 16px;
+    padding: 4px;
+  }
+
+  .notif-badge {
+    position: absolute;
+    top: -2px; right: -2px;
+    width: 14px; height: 14px;
+    background: var(--red);
+    border-radius: 50%;
+    font-size: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    color: white;
+  }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 240px 1fr 320px;
+    grid-template-rows: calc(100vh - 56px);
+    margin-top: 56px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* LEFT SIDEBAR */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .source-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .source-item:hover { background: var(--bg3); border-color: var(--border2); }
+  .source-item.active { background: var(--bg3); border-color: var(--border2); }
+
+  .source-icon {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .source-icon.slack { background: rgba(74,21,75,0.6); }
+  .source-icon.jira { background: rgba(0,82,204,0.4); }
+  .source-icon.outlook { background: rgba(0,120,212,0.3); }
+
+  .source-info { flex: 1; min-width: 0; }
+  .source-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .source-sub { font-size: 10px; font-family: var(--mono); color: var(--text3); margin-top: 1px; }
+
+  .source-count {
+    background: var(--red);
+    color: white;
+    font-size: 9px;
+    font-family: var(--mono);
+    padding: 2px 5px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .source-count.low { background: var(--bg3); color: var(--text3); border: 1px solid var(--border2); }
+
+  .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text2);
+    transition: all 0.15s;
+  }
+
+  .filter-item:hover { background: var(--bg3); color: var(--text); }
+  .filter-item.active { color: var(--accent); }
+
+  .filter-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* MAIN FEED */
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .main-toolbar {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+
+  .search-bar {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 7px 12px;
+    transition: border-color 0.2s;
+  }
+
+  .search-bar:focus-within { border-color: var(--accent2); }
+
+  .search-bar input {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    flex: 1;
+  }
+
+  .search-bar input::placeholder { color: var(--text3); }
+
+  .toolbar-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    padding: 7px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .toolbar-btn:hover { border-color: var(--accent2); color: var(--accent); }
+  .toolbar-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.06); }
+
+  .feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .feed::-webkit-scrollbar { width: 4px; }
+  .feed::-webkit-scrollbar-track { background: transparent; }
+  .feed::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* FEED ITEM */
+  .feed-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+    animation: slideIn 0.3s ease forwards;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .feed-item::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+
+  .feed-item.slack::before { background: var(--slack-light); }
+  .feed-item.jira::before { background: var(--jira-light); }
+  .feed-item.outlook::before { background: var(--outlook-light); }
+
+  .feed-item:hover { border-color: var(--border2); background: var(--bg3); transform: translateX(2px); }
+  .feed-item.unread { border-color: var(--border2); }
+  .feed-item.unread .feed-subject { font-weight: 700; color: var(--text); }
+
+  .feed-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .feed-source-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .feed-source-badge.slack { background: rgba(224,30,90,0.2); color: #e01e5a; border: 1px solid rgba(224,30,90,0.3); }
+  .feed-source-badge.jira { background: rgba(38,132,255,0.15); color: #2684ff; border: 1px solid rgba(38,132,255,0.3); }
+  .feed-source-badge.outlook { background: rgba(64,169,243,0.12); color: #40a9f3; border: 1px solid rgba(64,169,243,0.3); }
+
+  .feed-from {
+    font-size: 12px;
+    color: var(--text2);
+    font-family: var(--mono);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .feed-time {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text3);
+    flex-shrink: 0;
+  }
+
+  .feed-priority {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .feed-priority.high { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .feed-priority.med { background: var(--yellow); }
+  .feed-priority.low { background: var(--text3); }
+
+  .feed-subject {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+
+  .feed-preview {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .feed-tags {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-size: 9px;
+    font-family: var(--mono);
+    padding: 2px 7px;
+    border-radius: 2px;
+    border: 1px solid var(--border2);
+    color: var(--text3);
+    letter-spacing: 0.5px;
+  }
+
+  .tag.critical { border-color: rgba(255,71,87,0.4); color: var(--red); background: rgba(255,71,87,0.08); }
+  .tag.in-progress { border-color: rgba(250,165,2,0.4); color: var(--yellow); background: rgba(250,165,2,0.08); }
+  .tag.done { border-color: rgba(46,213,115,0.4); color: var(--green); background: rgba(46,213,115,0.08); }
+
+  .unread-dot {
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    border-left: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .panel-tab {
+    flex: 1;
+    padding: 12px 8px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .panel-tab:hover { color: var(--text2); }
+
+  .panel-content { flex: 1; overflow-y: auto; padding: 16px; }
+  .panel-content::-webkit-scrollbar { width: 3px; }
+  .panel-content::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  /* DETAIL VIEW */
+  .detail-header {
+    margin-bottom: 16px;
+  }
+
+  .detail-source-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .detail-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+
+  .detail-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 14px;
+  }
+
+  .meta-row {
+    display: flex;
+    gap: 8px;
+    font-size: 11px;
+    font-family: var(--mono);
+  }
+
+  .meta-key { color: var(--text3); width: 70px; flex-shrink: 0; }
+  .meta-val { color: var(--text2); }
+  .meta-val.high { color: var(--red); }
+  .meta-val.accent { color: var(--accent); }
+
+  .detail-body {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.7;
+    font-family: var(--mono);
+    padding: 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 14px;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 8px 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .action-btn:hover { border-color: var(--accent2); color: var(--accent); }
+  .action-btn.danger:hover { border-color: var(--red); color: var(--red); }
+  .action-btn.success:hover { border-color: var(--green); color: var(--green); }
+
+  /* STATS PANEL */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-num.red { color: var(--red); }
+  .stat-num.yellow { color: var(--yellow); }
+  .stat-num.green { color: var(--green); }
+  .stat-num.accent { color: var(--accent); }
+
+  .stat-label {
+    font-size: 9px;
+    font-family: var(--mono);
+    color: var(--text3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .bar-chart { margin-bottom: 16px; }
+  .bar-label-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text3);
+    margin-bottom: 4px;
+  }
+
+  .bar-track {
+    height: 6px;
+    background: var(--bg3);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease;
+  }
+
+  /* COMPOSE */
+  .compose-area {
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .compose-target {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .compose-btn {
+    padding: 4px 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 1px solid var(--border2);
+    background: none;
+    color: var(--text3);
+    transition: all 0.2s;
+  }
+
+  .compose-btn.slack.active { background: rgba(224,30,90,0.15); border-color: var(--slack-light); color: var(--slack-light); }
+  .compose-btn.jira.active { background: rgba(38,132,255,0.15); border-color: var(--jira-light); color: var(--jira-light); }
+  .compose-btn.outlook.active { background: rgba(64,169,243,0.12); border-color: var(--outlook-light); color: var(--outlook-light); }
+
+  .compose-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+    min-height: 80px;
+  }
+
+  .compose-input:focus { border-color: var(--accent2); }
+  .compose-input::placeholder { color: var(--text3); }
+
+  .compose-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+
+  .compose-hint { font-size: 10px; font-family: var(--mono); color: var(--text3); }
+
+  .send-btn {
+    background: var(--accent);
+    border: none;
+    color: var(--bg);
+    padding: 8px 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .send-btn:hover { background: var(--accent2); }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* SETUP MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    width: 520px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    overflow: hidden;
+    transform: translateY(20px);
+    transition: transform 0.3s;
+  }
+
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .modal-sub { font-size: 11px; font-family: var(--mono); color: var(--text3); margin-top: 2px; }
+
+  .modal-close {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--text3);
+    width: 28px; height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .modal-close:hover { border-color: var(--red); color: var(--red); }
+
+  .modal-body { padding: 24px; }
+
+  .connect-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+
+  .connect-card:hover { border-color: var(--border2); }
+  .connect-card.connected { border-color: rgba(46,213,115,0.3); }
+
+  .connect-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .connect-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .connect-name { font-weight: 700; font-size: 14px; }
+  .connect-desc { font-size: 11px; font-family: var(--mono); color: var(--text3); margin-top: 2px; }
+  .connect-status { margin-left: auto; }
+
+  .field-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .field-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .field-input:focus { border-color: var(--accent2); }
+  .field-input::placeholder { color: var(--text3); }
+
+  .connect-btn {
+    padding: 7px 16px;
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 11px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .connect-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .connect-btn.connected { border-color: rgba(46,213,115,0.4); color: var(--green); }
+
+  /* TOAST */
+  .toast-container {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    min-width: 250px;
+    animation: toastIn 0.3s ease forwards;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error { border-left: 3px solid var(--red); }
+  .toast.info { border-left: 3px solid var(--accent); }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* SCROLLBAR */
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border2); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">
+    ⬡ NEXUS <span>SEC-OPS COMMS</span>
+  </div>
+  <div class="nav-divider"></div>
+  <div class="nav-status">
+    <div class="status-chip connected" id="slack-status">
+      <div class="dot pulse"></div> SLACK
+    </div>
+    <div class="status-chip connected" id="jira-status">
+      <div class="dot pulse"></div> JIRA
+    </div>
+    <div class="status-chip connected" id="outlook-status">
+      <div class="dot pulse"></div> OUTLOOK
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="notif-bell" id="notif-bell">
+      🔔 <div class="notif-badge" id="notif-count">7</div>
+    </div>
+    <button class="nav-btn" onclick="openModal()">⚙ CONNECT</button>
+    <button class="nav-btn primary" id="sync-btn" onclick="syncAll()">↻ SYNC</button>
+  </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Sources</div>
+      <div class="source-item active" onclick="filterSource('all')">
+        <div class="source-icon" style="background:var(--bg3); font-size:16px;">⬡</div>
+        <div class="source-info">
+          <div class="source-name">All Messages</div>
+          <div class="source-sub">unified feed</div>
+        </div>
+        <div class="source-count" id="all-count">24</div>
+      </div>
+      <div class="source-item" onclick="filterSource('slack')">
+        <div class="source-icon slack">💬</div>
+        <div class="source-info">
+          <div class="source-name">Slack</div>
+          <div class="source-sub">#security-alerts</div>
+        </div>
+        <div class="source-count" id="slack-count">11</div>
+      </div>
+      <div class="source-item" onclick="filterSource('jira')">
+        <div class="source-icon jira">🔵</div>
+        <div class="source-info">
+          <div class="source-name">Jira</div>
+          <div class="source-sub">SEC project board</div>
+        </div>
+        <div class="source-count" id="jira-count">8</div>
+      </div>
+      <div class="source-item" onclick="filterSource('outlook')">
+        <div class="source-icon outlook">📧</div>
+        <div class="source-info">
+          <div class="source-name">Outlook</div>
+          <div class="source-sub">exchange server</div>
+        </div>
+        <div class="source-count" id="outlook-count">5</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Priority Filter</div>
+      <div class="filter-item active" onclick="filterPriority('all')">
+        <div class="filter-dot" style="background:var(--text3)"></div> All priorities
+      </div>
+      <div class="filter-item" onclick="filterPriority('high')">
+        <div class="filter-dot" style="background:var(--red);box-shadow:0 0 5px var(--red)"></div> Critical / High
+      </div>
+      <div class="filter-item" onclick="filterPriority('med')">
+        <div class="filter-dot" style="background:var(--yellow)"></div> Medium
+      </div>
+      <div class="filter-item" onclick="filterPriority('low')">
+        <div class="filter-dot" style="background:var(--text3)"></div> Low
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Quick Filters</div>
+      <div class="filter-item" onclick="filterTag('incident')">⚡ Incidents</div>
+      <div class="filter-item" onclick="filterTag('vulnerability')">🔓 Vulnerabilities</div>
+      <div class="filter-item" onclick="filterTag('review')">👁 Awaiting Review</div>
+      <div class="filter-item" onclick="filterTag('assigned')">👤 Assigned to Me</div>
+      <div class="filter-item" onclick="filterTag('sla')">⏱ SLA Breach Risk</div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Channels</div>
+      <div class="filter-item"># security-alerts</div>
+      <div class="filter-item"># incident-response</div>
+      <div class="filter-item"># vuln-management</div>
+      <div class="filter-item"># soc-team</div>
+    </div>
+  </aside>
+
+  <!-- MAIN FEED -->
+  <main class="main">
+    <div class="main-toolbar">
+      <div class="search-bar">
+        <span style="color:var(--text3);font-size:12px">⌕</span>
+        <input type="text" id="search-input" placeholder="search across all sources..." oninput="searchFeed(this.value)">
+        <span style="color:var(--text3);font-size:10px;font-family:var(--mono)">⌘K</span>
+      </div>
+      <button class="toolbar-btn active" id="btn-all" onclick="viewToggle('all', this)">ALL</button>
+      <button class="toolbar-btn" id="btn-unread" onclick="viewToggle('unread', this)">UNREAD</button>
+      <button class="toolbar-btn" id="btn-flagged" onclick="viewToggle('flagged', this)">FLAGGED</button>
+      <button class="toolbar-btn" onclick="markAllRead()">✓ MARK ALL</button>
+    </div>
+
+    <div class="feed" id="feed">
+      <!-- Items injected by JS -->
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="right-panel">
+    <div class="panel-tabs">
+      <div class="panel-tab active" onclick="switchPanel('detail', this)">DETAIL</div>
+      <div class="panel-tab" onclick="switchPanel('stats', this)">STATS</div>
+      <div class="panel-tab" onclick="switchPanel('create', this)">CREATE</div>
+    </div>
+
+    <!-- DETAIL -->
+    <div class="panel-content" id="panel-detail">
+      <div id="detail-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60%;color:var(--text3);text-align:center;gap:12px;">
+        <div style="font-size:32px;opacity:0.3">⬡</div>
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:1px">SELECT A MESSAGE<br>TO VIEW DETAILS</div>
+      </div>
+      <div id="detail-content" style="display:none;">
+        <div class="detail-header">
+          <div class="detail-source-row">
+            <div class="feed-source-badge" id="d-badge">SLACK</div>
+            <div id="d-priority" class="feed-priority high"></div>
+            <div id="d-time" style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-left:auto;"></div>
+          </div>
+          <div class="detail-title" id="d-title"></div>
+        </div>
+        <div class="detail-meta">
+          <div class="meta-row"><span class="meta-key">FROM</span><span class="meta-val" id="d-from"></span></div>
+          <div class="meta-row"><span class="meta-key">SOURCE</span><span class="meta-val accent" id="d-source"></span></div>
+          <div class="meta-row"><span class="meta-key">PRIORITY</span><span class="meta-val high" id="d-prio-text"></span></div>
+          <div class="meta-row"><span class="meta-key">STATUS</span><span class="meta-val" id="d-status"></span></div>
+        </div>
+        <div class="detail-body" id="d-body"></div>
+        <div class="feed-tags" id="d-tags" style="margin-bottom:14px;"></div>
+        <div class="action-row">
+          <button class="action-btn success" onclick="replyToItem()">↩ REPLY</button>
+          <button class="action-btn" onclick="flagItem()">⚑ FLAG</button>
+          <button class="action-btn" onclick="createJira()">+ JIRA</button>
+          <button class="action-btn danger" onclick="archiveItem()">✕ ARCHIVE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="panel-content" id="panel-stats" style="display:none;">
+      <div class="section-title">Overview — Today</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-num red" id="stat-critical">3</div><div class="stat-label">Critical</div></div>
+        <div class="stat-card"><div class="stat-num yellow" id="stat-unread">16</div><div class="stat-label">Unread</div></div>
+        <div class="stat-card"><div class="stat-num accent" id="stat-total">47</div><div class="stat-label">Total Today</div></div>
+        <div class="stat-card"><div class="stat-num green" id="stat-resolved">29</div><div class="stat-label">Resolved</div></div>
+      </div>
+
+      <div class="section-title" style="margin-top:16px;">By Source</div>
+      <div class="bar-chart">
+        <div class="bar-label-row"><span>Slack</span><span>11</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:46%;background:var(--slack-light)"></div></div>
+        <div class="bar-label-row"><span>Jira</span><span>8</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:33%;background:var(--jira-light)"></div></div>
+        <div class="bar-label-row"><span>Outlook</span><span>5</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:21%;background:var(--outlook-light)"></div></div>
+      </div>
+
+      <div class="section-title">SLA Status</div>
+      <div class="bar-chart">
+        <div class="bar-label-row"><span style="color:var(--green)">On Track</span><span>71%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:71%;background:var(--green)"></div></div>
+        <div class="bar-label-row"><span style="color:var(--yellow)">At Risk</span><span>19%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:19%;background:var(--yellow)"></div></div>
+        <div class="bar-label-row"><span style="color:var(--red)">Breached</span><span>10%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:10%;background:var(--red)"></div></div>
+      </div>
+
+      <div class="section-title">Response Time Avg</div>
+      <div class="detail-meta">
+        <div class="meta-row"><span class="meta-key">CRITICAL</span><span class="meta-val high">12 min</span></div>
+        <div class="meta-row"><span class="meta-key">HIGH</span><span class="meta-val" style="color:var(--yellow)">47 min</span></div>
+        <div class="meta-row"><span class="meta-key">MEDIUM</span><span class="meta-val">2.3 hr</span></div>
+        <div class="meta-row"><span class="meta-key">LOW</span><span class="meta-val">8.1 hr</span></div>
+      </div>
+    </div>
+
+    <!-- CREATE -->
+    <div class="panel-content" id="panel-create" style="display:none;">
+      <div class="section-title">New Message / Ticket</div>
+
+      <div style="margin-bottom:16px;">
+        <div class="sidebar-label" style="margin-bottom:8px;">Send To</div>
+        <div class="compose-target">
+          <button class="compose-btn slack" id="comp-slack" onclick="toggleTarget('slack')">💬 Slack</button>
+          <button class="compose-btn jira" id="comp-jira" onclick="toggleTarget('jira')">🔵 Jira Ticket</button>
+          <button class="compose-btn outlook" id="comp-outlook" onclick="toggleTarget('outlook')">📧 Email</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <div class="sidebar-label" style="margin-bottom:6px;">Subject / Title</div>
+        <input type="text" class="field-input" id="compose-subject" placeholder="e.g. Critical vuln detected in prod..." style="width:100%">
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <div class="sidebar-label" style="margin-bottom:6px;">Channel / Assignee</div>
+        <input type="text" class="field-input" id="compose-to" placeholder="@channel or user@company.com" style="width:100%">
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <div class="sidebar-label" style="margin-bottom:6px;">Priority</div>
+        <select class="field-input" id="compose-priority" style="width:100%">
+          <option value="critical">🔴 Critical</option>
+          <option value="high">🟠 High</option>
+          <option value="med" selected>🟡 Medium</option>
+          <option value="low">⚪ Low</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <div class="sidebar-label" style="margin-bottom:6px;">Message</div>
+        <textarea class="compose-input" id="compose-body" placeholder="Describe the issue, incident, or request..."></textarea>
+      </div>
+
+      <div class="compose-actions">
+        <div class="compose-hint">⌘ + Enter to send</div>
+        <button class="send-btn" onclick="sendCompose()">SEND →</button>
+      </div>
+    </div>
+
+    <!-- compose at bottom of feed (quick reply) -->
+  </aside>
+</div>
+
+<!-- SETUP MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Connect Integrations</div>
+        <div class="modal-sub">configure your workspace connections</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- SLACK -->
+      <div class="connect-card connected" id="slack-card">
+        <div class="connect-card-header">
+          <div class="connect-icon" style="background:rgba(74,21,75,0.6)">💬</div>
+          <div>
+            <div class="connect-name">Slack</div>
+            <div class="connect-desc">workspace messaging & channels</div>
+          </div>
+          <div class="connect-status">
+            <span style="color:var(--green);font-family:var(--mono);font-size:10px">● CONNECTED</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <input class="field-input" type="text" placeholder="Slack Workspace URL" value="company.slack.com" id="slack-url">
+          <input class="field-input" type="password" placeholder="Bot OAuth Token" value="xoxb-••••••••••" id="slack-token">
+        </div>
+        <div class="field-row">
+          <input class="field-input" type="text" placeholder="Channels (comma-sep)" value="#security-alerts,#incident-response,#soc-team" id="slack-channels">
+          <button class="connect-btn connected" onclick="testConn('slack')">✓ TEST</button>
+        </div>
+      </div>
+
+      <!-- JIRA -->
+      <div class="connect-card connected" id="jira-card">
+        <div class="connect-card-header">
+          <div class="connect-icon" style="background:rgba(0,82,204,0.4)">🔵</div>
+          <div>
+            <div class="connect-name">Jira</div>
+            <div class="connect-desc">project & issue tracking</div>
+          </div>
+          <div class="connect-status">
+            <span style="color:var(--green);font-family:var(--mono);font-size:10px">● CONNECTED</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <input class="field-input" type="text" placeholder="Jira Base URL" value="https://company.atlassian.net" id="jira-url">
+          <input class="field-input" type="text" placeholder="User Email" value="sec.engineer@company.com" id="jira-email">
+        </div>
+        <div class="field-row">
+          <input class="field-input" type="password" placeholder="API Token" value="ATATT3••••••" id="jira-token">
+          <input class="field-input" type="text" placeholder="Project Keys" value="SEC, VULN, IR" id="jira-project">
+          <button class="connect-btn connected" onclick="testConn('jira')">✓ TEST</button>
+        </div>
+      </div>
+
+      <!-- OUTLOOK -->
+      <div class="connect-card connected" id="outlook-card">
+        <div class="connect-card-header">
+          <div class="connect-icon" style="background:rgba(0,120,212,0.3)">📧</div>
+          <div>
+            <div class="connect-name">Outlook / Exchange</div>
+            <div class="connect-desc">microsoft exchange server</div>
+          </div>
+          <div class="connect-status">
+            <span style="color:var(--green);font-family:var(--mono);font-size:10px">● CONNECTED</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <input class="field-input" type="text" placeholder="EWS Endpoint / Graph API" value="https://outlook.office365.com/EWS/Exchange.asmx" id="ews-url">
+        </div>
+        <div class="field-row">
+          <input class="field-input" type="text" placeholder="Email address" value="sec.engineer@company.com" id="ews-user">
+          <input class="field-input" type="password" placeholder="Password / App Password" value="••••••••••" id="ews-pass">
+          <button class="connect-btn connected" onclick="testConn('outlook')">✓ TEST</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ===================== DATA =====================
+const FEED_DATA = [
+  {
+    id: 1, source: 'slack', from: '@soc-bot / #security-alerts', subject: 'CRITICAL: Unusual login attempt detected — admin account',
+    preview: 'Multiple failed auth attempts on admin@company.com from IP 185.220.101.47 (Tor exit node). Geolocation: Russia. 34 attempts in 8 minutes.',
+    time: '2 min ago', priority: 'high', unread: true, flagged: false,
+    body: 'Multiple failed authentication attempts detected on admin@company.com from IP 185.220.101.47, classified as a known Tor exit node. GeoIP indicates origin in Novosibirsk, Russia. 34 attempts recorded over 8 minutes, pattern consistent with credential stuffing. Account has NOT been locked yet. Recommend immediate action.',
+    tags: ['critical', 'incident'], status: 'OPEN'
+  },
+  {
+    id: 2, source: 'jira', from: 'SEC-2041 • Assigned to you', subject: 'CVE-2024-3400 — PAN-OS GlobalProtect RCE vulnerability in DMZ firewall',
+    preview: 'CVSS 10.0 — Unauthenticated remote code execution. Patch available. Must remediate within SLA window.',
+    time: '18 min ago', priority: 'high', unread: true, flagged: false,
+    body: 'CVE-2024-3400 affects PAN-OS versions < 11.1.2-h3, < 11.0.4-h1, < 10.2.9-h1. Unauthenticated RCE via malicious SESSID cookie in GlobalProtect. Our DMZ firewall FW-PROD-02 is currently running PAN-OS 10.2.8. Patch window scheduled for Saturday 02:00 UTC. Hotfix applied as interim mitigation.',
+    tags: ['vulnerability', 'in-progress'], status: 'IN PROGRESS'
+  },
+  {
+    id: 3, source: 'outlook', from: 'CISO Office <ciso@company.com>', subject: 'Board Report — Q2 Security Posture Review needed by EOD Friday',
+    preview: 'Please compile findings from the last 90 days including incident metrics, vuln closure rates, and compliance status for SOC2.',
+    time: '42 min ago', priority: 'med', unread: true, flagged: true,
+    body: 'The board requires a comprehensive security posture update for the Q2 review. Please include: (1) Incident count and MTTR metrics, (2) Vulnerability open/closed rates by severity, (3) SOC2 Type II audit prep status, (4) Phishing simulation results. Deadline is Friday COB. Template attached in SharePoint.',
+    tags: ['review'], status: 'OPEN'
+  },
+  {
+    id: 4, source: 'slack', from: '@alex.chen / #incident-response', subject: 'IR-2024-089 containment complete — lateral movement blocked',
+    preview: 'Network segmentation applied to affected host SEC-WS-047. Memory dump captured. Ready for forensics handoff.',
+    time: '1 hr ago', priority: 'med', unread: false, flagged: false,
+    body: 'Update on IR-2024-089: Lateral movement from SEC-WS-047 has been contained. EDR isolated the endpoint at 14:32 UTC. Network segmentation rules pushed to firewall cluster. 8GB memory image captured and uploaded to forensics share. Waiting for analyst assignment to begin examination.',
+    tags: ['incident', 'in-progress'], status: 'CONTAINED'
+  },
+  {
+    id: 5, source: 'jira', from: 'SEC-2038 • Unassigned', subject: 'Patch Tuesday — 47 CVEs require evaluation, 6 marked Critical',
+    preview: 'Microsoft Patch Tuesday batch. 6 critical CVEs including CVSS 9.8 Windows Kernel EoP. Awaiting triage assignment.',
+    time: '2 hr ago', priority: 'med', unread: true, flagged: false,
+    body: 'This month\'s Patch Tuesday batch includes 47 CVEs. 6 are rated Critical, 18 High. Of note: CVE-2024-30078 (CVSS 9.8, Windows WiFi Driver RCE, no auth), CVE-2024-30051 (CVSS 7.8, DWM Core Kernel EoP, actively exploited ITW). Recommended patching window: next 72 hours for critical. Awaiting senior analyst triage.',
+    tags: ['vulnerability', 'review'], status: 'TRIAGE'
+  },
+  {
+    id: 6, source: 'outlook', from: 'IT Helpdesk <helpdesk@company.com>', subject: 'User report: Suspicious email with attachment — finance team',
+    preview: 'Finance user Jen Park reported receiving invoice_Q2_final.zip from unknown sender. No execution confirmed.',
+    time: '2 hr ago', priority: 'med', unread: false, flagged: false,
+    body: 'User Jen Park (finance@company.com) reports receiving an unsolicited email with subject "URGENT: Invoice Q2 Final" and attachment invoice_Q2_final.zip (3.2MB) from sender noreply@billing-confirm[.]net. User has NOT opened the attachment. Email has been quarantined. File MD5: a3f2c891d4b7e6f098c1a2b3d4e5f6a7. VirusTotal scan pending.',
+    tags: ['incident'], status: 'INVESTIGATING'
+  },
+  {
+    id: 7, source: 'slack', from: '@vuln-scanner / #vuln-management', subject: 'Nessus scan complete — 312 findings on prod subnet 10.10.0.0/24',
+    preview: '3 Critical, 41 High, 128 Medium. Several unpatched Apache and OpenSSL instances detected. Full report uploaded.',
+    time: '3 hr ago', priority: 'low', unread: false, flagged: false,
+    body: 'Scheduled Nessus scan of production subnet 10.10.0.0/24 completed at 13:00 UTC. Total findings: 312 (3 Critical, 41 High, 128 Medium, 140 Low/Info). Notable: Apache/2.4.49 on WEB-PROD-03 (CVE-2021-41773 Path Traversal), OpenSSL 1.0.2 EOL on 4 hosts, SMBv1 enabled on 2 legacy servers. Full report in Confluence.',
+    tags: ['vulnerability'], status: 'OPEN'
+  },
+  {
+    id: 8, source: 'jira', from: 'SEC-2035 • @you', subject: 'Pentest findings remediation — WAF rule update for SQL injection bypass',
+    preview: 'External pentest team identified ModSecurity bypass. WAF config update required. Rule set version 3.3.5 available.',
+    time: '4 hr ago', priority: 'low', unread: false, flagged: true,
+    body: 'External penetration test (Rapid7 team) identified a WAF bypass technique affecting our ModSecurity ruleset. Specifically, chunked encoding bypass allowing SQL injection against /api/v2/users endpoint. Immediate workaround: block chunked TE on load balancer (done). Permanent fix: upgrade ModSecurity rules to CRS 3.3.5. ETA: deployment Friday.',
+    tags: ['vulnerability', 'in-progress'], status: 'IN PROGRESS'
+  },
+];
+
+let currentFilter = { source: 'all', priority: 'all', view: 'all' };
+let selectedItem = null;
+let composeTargets = new Set();
+
+// ===================== RENDER =====================
+function renderFeed() {
+  const feed = document.getElementById('feed');
+  let items = [...FEED_DATA];
+
+  if (currentFilter.source !== 'all') items = items.filter(i => i.source === currentFilter.source);
+  if (currentFilter.priority !== 'all') items = items.filter(i => i.priority === currentFilter.priority);
+  if (currentFilter.view === 'unread') items = items.filter(i => i.unread);
+  if (currentFilter.view === 'flagged') items = items.filter(i => i.flagged);
+
+  const search = document.getElementById('search-input').value.toLowerCase();
+  if (search) items = items.filter(i =>
+    i.subject.toLowerCase().includes(search) ||
+    i.from.toLowerCase().includes(search) ||
+    i.preview.toLowerCase().includes(search)
+  );
+
+  feed.innerHTML = '';
+  items.forEach((item, idx) => {
+    const el = document.createElement('div');
+    el.className = `feed-item ${item.source} ${item.unread ? 'unread' : ''}`;
+    el.style.animationDelay = `${idx * 0.04}s`;
+    el.dataset.id = item.id;
+    el.onclick = () => selectItem(item.id);
+    el.innerHTML = `
+      ${item.unread ? '<div class="unread-dot"></div>' : ''}
+      <div class="feed-header">
+        <div class="feed-source-badge ${item.source}">${item.source.toUpperCase()}</div>
+        <div class="feed-priority ${item.priority}"></div>
+        <div class="feed-from">${item.from}</div>
+        <div class="feed-time">${item.time}</div>
+      </div>
+      <div class="feed-subject">${item.subject}</div>
+      <div class="feed-preview">${item.preview}</div>
+      <div class="feed-tags">${item.tags.map(t => `<div class="tag ${t}">${t}</div>`).join('')}
+        ${item.flagged ? '<div class="tag" style="color:var(--yellow);border-color:rgba(255,165,2,0.4);background:rgba(255,165,2,0.08)">⚑ flagged</div>' : ''}
+      </div>
+    `;
+    feed.appendChild(el);
+  });
+
+  updateCounts();
+}
+
+function updateCounts() {
+  const unread = FEED_DATA.filter(i => i.unread).length;
+  document.getElementById('all-count').textContent = FEED_DATA.length;
+  document.getElementById('slack-count').textContent = FEED_DATA.filter(i => i.source === 'slack').length;
+  document.getElementById('jira-count').textContent = FEED_DATA.filter(i => i.source === 'jira').length;
+  document.getElementById('outlook-count').textContent = FEED_DATA.filter(i => i.source === 'outlook').length;
+  document.getElementById('notif-count').textContent = unread;
+  document.getElementById('stat-unread').textContent = unread;
+}
+
+// ===================== SELECT ITEM =====================
+function selectItem(id) {
+  const item = FEED_DATA.find(i => i.id === id);
+  if (!item) return;
+  selectedItem = item;
+  item.unread = false;
+
+  // highlight
+  document.querySelectorAll('.feed-item').forEach(el => el.style.outline = 'none');
+  const el = document.querySelector(`[data-id="${id}"]`);
+  if (el) { el.style.outline = '1px solid var(--accent2)'; el.querySelector('.unread-dot')?.remove(); }
+
+  // populate detail
+  const badge = document.getElementById('d-badge');
+  badge.textContent = item.source.toUpperCase();
+  badge.className = `feed-source-badge ${item.source}`;
+
+  document.getElementById('d-priority').className = `feed-priority ${item.priority}`;
+  document.getElementById('d-time').textContent = item.time;
+  document.getElementById('d-title').textContent = item.subject;
+  document.getElementById('d-from').textContent = item.from;
+  document.getElementById('d-source').textContent = item.source.charAt(0).toUpperCase() + item.source.slice(1);
+  document.getElementById('d-prio-text').textContent = item.priority.toUpperCase();
+  document.getElementById('d-prio-text').className = `meta-val ${item.priority === 'high' ? 'high' : ''}`;
+  document.getElementById('d-status').textContent = item.status;
+  document.getElementById('d-body').textContent = item.body;
+  document.getElementById('d-tags').innerHTML = item.tags.map(t => `<div class="tag ${t}">${t}</div>`).join('');
+
+  document.getElementById('detail-placeholder').style.display = 'none';
+  document.getElementById('detail-content').style.display = 'block';
+
+  // switch to detail tab
+  switchPanel('detail', document.querySelector('.panel-tab'));
+  updateCounts();
+  renderFeed();
+}
+
+// ===================== FILTERS =====================
+function filterSource(src) {
+  currentFilter.source = src;
+  document.querySelectorAll('.source-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  renderFeed();
+}
+
+function filterPriority(p) {
+  currentFilter.priority = p;
+  document.querySelectorAll('.filter-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  renderFeed();
+}
+
+function filterTag(tag) {
+  currentFilter.source = 'all';
+  const items = FEED_DATA.filter(i => i.tags.includes(tag));
+  const feed = document.getElementById('feed');
+  feed.innerHTML = '';
+  items.forEach(item => {
+    const el = document.createElement('div');
+    el.className = `feed-item ${item.source}`;
+    el.dataset.id = item.id;
+    el.onclick = () => selectItem(item.id);
+    el.innerHTML = `<div class="feed-header">
+        <div class="feed-source-badge ${item.source}">${item.source.toUpperCase()}</div>
+        <div class="feed-priority ${item.priority}"></div>
+        <div class="feed-from">${item.from}</div>
+        <div class="feed-time">${item.time}</div>
+      </div>
+      <div class="feed-subject">${item.subject}</div>
+      <div class="feed-preview">${item.preview}</div>
+      <div class="feed-tags">${item.tags.map(t => `<div class="tag ${t}">${t}</div>`).join('')}</div>`;
+    feed.appendChild(el);
+  });
+  showToast(`Filtered: ${tag} (${items.length} items)`, 'info');
+}
+
+function viewToggle(mode, btn) {
+  currentFilter.view = mode;
+  document.querySelectorAll('.toolbar-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFeed();
+}
+
+function searchFeed(val) { renderFeed(); }
+
+// ===================== PANEL SWITCH =====================
+function switchPanel(name, btn) {
+  ['detail', 'stats', 'create'].forEach(p => {
+    document.getElementById(`panel-${p}`).style.display = p === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.panel-tab').forEach((t, i) => {
+    t.classList.toggle('active', ['detail','stats','create'][i] === name);
+  });
+}
+
+// ===================== ACTIONS =====================
+function replyToItem() {
+  if (!selectedItem) return;
+  switchPanel('create', null);
+  document.querySelectorAll('.panel-tab').forEach((t, i) => t.classList.toggle('active', i === 2));
+  document.getElementById('compose-subject').value = `Re: ${selectedItem.subject}`;
+  if (selectedItem.source === 'slack') toggleTarget('slack');
+  if (selectedItem.source === 'outlook') toggleTarget('outlook');
+  showToast('Reply mode activated', 'info');
+}
+
+function flagItem() {
+  if (!selectedItem) return;
+  selectedItem.flagged = !selectedItem.flagged;
+  showToast(selectedItem.flagged ? '⚑ Item flagged' : 'Flag removed', 'success');
+  renderFeed();
+}
+
+function createJira() {
+  if (!selectedItem) return;
+  showToast('Jira ticket created: SEC-' + Math.floor(2042 + Math.random()*10), 'success');
+}
+
+function archiveItem() {
+  if (!selectedItem) return;
+  FEED_DATA.splice(FEED_DATA.indexOf(selectedItem), 1);
+  selectedItem = null;
+  document.getElementById('detail-placeholder').style.display = 'flex';
+  document.getElementById('detail-content').style.display = 'none';
+  renderFeed();
+  showToast('Item archived', 'info');
+}
+
+function markAllRead() {
+  FEED_DATA.forEach(i => i.unread = false);
+  renderFeed();
+  showToast('All messages marked as read', 'success');
+}
+
+// ===================== COMPOSE =====================
+function toggleTarget(t) {
+  const btn = document.getElementById(`comp-${t}`);
+  if (composeTargets.has(t)) { composeTargets.delete(t); btn.classList.remove('active'); }
+  else { composeTargets.add(t); btn.classList.add('active'); }
+}
+
+function sendCompose() {
+  const subj = document.getElementById('compose-subject').value;
+  const body = document.getElementById('compose-body').value;
+  if (!subj || !body) { showToast('Please fill in subject and message', 'error'); return; }
+  if (composeTargets.size === 0) { showToast('Select at least one destination', 'error'); return; }
+  composeTargets.forEach(t => showToast(`Sent to ${t.charAt(0).toUpperCase()+t.slice(1)} ✓`, 'success'));
+  document.getElementById('compose-subject').value = '';
+  document.getElementById('compose-body').value = '';
+  document.getElementById('compose-to').value = '';
+  composeTargets.clear();
+  ['slack','jira','outlook'].forEach(t => document.getElementById(`comp-${t}`)?.classList.remove('active'));
+}
+
+// ===================== MODAL =====================
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+function testConn(src) {
+  showToast(`${src.charAt(0).toUpperCase()+src.slice(1)} connection verified ✓`, 'success');
+}
+
+// ===================== SYNC =====================
+function syncAll() {
+  const btn = document.getElementById('sync-btn');
+  btn.textContent = '↻ SYNCING...';
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.textContent = '↻ SYNC';
+    btn.disabled = false;
+    showToast('All sources synced — 3 new messages', 'success');
+  }, 1800);
+}
+
+// ===================== TOAST =====================
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icons = { success: '✓', error: '✕', info: 'ℹ' };
+  t.innerHTML = `<span style="font-size:12px">${icons[type]}</span> ${msg}`;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+// ===================== KEYBOARD =====================
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('search-input').focus();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    sendCompose();
+  }
+  if (e.key === 'Escape') closeModal();
+});
+
+// ===================== INIT =====================
+renderFeed();
+setTimeout(() => showToast('↻ Connected to Slack, Jira, Outlook', 'success'), 600);
+</script>
+</body>
+</html>
