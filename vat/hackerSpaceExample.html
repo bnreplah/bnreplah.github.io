@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CypherSpace - Decentralized Hacker Collective</title>
+    <style>
+        /* 
+         * CSS Variables for easy theming and reactive design
+         * Terminal-inspired aesthetic with modern web3 elements
+         */
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #1a1f3a;
+            --bg-tertiary: #2a2f4a;
+            --text-primary: #00ff41;
+            --text-secondary: #00d4aa;
+            --text-muted: #6c7a89;
+            --accent: #ff006e;
+            --accent-secondary: #8338ec;
+            --border: #3a4f5a;
+            --success: #00ff41;
+            --warning: #ffbe0b;
+            --error: #ff006e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Animated matrix-style background */
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Main container with responsive grid */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                grid-template-columns: 250px 1fr;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .container {
+                grid-template-columns: 300px 1fr 300px;
+            }
+        }
+
+        /* Header with Web3 wallet connection */
+        header {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--text-secondary);
+            text-shadow: 0 0 10px var(--text-secondary);
+        }
+
+        .wallet-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: 2px solid var(--text-secondary);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: var(--text-secondary);
+            color: var(--bg-primary);
+            box-shadow: 0 0 20px var(--text-secondary);
+        }
+
+        .btn-accent {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-accent:hover {
+            background: var(--accent);
+            box-shadow: 0 0 20px var(--accent);
+        }
+
+        /* Sidebar navigation */
+        .sidebar {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .sidebar h3 {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            font-size: 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .nav-list {
+            list-style: none;
+        }
+
+        .nav-list li {
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .nav-list li:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding-left: 15px;
+        }
+
+        .nav-list li.active {
+            background: var(--bg-tertiary);
+            border-left: 3px solid var(--accent);
+        }
+
+        /* Main content area */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .panel-title {
+            color: var(--text-secondary);
+            font-size: 18px;
+        }
+
+        /* Post/Thread creation form */
+        .compose-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        input, textarea, select {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--text-secondary);
+            box-shadow: 0 0 10px rgba(0, 212, 170, 0.2);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        /* Forum thread display */
+        .thread-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .thread-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .thread-item:hover {
+            border-color: var(--text-secondary);
+            transform: translateX(5px);
+            box-shadow: 0 0 15px rgba(0, 212, 170, 0.1);
+        }
+
+        .thread-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+
+        .thread-title {
+            font-size: 16px;
+            color: var(--text-secondary);
+            font-weight: bold;
+        }
+
+        .thread-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+
+        .thread-content {
+            color: var(--text-primary);
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .thread-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            border: 1px solid var(--border);
+        }
+
+        .tag-exploit { border-color: var(--error); color: var(--error); }
+        .tag-research { border-color: var(--text-secondary); }
+        .tag-tutorial { border-color: var(--success); color: var(--success); }
+        .tag-discussion { border-color: var(--warning); color: var(--warning); }
+
+        /* Blockchain log display */
+        .blockchain-log {
+            background: var(--bg-primary);
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            border-left: 3px solid var(--text-secondary);
+        }
+
+        .log-timestamp {
+            color: var(--text-muted);
+            min-width: 160px;
+        }
+
+        .log-hash {
+            color: var(--accent);
+            word-break: break-all;
+        }
+
+        /* Activity feed sidebar */
+        .activity-feed {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .activity-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-user {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .activity-action {
+            color: var(--text-muted);
+        }
+
+        /* Stats dashboard */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            color: var(--text-secondary);
+            font-weight: bold;
+            text-shadow: 0 0 10px var(--text-secondary);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        /* Loading and offline indicators */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border);
+            border-top-color: var(--text-secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .offline-banner {
+            background: var(--warning);
+            color: var(--bg-primary);
+            padding: 10px 20px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .offline-banner.show {
+            display: block;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 767px) {
+            .sidebar, .activity-feed {
+                position: static;
+            }
+            
+            header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .wallet-info {
+                justify-content: space-between;
+            }
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--text-secondary);
+            padding: 15px 20px;
+            border-radius: 6px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); }
+            to { transform: translateX(0); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Matrix-style animated background canvas -->
+    <canvas class="matrix-bg" id="matrixCanvas"></canvas>
+
+    <!-- Offline indicator banner -->
+    <div class="offline-banner" id="offlineBanner">
+        ⚠ OFFLINE MODE - Running from cache
+    </div>
+
+    <div class="container">
+        <!-- Header with Web3 connection -->
+        <header>
+            <div class="logo">
+                [CypherSpace] &gt;_
+            </div>
+            <div class="wallet-info">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span id="networkStatus">Connecting...</span>
+                </div>
+                <span id="walletAddress">No wallet connected</span>
+                <button class="btn btn-accent" id="connectWallet">Connect Wallet</button>
+            </div>
+        </header>
+
+        <!-- Left Sidebar Navigation -->
+        <aside class="sidebar">
+            <h3>&gt; Navigation</h3>
+            <ul class="nav-list">
+                <li class="active" data-view="forum">🔒 Forum</li>
+                <li data-view="exploits">🎯 Exploits</li>
+                <li data-view="research">🔬 Research</li>
+                <li data-view="tools">🛠️ Tools</li>
+                <li data-view="blockchain">⛓️ Blockchain Log</li>
+                <li data-view="stats">📊 Stats</li>
+            </ul>
+
+            <h3 style="margin-top: 30px;">&gt; Categories</h3>
+            <ul class="nav-list">
+                <li data-filter="all">All Posts</li>
+                <li data-filter="exploit">Exploits</li>
+                <li data-filter="research">Research</li>
+                <li data-filter="tutorial">Tutorials</li>
+                <li data-filter="discussion">Discussion</li>
+            </ul>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Stats Dashboard -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalPosts">0</div>
+                    <div class="stat-label">Total Posts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalUsers">0</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="blockHeight">0</div>
+                    <div class="stat-label">Block Height</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="cacheStatus">✓</div>
+                    <div class="stat-label">Cache Status</div>
+                </div>
+            </div>
+
+            <!-- New Post Panel -->
+            <div class="panel" id="composePanel">
+                <div class="panel-header">
+                    <h2 class="panel-title">&gt; Create New Post</h2>
+                </div>
+                <form class="compose-form" id="postForm">
+                    <div class="input-group">
+                        <label for="postTitle">Title</label>
+                        <input type="text" id="postTitle" placeholder="Enter post title..." required>
+                    </div>
+                    <div class="input-group">
+                        <label for="postCategory">Category</label>
+                        <select id="postCategory" required>
+                            <option value="discussion">Discussion</option>
+                            <option value="exploit">Exploit</option>
+                            <option value="research">Research</option>
+                            <option value="tutorial">Tutorial</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="postContent">Content</label>
+                        <textarea id="postContent" placeholder="Share your findings, exploits, or questions..." required></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="postTags">Tags (comma-separated)</label>
+                        <input type="text" id="postTags" placeholder="web3, security, blockchain...">
+                    </div>
+                    <button type="submit" class="btn">Publish to Blockchain</button>
+                </form>
+            </div>
+
+            <!-- Forum Thread List -->
+            <div class="panel" id="forumPanel">
+                <div class="panel-header">
+                    <h2 class="panel-title">&gt; Recent Posts</h2>
+                    <button class="btn" id="refreshBtn">Refresh</button>
+                </div>
+                <div class="thread-list" id="threadList">
+                    <!-- Threads will be dynamically loaded here -->
+                </div>
+            </div>
+
+            <!-- Blockchain Log Panel -->
+            <div class="panel hidden" id="blockchainPanel">
+                <div class="panel-header">
+                    <h2 class="panel-title">&gt; Blockchain Transaction Log</h2>
+                </div>
+                <div class="blockchain-log" id="blockchainLog">
+                    <!-- Blockchain entries will be displayed here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar - Activity Feed -->
+        <aside class="activity-feed">
+            <h3>&gt; Live Activity</h3>
+            <div id="activityList">
+                <div class="activity-item">
+                    <span class="activity-user">System</span>
+                    <span class="activity-action"> initialized</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        /**
+         * CypherSpace - Decentralized Hacker Collaborative Platform
+         * 
+         * This application uses:
+         * - IndexedDB for local persistent storage (cache)
+         * - Web3.js for blockchain interaction
+         * - Service Worker for offline functionality
+         * - LocalStorage for lightweight state management
+         */
+
+        // ============================================
+        // CONFIGURATION & INITIALIZATION
+        // ============================================
+
+        const CONFIG = {
+            APP_NAME: 'CypherSpace',
+            VERSION: '1.0.0',
+            DB_NAME: 'cypherspace_db',
+            DB_VERSION: 1,
+            CACHE_NAME: 'cypherspace-cache-v1',
+            // In production, replace with actual blockchain RPC endpoint
+            BLOCKCHAIN_RPC: 'http://localhost:8545',
+            // Simple in-memory blockchain simulation for demo
+            USE_MOCK_BLOCKCHAIN: true
+        };
+
+        // Global state management
+        const AppState = {
+            db: null,
+            walletAddress: null,
+            isOnline: navigator.onLine,
+            currentView: 'forum',
+            blockchain: [],
+            posts: [],
+            users: new Set()
+        };
+
+        // ============================================
+        // DATABASE MANAGEMENT (IndexedDB)
+        // ============================================
+
+        /**
+         * Initialize IndexedDB for persistent local storage
+         * This allows the app to function fully offline
+         */
+        async function initDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(CONFIG.DB_NAME, CONFIG.DB_VERSION);
+
+                // Create object stores on first run or version upgrade
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+
+                    // Store for forum posts
+                    if (!db.objectStoreNames.contains('posts')) {
+                        const postStore = db.createObjectStore('posts', { 
+                            keyPath: 'id', 
+                            autoIncrement: true 
+                        });
+                        postStore.createIndex('timestamp', 'timestamp', { unique: false });
+                        postStore.createIndex('category', 'category', { unique: false });
+                        postStore.createIndex('author', 'author', { unique: false });
+                    }
+
+                    // Store for blockchain transactions
+                    if (!db.objectStoreNames.contains('blockchain')) {
+                        const blockStore = db.createObjectStore('blockchain', { 
+                            keyPath: 'blockNumber', 
+                            autoIncrement: true 
+                        });
+                        blockStore.createIndex('hash', 'hash', { unique: true });
+                        blockStore.createIndex('timestamp', 'timestamp', { unique: false });
+                    }
+
+                    // Store for user profiles
+                    if (!db.objectStoreNames.contains('users')) {
+                        const userStore = db.createObjectStore('users', { 
+                            keyPath: 'address' 
+                        });
+                        userStore.createIndex('username', 'username', { unique: false });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    AppState.db = event.target.result;
+                    console.log('[DB] Database initialized successfully');
+                    resolve(AppState.db);
+                };
+
+                request.onerror = (event) => {
+                    console.error('[DB] Database error:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        /**
+         * Generic function to add data to IndexedDB
+         */
+        async function addToStore(storeName, data) {
+            return new Promise((resolve, reject) => {
+                const transaction = AppState.db.transaction([storeName], 'readwrite');
+                const store = transaction.objectStore(storeName);
+                const request = store.add(data);
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * Generic function to get all data from a store
+         */
+        async function getAllFromStore(storeName) {
+            return new Promise((resolve, reject) => {
+                const transaction = AppState.db.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * Get data from store by index
+         */
+        async function getByIndex(storeName, indexName, value) {
+            return new Promise((resolve, reject) => {
+                const transaction = AppState.db.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                const index = store.index(indexName);
+                const request = index.getAll(value);
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // ============================================
+        // BLOCKCHAIN SIMULATION
+        // ============================================
+
+        /**
+         * Simple blockchain implementation for demonstration
+         * In production, this would interact with actual Web3 providers
+         */
+        class SimpleBlockchain {
+            constructor() {
+                this.chain = [];
+                this.pendingTransactions = [];
+                // Create genesis block
+                this.createGenesisBlock();
+            }
+
+            createGenesisBlock() {
+                const genesisBlock = {
+                    blockNumber: 0,
+                    timestamp: Date.now(),
+                    transactions: [],
+                    previousHash: '0',
+                    hash: this.calculateHash(0, Date.now(), [], '0'),
+                    nonce: 0
+                };
+                this.chain.push(genesisBlock);
+            }
+
+            /**
+             * Calculate SHA-256 hash (simplified for demo)
+             * In production, use proper crypto library
+             */
+            calculateHash(blockNumber, timestamp, transactions, previousHash) {
+                const data = `${blockNumber}${timestamp}${JSON.stringify(transactions)}${previousHash}`;
+                // Simple hash simulation - in production use crypto.subtle or web3.utils
+                let hash = 0;
+                for (let i = 0; i < data.length; i++) {
+                    const char = data.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                return Math.abs(hash).toString(16).padStart(64, '0');
+            }
+
+            /**
+             * Get the latest block in the chain
+             */
+            getLatestBlock() {
+                return this.chain[this.chain.length - 1];
+            }
+
+            /**
+             * Add a new transaction to the pending pool
+             */
+            addTransaction(transaction) {
+                this.pendingTransactions.push({
+                    ...transaction,
+                    timestamp: Date.now(),
+                    from: AppState.walletAddress || 'anonymous'
+                });
+            }
+
+            /**
+             * Mine pending transactions into a new block
+             */
+            minePendingTransactions() {
+                const previousBlock = this.getLatestBlock();
+                const newBlock = {
+                    blockNumber: previousBlock.blockNumber + 1,
+                    timestamp: Date.now(),
+                    transactions: [...this.pendingTransactions],
+                    previousHash: previousBlock.hash,
+                    nonce: 0
+                };
+
+                // Calculate hash for new block
+                newBlock.hash = this.calculateHash(
+                    newBlock.blockNumber,
+                    newBlock.timestamp,
+                    newBlock.transactions,
+                    newBlock.previousHash
+                );
+
+                this.chain.push(newBlock);
+                this.pendingTransactions = [];
+
+                // Save to IndexedDB
+                addToStore('blockchain', newBlock).catch(err => 
+                    console.error('[Blockchain] Error saving block:', err)
+                );
+
+                return newBlock;
+            }
+
+            /**
+             * Validate the entire blockchain
+             */
+            isChainValid() {
+                for (let i = 1; i < this.chain.length; i++) {
+                    const currentBlock = this.chain[i];
+                    const previousBlock = this.chain[i - 1];
+
+                    // Verify hash integrity
+                    if (currentBlock.previousHash !== previousBlock.hash) {
+                        return false;
+                    }
+
+                    // Verify current block hash
+                    const calculatedHash = this.calculateHash(
+                        currentBlock.blockNumber,
+                        currentBlock.timestamp,
+                        currentBlock.transactions,
+                        currentBlock.previousHash
+                    );
+
+                    if (currentBlock.hash !== calculatedHash) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+
+        // Initialize blockchain
+        const blockchain = new SimpleBlockchain();
+
+        // ============================================
+        // WEB3 WALLET INTEGRATION
+        // ============================================
+
+        /**
+         * Connect to Web3 wallet (MetaMask, etc.)
+         */
+        async function connectWallet() {
+            try {
+                // Check if Web3 is available (MetaMask or similar)
+                if (typeof window.ethereum !== 'undefined') {
+                    // Request account access
+                    const accounts = await window.ethereum.request({ 
+                        method: 'eth_requestAccounts' 
+                    });
+                    
+                    AppState.walletAddress = accounts[0];
+                    
+                    // Update UI
+                    document.getElementById('walletAddress').textContent = 
+                        AppState.walletAddress.substring(0, 6) + '...' + 
+                        AppState.walletAddress.substring(38);
+                    
+                    document.getElementById('connectWallet').textContent = 'Connected';
+                    document.getElementById('connectWallet').disabled = true;
+
+                    showToast('Wallet connected successfully!', 'success');
+
+                    // Listen for account changes
+                    window.ethereum.on('accountsChanged', (accounts) => {
+                        if (accounts.length === 0) {
+                            AppState.walletAddress = null;
+                            document.getElementById('walletAddress').textContent = 
+                                'No wallet connected';
+                        } else {
+                            AppState.walletAddress = accounts[0];
+                            document.getElementById('walletAddress').textContent = 
+                                AppState.walletAddress.substring(0, 6) + '...' + 
+                                AppState.walletAddress.substring(38);
+                        }
+                    });
+
+                } else {
+                    // Fallback: Use mock address for demo
+                    AppState.walletAddress = '0x' + 
+                        Array(40).fill(0).map(() => 
+                            Math.floor(Math.random() * 16).toString(16)
+                        ).join('');
+                    
+                    document.getElementById('walletAddress').textContent = 
+                        'Demo: ' + AppState.walletAddress.substring(0, 10) + '...';
+                    
+                    showToast('Demo mode: Mock wallet connected', 'warning');
+                }
+            } catch (error) {
+                console.error('[Wallet] Connection error:', error);
+                showToast('Failed to connect wallet: ' + error.message, 'error');
+            }
+        }
+
+        // ============================================
+        // POST MANAGEMENT
+        // ============================================
+
+        /**
+         * Create a new post and add to blockchain
+         */
+        async function createPost(postData) {
+            try {
+                // Create post object
+                const post = {
+                    title: postData.title,
+                    content: postData.content,
+                    category: postData.category,
+                    tags: postData.tags || [],
+                    author: AppState.walletAddress || 'anonymous',
+                    timestamp: Date.now(),
+                    replies: [],
+                    upvotes: 0,
+                    downvotes: 0
+                };
+
+                // Add to IndexedDB
+                const postId = await addToStore('posts', post);
+                post.id = postId;
+
+                // Add to blockchain as transaction
+                blockchain.addTransaction({
+                    type: 'POST_CREATE',
+                    postId: postId,
+                    data: {
+                        title: post.title,
+                        category: post.category,
+                        author: post.author
+                    }
+                });
+
+                // Mine the block
+                const newBlock = blockchain.minePendingTransactions();
+
+                // Update UI
+                AppState.posts.unshift(post);
+                AppState.users.add(post.author);
+                renderPosts();
+                updateStats();
+                addActivityItem(post.author, 'created a new post');
+                updateBlockchainLog();
+
+                showToast('Post published to blockchain!', 'success');
+
+                return post;
+            } catch (error) {
+                console.error('[Post] Error creating post:', error);
+                showToast('Failed to create post: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        /**
+         * Load all posts from IndexedDB
+         */
+        async function loadPosts() {
+            try {
+                const posts = await getAllFromStore('posts');
+                AppState.posts = posts.sort((a, b) => b.timestamp - a.timestamp);
+                
+                // Track unique users
+                AppState.posts.forEach(post => {
+                    AppState.users.add(post.author);
+                });
+
+                renderPosts();
+                updateStats();
+            } catch (error) {
+                console.error('[Post] Error loading posts:', error);
+                // If no posts exist, create some sample posts
+                if (AppState.posts.length === 0) {
+                    createSampleData();
+                }
+            }
+        }
+
+        /**
+         * Render posts to the UI
+         */
+        function renderPosts(filter = 'all') {
+            const threadList = document.getElementById('threadList');
+            threadList.innerHTML = '';
+
+            let postsToRender = AppState.posts;
+
+            // Apply category filter
+            if (filter !== 'all') {
+                postsToRender = AppState.posts.filter(post => post.category === filter);
+            }
+
+            if (postsToRender.length === 0) {
+                threadList.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        No posts found. Create the first one!
+                    </div>
+                `;
+                return;
+            }
+
+            postsToRender.forEach(post => {
+                const threadItem = document.createElement('div');
+                threadItem.className = 'thread-item';
+                
+                // Format timestamp
+                const timeAgo = formatTimeAgo(post.timestamp);
+                
+                // Create tags HTML
+                const tagsHTML = post.tags.map(tag => 
+                    `<span class="tag tag-${post.category}">${tag}</span>`
+                ).join('');
+
+                threadItem.innerHTML = `
+                    <div class="thread-header">
+                        <div class="thread-title">${escapeHtml(post.title)}</div>
+                    </div>
+                    <div class="thread-meta">
+                        <span>👤 ${formatAddress(post.author)}</span>
+                        <span>🕐 ${timeAgo}</span>
+                        <span>💬 ${post.replies.length} replies</span>
+                        <span>⬆ ${post.upvotes} ⬇ ${post.downvotes}</span>
+                    </div>
+                    <div class="thread-content">
+                        ${escapeHtml(post.content.substring(0, 200))}${post.content.length > 200 ? '...' : ''}
+                    </div>
+                    <div class="thread-tags">
+                        <span class="tag tag-${post.category}">${post.category}</span>
+                        ${tagsHTML}
+                    </div>
+                `;
+
+                threadItem.addEventListener('click', () => {
+                    showPostDetail(post);
+                });
+
+                threadList.appendChild(threadItem);
+            });
+        }
+
+        /**
+         * Show detailed post view (could be expanded to a modal)
+         */
+        function showPostDetail(post) {
+            showToast(`Viewing: ${post.title}`, 'info');
+            // In a full implementation, this would open a modal with full post content
+            // and reply functionality
+        }
+
+        // ============================================
+        // BLOCKCHAIN LOG DISPLAY
+        // ============================================
+
+        /**
+         * Update the blockchain transaction log display
+         */
+        async function updateBlockchainLog() {
+            const logContainer = document.getElementById('blockchainLog');
+            logContainer.innerHTML = '';
+
+            // Get blocks from IndexedDB
+            try {
+                const blocks = await getAllFromStore('blockchain');
+                
+                // Combine with in-memory blockchain
+                const allBlocks = [...blocks, ...blockchain.chain.slice(blocks.length)];
+
+                allBlocks.reverse().forEach(block => {
+                    const logEntry = document.createElement('div');
+                    logEntry.className = 'log-entry';
+                    
+                    const timestamp = new Date(block.timestamp).toLocaleString();
+                    
+                    logEntry.innerHTML = `
+                        <div class="log-timestamp">${timestamp}</div>
+                        <div style="flex: 1;">
+                            <div><strong>Block #${block.blockNumber}</strong></div>
+                            <div class="log-hash">Hash: ${block.hash.substring(0, 32)}...</div>
+                            <div style="color: var(--text-muted); font-size: 11px;">
+                                ${block.transactions.length} transaction(s)
+                            </div>
+                        </div>
+                    `;
+                    
+                    logContainer.appendChild(logEntry);
+                });
+
+                // Update block height stat
+                document.getElementById('blockHeight').textContent = 
+                    blockchain.getLatestBlock().blockNumber;
+
+            } catch (error) {
+                console.error('[Blockchain] Error loading log:', error);
+            }
+        }
+
+        // ============================================
+        // ACTIVITY FEED
+        // ============================================
+
+        /**
+         * Add an activity item to the feed
+         */
+        function addActivityItem(user, action, details = '') {
+            const activityList = document.getElementById('activityList');
+            const activityItem = document.createElement('div');
+            activityItem.className = 'activity-item';
+            
+            activityItem.innerHTML = `
+                <span class="activity-user">${formatAddress(user)}</span>
+                <span class="activity-action"> ${action}</span>
+                ${details ? `<div style="font-size: 11px; color: var(--text-muted);">${details}</div>` : ''}
+            `;
+            
+            activityList.insertBefore(activityItem, activityList.firstChild);
+            
+            // Keep only last 20 activities
+            while (activityList.children.length > 20) {
+                activityList.removeChild(activityList.lastChild);
+            }
+        }
+
+        // ============================================
+        // STATS & UI UPDATES
+        // ============================================
+
+        /**
+         * Update statistics dashboard
+         */
+        function updateStats() {
+            document.getElementById('totalPosts').textContent = AppState.posts.length;
+            document.getElementById('totalUsers').textContent = AppState.users.size;
+            document.getElementById('blockHeight').textContent = 
+                blockchain.getLatestBlock().blockNumber;
+            document.getElementById('cacheStatus').textContent = 
+                AppState.isOnline ? '✓' : '⚠';
+        }
+
+        /**
+         * Update network status indicator
+         */
+        function updateNetworkStatus() {
+            const statusEl = document.getElementById('networkStatus');
+            const offlineBanner = document.getElementById('offlineBanner');
+            
+            if (AppState.isOnline) {
+                statusEl.textContent = 'Online';
+                offlineBanner.classList.remove('show');
+            } else {
+                statusEl.textContent = 'Offline - Cache Mode';
+                offlineBanner.classList.add('show');
+            }
+        }
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+
+        /**
+         * Format blockchain address for display
+         */
+        function formatAddress(address) {
+            if (!address || address === 'anonymous') return 'Anonymous';
+            return address.substring(0, 6) + '...' + address.substring(address.length - 4);
+        }
+
+        /**
+         * Format timestamp to relative time
+         */
+        function formatTimeAgo(timestamp) {
+            const seconds = Math.floor((Date.now() - timestamp) / 1000);
+            
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+            if (seconds < 604800) return Math.floor(seconds / 86400) + 'd ago';
+            return new Date(timestamp).toLocaleDateString();
+        }
+
+        /**
+         * Escape HTML to prevent XSS
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        /**
+         * Show toast notification
+         */
+        function showToast(message, type = 'info') {
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            
+            // Color based on type
+            const colors = {
+                success: 'var(--success)',
+                error: 'var(--error)',
+                warning: 'var(--warning)',
+                info: 'var(--text-secondary)'
+            };
+            toast.style.borderColor = colors[type] || colors.info;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        /**
+         * Create sample data for demonstration
+         */
+        async function createSampleData() {
+            const samplePosts = [
+                {
+                    title: "Welcome to CypherSpace!",
+                    content: "This is a decentralized hacker collaborative space. All posts are stored on a blockchain and cached locally for offline access. Feel free to explore and contribute!",
+                    category: "discussion",
+                    tags: ["welcome", "intro"]
+                },
+                {
+                    title: "CVE-2024-XXXX: New XSS Vector Discovered",
+                    content: "Discovered a novel XSS technique bypassing modern CSP implementations. This affects multiple frameworks. Details and PoC included.",
+                    category: "exploit",
+                    tags: ["xss", "cve", "web-security"]
+                },
+                {
+                    title: "Web3 Smart Contract Auditing Guide",
+                    content: "Comprehensive guide on auditing Ethereum smart contracts. Covers common vulnerabilities like reentrancy, integer overflow, and access control issues.",
+                    category: "tutorial",
+                    tags: ["web3", "ethereum", "security-audit"]
+                },
+                {
+                    title: "Research: Side-Channel Attacks on Modern CPUs",
+                    content: "Analysis of timing-based side-channel vulnerabilities in current generation processors. Includes experimental data and mitigation strategies.",
+                    category: "research",
+                    tags: ["cpu", "side-channel", "hardware"]
+                }
+            ];
+
+            for (const postData of samplePosts) {
+                await createPost(postData);
+                await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+            }
+
+            addActivityItem('System', 'initialized sample data');
+        }
+
+        // ============================================
+        // MATRIX BACKGROUND ANIMATION
+        // ============================================
+
+        /**
+         * Create animated matrix-style background
+         */
+        function initMatrixBackground() {
+            const canvas = document.getElementById('matrixCanvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            const drops = Array(Math.floor(columns)).fill(1);
+
+            function drawMatrix() {
+                ctx.fillStyle = 'rgba(10, 14, 39, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = '#00ff41';
+                ctx.font = fontSize + 'px monospace';
+
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+
+            setInterval(drawMatrix, 50);
+
+            // Resize canvas on window resize
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        }
+
+        // ============================================
+        // SERVICE WORKER REGISTRATION
+        // ============================================
+
+        /**
+         * Register service worker for offline caching
+         */
+        async function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    // In production, create a separate service-worker.js file
+                    // For demo, we'll create it inline
+                    const swCode = `
+                        const CACHE_NAME = '${CONFIG.CACHE_NAME}';
+                        const urlsToCache = [
+                            '/',
+                            '/index.html'
+                        ];
+
+                        self.addEventListener('install', (event) => {
+                            event.waitUntil(
+                                caches.open(CACHE_NAME)
+                                    .then((cache) => cache.addAll(urlsToCache))
+                            );
+                        });
+
+                        self.addEventListener('fetch', (event) => {
+                            event.respondWith(
+                                caches.match(event.request)
+                                    .then((response) => {
+                                        if (response) {
+                                            return response;
+                                        }
+                                        return fetch(event.request);
+                                    })
+                            );
+                        });
+                    `;
+
+                    const blob = new Blob([swCode], { type: 'application/javascript' });
+                    const swUrl = URL.createObjectURL(blob);
+                    
+                    const registration = await navigator.serviceWorker.register(swUrl);
+                    console.log('[SW] Service Worker registered:', registration);
+                    
+                } catch (error) {
+                    console.error('[SW] Service Worker registration failed:', error);
+                }
+            }
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+
+        /**
+         * Setup all event listeners
+         */
+        function setupEventListeners() {
+            // Connect wallet button
+            document.getElementById('connectWallet').addEventListener('click', connectWallet);
+
+            // Post form submission
+            document.getElementById('postForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const postData = {
+                    title: document.getElementById('postTitle').value,
+                    content: document.getElementById('postContent').value,
+                    category: document.getElementById('postCategory').value,
+                    tags: document.getElementById('postTags').value
+                        .split(',')
+                        .map(tag => tag.trim())
+                        .filter(tag => tag)
+                };
+
+                try {
+                    await createPost(postData);
+                    e.target.reset();
+                } catch (error) {
+                    console.error('Error creating post:', error);
+                }
+            });
+
+            // Refresh button
+            document.getElementById('refreshBtn').addEventListener('click', async () => {
+                showToast('Refreshing posts...', 'info');
+                await loadPosts();
+            });
+
+            // Navigation menu
+            document.querySelectorAll('.nav-list li[data-view]').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const view = e.target.dataset.view;
+                    switchView(view);
+                    
+                    // Update active state
+                    document.querySelectorAll('.nav-list li').forEach(li => 
+                        li.classList.remove('active')
+                    );
+                    e.target.classList.add('active');
+                });
+            });
+
+            // Category filters
+            document.querySelectorAll('.nav-list li[data-filter]').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const filter = e.target.dataset.filter;
+                    renderPosts(filter);
+                });
+            });
+
+            // Online/offline detection
+            window.addEventListener('online', () => {
+                AppState.isOnline = true;
+                updateNetworkStatus();
+                showToast('Connection restored', 'success');
+            });
+
+            window.addEventListener('offline', () => {
+                AppState.isOnline = false;
+                updateNetworkStatus();
+                showToast('Working in offline mode', 'warning');
+            });
+        }
+
+        /**
+         * Switch between different views
+         */
+        function switchView(view) {
+            AppState.currentView = view;
+
+            // Hide all panels
+            document.querySelectorAll('.panel').forEach(panel => {
+                if (panel.id === 'composePanel') return; // Always show compose
+                panel.classList.add('hidden');
+            });
+
+            // Show appropriate panel
+            switch(view) {
+                case 'forum':
+                    document.getElementById('forumPanel').classList.remove('hidden');
+                    break;
+                case 'blockchain':
+                    document.getElementById('blockchainPanel').classList.remove('hidden');
+                    updateBlockchainLog();
+                    break;
+                case 'stats':
+                    updateStats();
+                    break;
+                // Add more views as needed
+            }
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        /**
+         * Initialize the application
+         */
+        async function initApp() {
+            try {
+                console.log('[App] Initializing CypherSpace...');
+
+                // Initialize database
+                await initDatabase();
+
+                // Load blockchain from IndexedDB
+                const savedBlocks = await getAllFromStore('blockchain');
+                if (savedBlocks.length > 0) {
+                    blockchain.chain = savedBlocks;
+                }
+
+                // Load posts
+                await loadPosts();
+
+                // Update blockchain log
+                await updateBlockchainLog();
+
+                // Setup event listeners
+                setupEventListeners();
+
+                // Initialize matrix background
+                initMatrixBackground();
+
+                // Register service worker
+                await registerServiceWorker();
+
+                // Update network status
+                updateNetworkStatus();
+
+                // Update stats
+                updateStats();
+
+                console.log('[App] Initialization complete');
+                showToast('CypherSpace initialized successfully!', 'success');
+
+            } catch (error) {
+                console.error('[App] Initialization error:', error);
+                showToast('Initialization error: ' + error.message, 'error');
+            }
+        }
+
+        // Start the application when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
+        // ============================================
+        // EXPORT FOR DEBUGGING (Development only)
+        // ============================================
+        
+        // Make certain functions available in console for debugging
+        window.CypherSpace = {
+            blockchain,
+            AppState,
+            createPost,
+            loadPosts,
+            connectWallet,
+            updateBlockchainLog,
+            createSampleData
+        };
+
+    </script>
+</body>
+</html>
