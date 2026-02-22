@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; background: #1e1e1e; color: #d4d4d4; height: 100vh; display: flex; flex-direction: column; }
+        .toolbar { background: #2d2d30; padding: 10px; display: flex; gap: 10px; align-items: center; }
+        .btn { background: #0e639c; color: white; border: none; padding: 8px 16px; cursor: pointer; border-radius: 3px; }
+        .btn:hover { background: #1177bb; }
+        input[type="text"] { background: #3c3c3c; border: 1px solid #555; color: #d4d4d4; padding: 6px; border-radius: 3px; }
+        .editor-container { flex: 1; position: relative; }
+        .editor { width: 100%; height: 100%; background: #1e1e1e; color: #d4d4d4; border: none; outline: none; padding: 20px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5; resize: none; }
+        .highlight-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 20px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; overflow: hidden; }
+        .keyword { color: #569cd6; }
+        .string { color: #ce9178; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .function { color: #dcdcaa; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <input type="text" id="filename" placeholder="filename.js" value="code.js">
+        <button class="btn" onclick="downloadCode()">Download</button>
+        <button class="btn" onclick="saveCode()">Save</button>
+        <button class="btn" onclick="loadCode()">Load</button>
+    </div>
+    <div class="editor-container">
+        <div class="highlight-layer" id="highlight"></div>
+        <textarea class="editor" id="editor" placeholder="Start coding..."></textarea>
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        const highlight = document.getElementById('highlight');
+        const filename = document.getElementById('filename');
+
+        const keywords = /\b(function|var|let|const|if|else|for|while|return|class|import|export|default|async|await|try|catch|finally|throw|new|this|super|extends|implements|interface|type|enum|namespace|module|declare|public|private|protected|static|readonly|abstract)\b/g;
+        const strings = /(["'`])(?:(?!\1)[^\\]|\\.)*?\1/g;
+        const comments = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm;
+        const numbers = /\b\d+(\.\d+)?\b/g;
+        const functions = /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g;
+
+        function highlightCode(code) {
+            return code
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(comments, '<span class="comment">$1</span>')
+                .replace(strings, '<span class="string">$1</span>')
+                .replace(keywords, '<span class="keyword">$1</span>')
+                .replace(numbers, '<span class="number">$1</span>')
+                .replace(functions, '<span class="function">$1</span>');
+        }
+
+        function updateHighlight() {
+            const code = editor.value;
+            highlight.innerHTML = highlightCode(code);
+            highlight.scrollTop = editor.scrollTop;
+            highlight.scrollLeft = editor.scrollLeft;
+        }
+
+        editor.addEventListener('input', updateHighlight);
+        editor.addEventListener('scroll', () => {
+            highlight.scrollTop = editor.scrollTop;
+            highlight.scrollLeft = editor.scrollLeft;
+        });
+
+        function downloadCode() {
+            const code = editor.value;
+            const fname = filename.value || 'code.js';
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fname;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function saveCode() {
+            const code = editor.value;
+            const fname = filename.value || 'code.js';
+            localStorage.setItem('savedCode', code);
+            localStorage.setItem('savedFilename', fname);
+        }
+
+        function loadCode() {
+            const saved = localStorage.getItem('savedCode');
+            const savedName = localStorage.getItem('savedFilename');
+            if (saved) {
+                editor.value = saved;
+                filename.value = savedName || 'code.js';
+                updateHighlight();
+            }
+        }
+
+        window.addEventListener('load', () => {
+            const saved = localStorage.getItem('savedCode');
+            if (saved) {
+                editor.value = saved;
+                filename.value = localStorage.getItem('savedFilename') || 'code.js';
+            }
+            updateHighlight();
+        });
+    </script>
+</body>
+</html>
