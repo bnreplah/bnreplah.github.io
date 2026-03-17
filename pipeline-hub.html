@@ -316,7 +316,7 @@ const CARDS = [
     category:    'CI/CD',
     icon:        '🔗',
     colorIdx:    0,
-    description: '///',
+    description: 'Azure Dev Ops Pipeline example for DotNet Builds, built of the verademo-net project',
     yamlLabel:   'azure-devops-dotnet.yaml',
   },
   {
@@ -325,7 +325,7 @@ const CARDS = [
     category:    'CI/CD',
     icon:        '⚡',
     colorIdx:    1,
-    description: '///',
+    description: 'A Maven Java Build that after the run allows for you to select which scan you would like to run on manual trigger in parallel',
     yamlLabel:   'bitbucket.yaml',
   },
   {
@@ -334,7 +334,7 @@ const CARDS = [
     category:    'SCM',
     icon:        '☁️',
     colorIdx:    5,
-    description: '///',
+    description: 'A Java General GitHub Actions Workflow Template',
     yamlLabel:   'github-actions-veracode.yaml',
   },
   {
@@ -343,8 +343,17 @@ const CARDS = [
     category:    'SCM',
     icon:        '🛢',
     colorIdx:    3,
-    description: '///',
+    description: 'A GitLab Pipelines that builds a Java Maven Application, and then runs Veracode Scans',
     yamlLabel:   'gitlab-java-veracode.yml',
+  },
+   {
+    id:          'card5',
+    name:        'BitBucket - JavaScript Simple Pipeline scan for Veracode Scan',
+    category:    'SCM',
+    icon:        '🛢',
+    colorIdx:    3,
+    description: 'A BitBucket pipeline that packages the javascript according to the Veracode guidelines and then runs a upload and scan using the packaged artifact.',
+    yamlLabel:   'bitbucket-javascript-reactvulna.yml',
   },
   
 ];
@@ -1549,12 +1558,29 @@ upload-and-scan:
   allow_failure: true
 </script>
 
-<!-- ── slack.yml ─────────────────────────────────────────────────
-<script type="text/yml" id="card5">
 
+<script type="text/yaml" id="card5">
+
+# You can specify a custom docker image from Docker Hub as your build environment.
+
+image: ubuntu
+
+pipelines:
+  default:
+      - step:
+          name: 'Building the build enviornment'
+          script:
+            - apt-get update
+            - apt-get install -y curl zip unzip npm openjdk-11-jdk
+            - npm install 
+            - zip -r reactvulna.zip ./
+            - curl -O https://downloads.veracode.com/securityscan/pipeline-scan-LATEST.zip
+            - unzip pipeline-scan-LATEST.zip pipeline-scan.jar
+            - java -jar pipeline-scan.jar -f reactvulna.zip -vid ${VERACODE_API_ID} -vkey ${VERACODE_API_KEY}  
+           
 </script>
 
--->
+
 <!-- Add more blocks here — remember to add a matching entry in CARDS too -->
 
 
