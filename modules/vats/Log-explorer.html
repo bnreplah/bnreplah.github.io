@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DAST Log Investigator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0a0e1a;color:#e1e8f0;overflow:hidden}
+.container{display:grid;grid-template-rows:auto 1fr;height:100vh}
+header{background:#141b2d;border-bottom:2px solid #1e2940;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+h1{font-size:20px;color:#60a5fa;font-weight:600}
+.stats{display:flex;gap:24px;font-size:13px}
+.stat-item{text-align:center}
+.stat-value{font-size:20px;font-weight:700;color:#34d399}
+.stat-label{color:#94a3b8;font-size:11px;margin-top:2px}
+main{display:flex;flex-direction:row;gap:0;height:calc(100vh - 70px);overflow:hidden}
+.resize-handle{width:4px;background:#1e2940;cursor:col-resize;transition:background .2s;flex-shrink:0}
+.resize-handle:hover{background:#34d399}
+.panel-container{display:flex;gap:0;overflow:hidden;width:100%}
+.panel{background:#141b2d;padding:16px;overflow-y:auto;border-right:1px solid #1e2940;flex:0 0 280px}
+.panel.left-panel{flex:0 0 280px}
+.panel.center-panel{flex:1 1 auto;background:#0f1621}
+.panel.right-panel{flex:0 0 380px;border-right:none}
+textarea{width:100%;min-height:100px;background:#0a0e1a;border:1px solid #1e2940;border-radius:6px;color:#e1e8f0;padding:10px;font-family:monospace;font-size:12px;resize:vertical}
+input[type=file],input[type=text],select{width:100%;background:#0a0e1a;border:1px solid #1e2940;border-radius:6px;color:#e1e8f0;padding:8px;font-size:12px;margin-top:4px}
+button{width:100%;background:#2563eb;color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer;margin-top:8px;font-size:13px}
+button:hover{background:#1d4ed8}
+button.secondary{background:#1e2940}
+button.secondary:hover{background:#2a3650}
+label{display:block;font-size:12px;color:#94a3b8;margin-top:12px;margin-bottom:4px}
+.timeline{background:#0a0e1a;border-radius:8px;padding:16px;margin-bottom:16px;min-height:200px}
+.timeline-item{background:#141b2d;border-left:3px solid #60a5fa;padding:12px;margin-bottom:8px;border-radius:4px;cursor:pointer;transition:all .2s}
+.timeline-item:hover{background:#1e2940;transform:translateX(4px)}
+.timeline-item.selected{background:#1e2940;border-left-color:#34d399;box-shadow:0 0 0 2px #34d39933}
+.timeline-item.alert{border-left-color:#f87171}
+.item-time{font-size:11px;color:#64748b;margin-bottom:4px}
+.item-method{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-right:8px}
+.method-GET{background:#06b6d422;color:#06b6d4}
+.method-POST{background:#f59e0b22;color:#f59e0b}
+.method-PUT{background:#8b5cf622;color:#8b5cf6}
+.method-DELETE{background:#ef444422;color:#ef4444}
+.item-path{font-size:13px;color:#e1e8f0;word-break:break-all}
+.item-status{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-top:4px}
+.status-2xx{background:#22c55e22;color:#22c55e}
+.status-3xx{background:#3b82f622;color:#3b82f6}
+.status-4xx{background:#f59e0b22;color:#f59e0b}
+.status-5xx{background:#ef444422;color:#ef4444}
+.detail-view{background:#0a0e1a;border-radius:8px;padding:16px}
+.detail-row{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #1e2940}
+.detail-label{color:#64748b;font-size:12px}
+.detail-value{color:#e1e8f0;font-size:12px;word-break:break-all;font-family:monospace;white-space:pre-wrap;overflow-wrap:break-word}
+.tag{display:inline-block;background:#1e2940;color:#60a5fa;padding:4px 10px;border-radius:12px;font-size:11px;margin:2px;cursor:pointer}
+.tag.threat{background:#7f1d1d;color:#fca5a5}
+.tag:hover{opacity:.8}
+.source-badge{display:inline-block;background:#0f172a;border:1px solid #1e2940;padding:4px 8px;border-radius:4px;font-size:10px;color:#94a3b8;margin-bottom:8px}
+.filter-active{background:#2563eb !important;color:#fff !important}
+.empty-state{text-align:center;padding:40px 20px;color:#64748b;font-size:14px}
+.chart{background:#0a0e1a;border-radius:8px;padding:12px;margin-bottom:16px;height:220px;position:relative}
+canvas{width:100%;height:100%;display:block}
+.scrollable{max-height:calc(100vh - 200px);overflow-y:auto}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:#0a0e1a}
+::-webkit-scrollbar-thumb{background:#1e2940;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#2a3650}
+</style>
+</head>
+<body>
+
+<div class="container">
+<header>
+<h1>🔍 DAST Log Investigator</h1>
+<div class="stats">
+<div class="stat-item"><div class="stat-value" id="totalLogs">0</div><div class="stat-label">Total Events</div></div>
+<div class="stat-item"><div class="stat-value" id="errorCount">0</div><div class="stat-label">Errors</div></div>
+<div class="stat-item"><div class="stat-value" id="threatCount">0</div><div class="stat-label">Threats</div></div>
+<div class="stat-item"><div class="stat-value" id="sourceCount">0</div><div class="stat-label">Sources</div></div>
+</div>
+</header>
+
+<main>
+<div class="panel left-panel">
+<h3>📁 Ingest Logs</h3>
+<label>Source Name</label>
+<input type="text" id="sourceName" placeholder="e.g., OWASP ZAP, Burp Suite">
+<label>Log Format</label>
+<select id="logFormat">
+<option value="auto">Auto-detect</option>
+<option value="json">JSON</option>
+<option value="csv">CSV</option>
+<option value="space">Space-delimited</option>
+<option value="clf">CLF</option>
+<option value="elf">ELF</option>
+<option value="custom">Custom App Logs</option>
+<option value="stitched">Stitched Logs (.stitched)</option>
+</select>
+<label>Paste Logs</label>
+<textarea id="logInput" placeholder="Paste your logs here..."></textarea>
+<input type="file" id="fileInput" accept=".log,.txt,.csv,.json,.stitched,.log.stitched">
+<button id="ingestBtn">📥 Ingest Logs</button>
+<button class="secondary" id="clearBtn">🗑️ Clear All</button>
+
+<h3 style="margin-top:24px">🔎 Filters</h3>
+<div class="filter-section">
+<label>Keywords</label>
+<input type="text" id="keywordFilter" placeholder="Search any field...">
+</div>
+<div class="filter-section">
+<label>Component</label>
+<input type="text" id="componentFilter" placeholder="Filter by component...">
+</div>
+<div class="filter-section">
+<label>Path</label>
+<input type="text" id="pathFilter" placeholder="Filter by path...">
+</div>
+<div class="filter-section">
+<label>HTTP Method</label>
+<select id="methodFilter">
+<option value="">All Methods</option>
+<option value="GET">GET</option>
+<option value="POST">POST</option>
+<option value="PUT">PUT</option>
+<option value="DELETE">DELETE</option>
+<option value="PATCH">PATCH</option>
+</select>
+</div>
+<div class="filter-section">
+<label>Status Code</label>
+<select id="statusFilter">
+<option value="">All Status</option>
+<option value="2">2xx Success</option>
+<option value="3">3xx Redirect</option>
+<option value="4">4xx Client Error</option>
+<option value="5">5xx Server Error</option>
+</select>
+</div>
+<div class="filter-section">
+<label>Source</label>
+<select id="sourceFilter">
+<option value="">All Sources</option>
+</select>
+</div>
+<div class="filter-section">
+<label>Time Range</label>
+<input type="text" id="timeRangeFilter" placeholder="Start time (HH:MM:SS)">
+<input type="text" id="timeRangeFilterEnd" placeholder="End time (HH:MM:SS)" style="margin-top:4px">
+</div>
+<div class="filter-section">
+<label>Tags</label>
+<div id="tagFilters"></div>
+</div>
+<button class="secondary" id="resetFilters">Reset Filters</button>
+</div>
+
+<div class="resize-handle" id="resizeHandle1"></div>
+
+<div class="panel center-panel">
+<h3>📊 Event Timeline</h3>
+<div class="chart">
+<canvas id="timelineChart"></canvas>
+</div>
+<div class="scrollable" id="timelineContainer"></div>
+</div>
+
+<div class="resize-handle" id="resizeHandle2"></div>
+
+<div class="panel right-panel">
+<h3>📋 Event Details</h3>
+<div id="detailContainer">
+<div class="empty-state">Select an event from the timeline to view details</div>
+</div>
+</div>
+</main>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+let allLogs=[];
+let filteredLogs=[];
+let selectedLog=null;
+let sources=new Set();
+let allTags=new Set();
+
+const $=id=>document.getElementById(id);
+
+// Initialize resize handles
+function initResizeHandles(){
+const handle1=$('resizeHandle1');
+const handle2=$('resizeHandle2');
+const main=document.querySelector('main');
+const leftPanel=main.querySelector('.left-panel');
+const centerPanel=main.querySelector('.center-panel');
+const rightPanel=main.querySelector('.right-panel');
+
+function createResizer(handle,isRightHandle){
+handle.addEventListener('mousedown',(e)=>{
+e.preventDefault();
+const startX=e.clientX;
+const leftWidth=leftPanel.offsetWidth;
+const centerWidth=centerPanel.offsetWidth;
+const rightWidth=rightPanel.offsetWidth;
+
+function onMouseMove(moveE){
+const deltaX=moveE.clientX-startX;
+if(!isRightHandle){
+const newLeftWidth=Math.max(200,leftWidth+deltaX);
+const newCenterWidth=centerWidth-deltaX;
+leftPanel.style.flex=`0 0 ${newLeftWidth}px`;
+centerPanel.style.flex=`0 1 ${newCenterWidth}px`;
+rightPanel.style.flex=`0 0 ${rightWidth}px`;
+}else{
+const newCenterWidth=Math.max(300,centerWidth+deltaX);
+const newRightWidth=rightWidth-deltaX;
+centerPanel.style.flex=`0 1 ${newCenterWidth}px`;
+rightPanel.style.flex=`0 0 ${Math.max(200,newRightWidth)}px`;
+}
+}
+
+function onMouseUp(){
+document.removeEventListener('mousemove',onMouseMove);
+document.removeEventListener('mouseup',onMouseUp);
+}
+
+document.addEventListener('mousemove',onMouseMove);
+document.addEventListener('mouseup',onMouseUp);
+});
+}
+
+createResizer(handle1,false);
+createResizer(handle2,true);
+}
+
+setTimeout(initResizeHandles,0);
+
+function parseLog(text,format,source){
+const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
+if(!lines.length)return[];
+
+if(format==='json')return parseJSON(lines,source);
+if(format==='csv')return parseCSV(lines,source);
+if(format==='space')return parseSpace(lines,source);
+if(format==='clf')return parseCLF(lines,source);
+if(format==='elf')return parseELF(lines,source);
+if(format==='custom')return parseCustomApp(lines,source);
+if(format==='stitched')return parseStitched(lines,source);
+
+if(lines[0].startsWith('{'))return parseJSON(lines,source);
+if(lines[0].includes(',')&&lines[0].toLowerCase().includes('time'))return parseCSV(lines,source);
+if(lines[0].match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\s+\w+\s+\[.*\]\s+\{/))return parseStitched(lines,source);
+if(lines[0].match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}/))return parseCustomApp(lines,source);
+if(lines[0].match(/^\d{4}-\d{2}-\d{2}T/))return parseSpace(lines,source);
+if(lines[0].match(/^\S+ \S+ \S+ \[.*\]/))return parseCLF(lines,source);
+if(lines[0].match(/^\d{4}-\d{2}-\d{2} \d{2}:/))return parseELF(lines,source);
+return parseSpace(lines,source);
+}
+
+function parseJSON(lines,source){
+return lines.map((l,i)=>{
+try{
+const obj=JSON.parse(l);
+return makeLog({
+timestamp:obj.timestamp||obj.time||obj.date||new Date().toISOString(),
+method:(obj.method||obj.verb||'GET').toUpperCase(),
+path:obj.path||obj.url||obj.uri||'/',
+status:String(obj.status||obj.statusCode||obj.code||200),
+source:source,
+raw:l,
+index:i,
+headers:obj.headers,
+body:obj.body||obj.request,
+response:obj.response
+});
+}catch(e){return null}
+}).filter(Boolean);
+}
+
+function parseCSV(lines,source){
+const headers=lines[0].toLowerCase().split(',').map(h=>h.trim());
+return lines.slice(1).map((l,i)=>{
+const vals=l.split(',').map(v=>v.trim());
+const get=key=>vals[headers.findIndex(h=>h.includes(key))]||'';
+return makeLog({
+timestamp:get('time')||get('date')||new Date().toISOString(),
+method:(get('method')||get('verb')||'GET').toUpperCase(),
+path:get('path')||get('url')||get('uri')||'/',
+status:get('status')||get('code')||'200',
+source:source,
+raw:l,
+index:i
+});
+}).filter(l=>l.timestamp);
+}
+
+function parseSpace(lines,source){
+return lines.map((l,i)=>{
+const parts=l.split(/\s+/);
+return makeLog({
+timestamp:parts[0]||new Date().toISOString(),
+method:(parts[1]||'GET').toUpperCase(),
+path:parts[2]||'/',
+status:parts[3]||'200',
+source:source,
+raw:l,
+index:i
+});
+});
+}
+
+function parseCLF(lines,source){
+return lines.map((l,i)=>{
+const m=l.match(/^(\S+) \S+ \S+ \[([\w:\/\s+-]+)\] "(\w+) ([^"]+).*?" (\d{3})/);
+if(!m)return null;
+const date=m[2].replace(/(\d{2})\/(\w{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2})/,(a,d,mo,y,h,mi,s)=>{
+const mos={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+return new Date(y,mos[mo],d,h,mi,s).toISOString();
+});
+return makeLog({
+timestamp:date,
+method:m[3].toUpperCase(),
+path:m[4],
+status:m[5],
+source:source,
+raw:l,
+index:i,
+ip:m[1]
+});
+}).filter(Boolean);
+}
+
+function parseELF(lines,source){
+return lines.map((l,i)=>{
+const parts=l.split(/\s+/);
+return makeLog({
+timestamp:parts[0]+' '+parts[1],
+method:(parts[3]||'GET').toUpperCase(),
+path:parts[4]||'/',
+status:parts[5]||'200',
+source:source,
+raw:l,
+index:i,
+ip:parts[2]
+});
+});
+}
+
+function parseCustomApp(lines,source){
+return lines.map((l,i)=>{
+const match=l.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})\s+(\w+)\s+\[([^\]]+)\]\s+\{([^}]+)\}\s+(.*)$/);
+if(!match)return null;
+
+const timestamp=match[1].replace(',','.');
+const level=match[2];
+const component=match[3];
+const thread=match[4];
+const message=match[5];
+
+const methodMatch=message.match(/\b(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\b/i);
+const method=methodMatch?methodMatch[1].toUpperCase():'INFO';
+
+const pathMatch=message.match(/(?:GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+([^\s]+)/i);
+const path=pathMatch?pathMatch[1]:message.substring(0,50);
+
+const statusMatch=message.match(/\b([2-5]\d{2})\b/);
+const status=statusMatch?statusMatch[1]:(level==='ERROR'?'500':'200');
+
+return makeLog({
+timestamp:timestamp,
+method:method,
+path:path,
+status:status,
+source:source,
+raw:l,
+index:i,
+level:level,
+component:component,
+thread:thread,
+message:message
+});
+}).filter(Boolean);
+}
+
+function parseStitched(lines,source){
+return lines.map((l,i)=>{
+const match=l.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),(\d{3})\s+(\S+)\s+\[([^\]]*)\]\s+\{([^}]*)\}\s+(.*)$/);
+if(!match)return null;
+
+const timestamp=match[1]+'.'+match[2];
+const level=match[3];
+const component=match[4]||'Unknown';
+const thread=match[5]||'';
+const message=match[6];
+
+const methodMatch=message.match(/\b(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\b/i);
+const method=methodMatch?methodMatch[1].toUpperCase():'INFO';
+
+const pathMatch=message.match(/(?:GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+([^\s]+)/i);
+const path=pathMatch?pathMatch[1]:message.substring(0,50);
+
+const statusMatch=message.match(/\b([2-5]\d{2})\b/);
+const status=statusMatch?statusMatch[1]:(level==='ERROR'?'500':'200');
+
+return makeLog({
+timestamp:timestamp,
+method:method,
+path:path,
+status:status,
+source:source,
+raw:l,
+index:i,
+level:level,
+component:component,
+thread:thread,
+message:message
+});
+}).filter(Boolean);
+}
+
+function makeLog(obj){
+const tags=detectThreats(obj.path);
+return{
+id:Date.now()+Math.random(),
+timestamp:obj.timestamp,
+method:obj.method,
+path:obj.path,
+status:obj.status,
+source:obj.source,
+raw:obj.raw,
+index:obj.index,
+tags:tags,
+time:new Date(obj.timestamp),
+ip:obj.ip,
+headers:obj.headers,
+body:obj.body,
+response:obj.response,
+level:obj.level,
+component:obj.component,
+thread:obj.thread,
+message:obj.message
+};
+}
+
+function detectThreats(path){
+const threats=[];
+if(/\.\.|%2e%2e|\.\.%2f|\.\.\//.test(path))threats.push('Path Traversal');
+if(/union.*select|select.*from|drop.*table|insert.*into/i.test(path))threats.push('SQL Injection');
+if(/<script|javascript:|onerror=|onload=/i.test(path))threats.push('XSS');
+if(/;.*\||&&|\$\(|`.*`/.test(path))threats.push('Command Injection');
+if(/etc\/passwd|\.ssh|\.aws|\.env/.test(path))threats.push('Sensitive File');
+return threats;
+}
+
+$('ingestBtn').onclick=()=>{
+const text=$('logInput').value.trim();
+if(!text){alert('Please paste logs');return}
+const format=$('logFormat').value;
+const source=$('sourceName').value.trim()||'Unknown Source';
+const logs=parseLog(text,format,source);
+if(!logs.length){alert('Could not parse logs. Check format.');return}
+allLogs.push(...logs);
+sources.add(source);
+logs.forEach(l=>l.tags.forEach(t=>allTags.add(t)));
+updateSourceFilter();
+updateTagFilters();
+applyFilters();
+$('logInput').value='';
+alert(`Ingested ${logs.length} events from ${source}`);
+};
+
+$('fileInput').onchange=e=>{
+const file=e.target.files[0];
+if(!file)return;
+const reader=new FileReader();
+reader.onload=ev=>{
+$('logInput').value=ev.target.result;
+if(!$('sourceName').value)$('sourceName').value=file.name;
+};
+reader.readAsText(file);
+};
+
+$('clearBtn').onclick=()=>{
+if(confirm('Clear all logs?')){
+allLogs=[];
+filteredLogs=[];
+selectedLog=null;
+sources.clear();
+allTags.clear();
+updateAll();
+}
+};
+
+function applyFilters(){
+let logs=allLogs.slice();
+const keyword=$('keywordFilter').value.toLowerCase();
+const component=$('componentFilter').value.toLowerCase();
+const path=$('pathFilter').value.toLowerCase();
+const method=$('methodFilter').value;
+const status=$('statusFilter').value;
+const source=$('sourceFilter').value;
+const timeStart=$('timeRangeFilter').value;
+const timeEnd=$('timeRangeFilterEnd').value;
+const activeTags=Array.from(document.querySelectorAll('.tag.filter-active')).map(t=>t.textContent);
+
+if(keyword)logs=logs.filter(l=>
+  l.path.toLowerCase().includes(keyword)||
+  l.method.toLowerCase().includes(keyword)||
+  (l.message&&l.message.toLowerCase().includes(keyword))||
+  (l.component&&l.component.toLowerCase().includes(keyword))||
+  l.source.toLowerCase().includes(keyword)
+);
+if(component)logs=logs.filter(l=>l.component&&l.component.toLowerCase().includes(component));
+if(path)logs=logs.filter(l=>l.path.toLowerCase().includes(path));
+if(method)logs=logs.filter(l=>l.method===method);
+if(status)logs=logs.filter(l=>l.status.startsWith(status));
+if(source)logs=logs.filter(l=>l.source===source);
+if(timeStart)logs=logs.filter(l=>{
+  const logTime=new Date(l.timestamp).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  return logTime>=timeStart;
+});
+if(timeEnd)logs=logs.filter(l=>{
+  const logTime=new Date(l.timestamp).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  return logTime<=timeEnd;
+});
+if(activeTags.length)logs=logs.filter(l=>activeTags.some(t=>l.tags.includes(t)));
+
+filteredLogs=logs.sort((a,b)=>b.time-a.time);
+updateTimeline();
+updateStats();
+updateChart();
+}
+
+$('keywordFilter').oninput=applyFilters;
+$('componentFilter').oninput=applyFilters;
+$('pathFilter').oninput=applyFilters;
+$('methodFilter').onchange=applyFilters;
+$('statusFilter').onchange=applyFilters;
+$('sourceFilter').onchange=applyFilters;
+$('timeRangeFilter').oninput=applyFilters;
+$('timeRangeFilterEnd').oninput=applyFilters;
+$('resetFilters').onclick=()=>{
+$('keywordFilter').value='';
+$('componentFilter').value='';
+$('pathFilter').value='';
+$('methodFilter').value='';
+$('statusFilter').value='';
+$('sourceFilter').value='';
+$('timeRangeFilter').value='';
+$('timeRangeFilterEnd').value='';
+document.querySelectorAll('.tag').forEach(t=>t.classList.remove('filter-active'));
+applyFilters();
+};
+
+function updateSourceFilter(){
+const sel=$('sourceFilter');
+sel.innerHTML='<option value="">All Sources</option>';
+sources.forEach(s=>{
+const opt=document.createElement('option');
+opt.value=s;
+opt.textContent=s;
+sel.appendChild(opt);
+});
+}
+
+function updateTagFilters(){
+const container=$('tagFilters');
+container.innerHTML='';
+allTags.forEach(tag=>{
+const span=document.createElement('span');
+span.className='tag threat';
+span.textContent=tag;
+span.onclick=()=>{
+span.classList.toggle('filter-active');
+applyFilters();
+};
+container.appendChild(span);
+});
+}
+
+function updateTimeline(){
+const container=$('timelineContainer');
+container.innerHTML='';
+if(!filteredLogs.length){
+container.innerHTML='<div class="empty-state">No logs match current filters</div>';
+return;
+}
+
+filteredLogs.forEach(log=>{
+const item=document.createElement('div');
+item.className='timeline-item';
+if(log.tags.length)item.classList.add('alert');
+if(selectedLog&&selectedLog.id===log.id)item.classList.add('selected');
+
+const time=document.createElement('div');
+time.className='item-time';
+time.textContent=new Date(log.timestamp).toLocaleString();
+
+const method=document.createElement('span');
+method.className=`item-method method-${log.method}`;
+method.textContent=log.method;
+
+const path=document.createElement('div');
+path.className='item-path';
+path.textContent=log.path;
+
+const status=document.createElement('span');
+status.className=`item-status status-${log.status.charAt(0)}xx`;
+status.textContent=log.status;
+
+const source=document.createElement('div');
+source.className='source-badge';
+source.textContent=log.source;
+
+item.appendChild(source);
+item.appendChild(time);
+item.appendChild(method);
+item.appendChild(path);
+item.appendChild(status);
+
+if(log.tags.length){
+log.tags.forEach(tag=>{
+const t=document.createElement('span');
+t.className='tag threat';
+t.textContent=tag;
+t.style.marginTop='4px';
+item.appendChild(t);
+});
+}
+
+item.onclick=()=>selectLog(log);
+container.appendChild(item);
+});
+}
+
+function selectLog(log){
+selectedLog=log;
+updateTimeline();
+updateDetail();
+}
+
+function updateDetail(){
+const container=$('detailContainer');
+if(!selectedLog){
+container.innerHTML='<div class="empty-state">Select an event</div>';
+return;
+}
+
+const detail=document.createElement('div');
+detail.className='detail-view';
+
+const addRow=(label,value)=>{
+const row=document.createElement('div');
+row.className='detail-row';
+const lbl=document.createElement('div');
+lbl.className='detail-label';
+lbl.textContent=label;
+const val=document.createElement('div');
+val.className='detail-value';
+val.textContent=value||'—';
+row.appendChild(lbl);
+row.appendChild(val);
+detail.appendChild(row);
+};
+
+addRow('Timestamp',new Date(selectedLog.timestamp).toLocaleString());
+addRow('Source',selectedLog.source);
+addRow('Method',selectedLog.method);
+addRow('Path',selectedLog.path);
+addRow('Status Code',selectedLog.status);
+if(selectedLog.level)addRow('Log Level',selectedLog.level);
+if(selectedLog.component)addRow('Component',selectedLog.component);
+if(selectedLog.thread)addRow('Thread',selectedLog.thread);
+if(selectedLog.ip)addRow('IP Address',selectedLog.ip);
+if(selectedLog.message)addRow('Message',selectedLog.message);
+if(selectedLog.headers)addRow('Headers',JSON.stringify(selectedLog.headers,null,2));
+if(selectedLog.body)addRow('Request Body',typeof selectedLog.body==='string'?selectedLog.body:JSON.stringify(selectedLog.body,null,2));
+if(selectedLog.response)addRow('Response',typeof selectedLog.response==='string'?selectedLog.response:JSON.stringify(selectedLog.response,null,2));
+
+if(selectedLog.tags.length){
+const row=document.createElement('div');
+row.className='detail-row';
+const lbl=document.createElement('div');
+lbl.className='detail-label';
+lbl.textContent='Threats';
+const val=document.createElement('div');
+val.className='detail-value';
+selectedLog.tags.forEach(tag=>{
+const t=document.createElement('span');
+t.className='tag threat';
+t.textContent=tag;
+val.appendChild(t);
+});
+row.appendChild(lbl);
+row.appendChild(val);
+detail.appendChild(row);
+}
+
+addRow('Raw Log',selectedLog.raw);
+
+container.innerHTML='';
+container.appendChild(detail);
+}
+
+function updateStats(){
+$('totalLogs').textContent=allLogs.length;
+const errors=allLogs.filter(l=>l.status.startsWith('4')||l.status.startsWith('5')).length;
+$('errorCount').textContent=errors;
+const threats=allLogs.filter(l=>l.tags.length>0).length;
+$('threatCount').textContent=threats;
+$('sourceCount').textContent=sources.size;
+}
+
+function updateChart(){
+const canvas=$('timelineChart');
+const ctx=canvas.getContext('2d');
+canvas.width=canvas.offsetWidth;
+canvas.height=canvas.offsetHeight;
+
+if(!allLogs.length){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+return;
+}
+
+const logs=allLogs.slice().sort((a,b)=>a.time-b.time);
+const padding=40;
+const width=canvas.width-padding*2;
+const height=canvas.height-padding*2;
+
+const minTime=logs[0].time.getTime();
+const maxTime=logs[logs.length-1].time.getTime();
+const timeRange=maxTime-minTime||1;
+
+// Group by status for color coding
+const statusGroups={
+  '2xx':[],
+  '3xx':[],
+  '4xx':[],
+  '5xx':[],
+  'other':[]
+};
+
+logs.forEach((log,i)=>{
+const x=padding+(log.time.getTime()-minTime)/timeRange*width;
+const y=padding+height/2;
+const statusType=log.status.startsWith('2')?'2xx':
+                 log.status.startsWith('3')?'3xx':
+                 log.status.startsWith('4')?'4xx':
+                 log.status.startsWith('5')?'5xx':'other';
+statusGroups[statusType].push({log,x,y,index:i});
+});
+
+function drawChart(highlightLog=null){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+// Draw grid lines
+ctx.strokeStyle='#1e2940';
+ctx.lineWidth=1;
+for(let i=0;i<=4;i++){
+const y=padding+i*(height/4);
+ctx.beginPath();
+ctx.moveTo(padding,y);
+ctx.lineTo(canvas.width-padding,y);
+ctx.stroke();
+}
+
+// Draw time axis
+ctx.strokeStyle='#1e2940';
+ctx.lineWidth=2;
+ctx.beginPath();
+ctx.moveTo(padding,padding+height/2);
+ctx.lineTo(canvas.width-padding,padding+height/2);
+ctx.stroke();
+
+// Draw all points by status group
+const colors={'2xx':'#22c55e','3xx':'#3b82f6','4xx':'#f59e0b','5xx':'#ef4444','other':'#64748b'};
+const yOffsets={'2xx':-40,'3xx':-20,'4xx':0,'5xx':20,'other':40};
+
+Object.entries(statusGroups).forEach(([status,items])=>{
+items.forEach(({log,x,index})=>{
+const y=padding+height/2+yOffsets[status];
+const isHighlight=highlightLog&&highlightLog.id===log.id;
+const isSelected=selectedLog&&selectedLog.id===log.id;
+const isThreat=log.tags.length>0;
+
+// Draw point
+if(isSelected){
+ctx.fillStyle='#f59e0b';
+ctx.beginPath();
+ctx.arc(x,y,6,0,Math.PI*2);
+ctx.fill();
+ctx.strokeStyle='#fff';
+ctx.lineWidth=2;
+ctx.stroke();
+}else if(isHighlight){
+ctx.fillStyle='#34d399';
+ctx.beginPath();
+ctx.arc(x,y,5,0,Math.PI*2);
+ctx.fill();
+}else if(isThreat){
+ctx.fillStyle='#ef4444';
+ctx.beginPath();
+ctx.arc(x,y,4,0,Math.PI*2);
+ctx.fill();
+ctx.strokeStyle='#7f1d1d';
+ctx.lineWidth=1;
+ctx.stroke();
+}else{
+ctx.fillStyle=colors[status];
+ctx.globalAlpha=0.7;
+ctx.beginPath();
+ctx.arc(x,y,3,0,Math.PI*2);
+ctx.fill();
+ctx.globalAlpha=1;
+}
+
+// Show tooltip on highlight
+if(isHighlight){
+ctx.fillStyle='#141b2d';
+ctx.strokeStyle='#34d399';
+ctx.lineWidth=2;
+const time=log.time.toLocaleTimeString();
+const tooltipText=`${log.method} ${log.path.substring(0,30)} - ${log.status}`;
+ctx.font='11px monospace';
+const textWidth=ctx.measureText(tooltipText).width;
+const tooltipX=Math.min(x-textWidth/2-8,canvas.width-textWidth-20);
+const tooltipY=y-45;
+ctx.fillRect(tooltipX,tooltipY,textWidth+16,32);
+ctx.strokeRect(tooltipX,tooltipY,textWidth+16,32);
+ctx.fillStyle='#e1e8f0';
+ctx.textAlign='left';
+ctx.fillText(time,tooltipX+8,tooltipY+14);
+ctx.fillText(tooltipText,tooltipX+8,tooltipY+26);
+}
+});
+});
+
+// Draw time labels
+ctx.fillStyle='#64748b';
+ctx.font='10px system-ui';
+ctx.textAlign='center';
+const timeSteps=5;
+for(let i=0;i<=timeSteps;i++){
+const x=padding+i*(width/timeSteps);
+const time=new Date(minTime+i*(timeRange/timeSteps));
+const label=time.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+ctx.fillText(label,x,canvas.height-padding+15);
+}
+
+// Draw status legend
+ctx.textAlign='left';
+ctx.font='10px system-ui';
+let legendX=padding;
+const legendY=padding-15;
+Object.entries(colors).forEach(([status,color])=>{
+ctx.fillStyle=color;
+ctx.beginPath();
+ctx.arc(legendX,legendY,3,0,Math.PI*2);
+ctx.fill();
+ctx.fillStyle='#94a3b8';
+ctx.fillText(status,legendX+8,legendY+3);
+legendX+=50;
+});
+}
+
+drawChart();
+
+// Interaction
+let allPoints=[];
+Object.values(statusGroups).forEach(items=>{
+items.forEach(({log,x,y})=>{
+allPoints.push({log,x,y});
+});
+});
+
+canvas.onmousemove=e=>{
+const rect=canvas.getBoundingClientRect();
+const mouseX=e.clientX-rect.left;
+const mouseY=e.clientY-rect.top;
+
+let closest=null;
+let minDist=Infinity;
+
+allPoints.forEach(({log,x,y})=>{
+const dist=Math.sqrt((mouseX-x)**2+(mouseY-y)**2);
+if(dist<15&&dist<minDist){
+minDist=dist;
+closest=log;
+}
+});
+
+if(closest){
+canvas.style.cursor='pointer';
+drawChart(closest);
+}else{
+canvas.style.cursor='default';
+drawChart();
+}
+};
+
+canvas.onmouseleave=()=>{
+drawChart();
+canvas.style.cursor='default';
+};
+
+canvas.onclick=e=>{
+const rect=canvas.getBoundingClientRect();
+const mouseX=e.clientX-rect.left;
+const mouseY=e.clientY-rect.top;
+
+let closest=null;
+let minDist=Infinity;
+
+allPoints.forEach(({log,x,y})=>{
+const dist=Math.sqrt((mouseX-x)**2+(mouseY-y)**2);
+if(dist<15&&dist<minDist){
+minDist=dist;
+closest=log;
+}
+});
+
+if(closest){
+selectLog(closest);
+const container=$('timelineContainer');
+container.scrollTop=0;
+}
+};
+}
+
+function updateAll(){
+updateSourceFilter();
+updateTagFilters();
+applyFilters();
+updateStats();
+updateDetail();
+}
+
+updateAll();
+})();
+</script>
+</body>
+</html>
