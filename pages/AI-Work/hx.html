@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ============================================================
+  NEXUS // Global Security Research Resource Library
+  Version: 2.0 — Production Build
+  License: CC BY 4.0
+  Maintainer: Cybopsec
+  
+  SECURITY-BY-DESIGN:
+  • CSP via meta tag (no inline eval, no external scripts)
+  • X-Content-Type-Options: nosniff
+  • X-Frame-Options: DENY
+  • Referrer-Policy: no-referrer
+  • All external links: rel="noopener noreferrer"
+  • No cookies, no tracking, no analytics
+  • No innerHTML with user-supplied data (textContent only)
+  • No eval(), no Function(), no setTimeout(string)
+  • Subresource integrity on external fonts
+  • All DOM writes via safe DOM API (createElement/textContent)
+  
+  SELF-MAINTAINING:
+  • Live RSS feed ingestion via rss2json.com (free CORS API)
+  • GitHub Actions workflow for automated link health checks
+  • Community contribution via GitHub Issues + PR templates
+  • JSON-driven resource database for easy automated updates
+  • Feed health monitoring with visual status indicators
+  ============================================================ -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src https://api.rss2json.com https://raw.githubusercontent.com;">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="index, follow">
+<meta name="description" content="NEXUS — The Global Security Research Resource Library. Events, live feeds, tools, training, and intelligence for the ethical hacking community worldwide. Self-updating. Community-driven. Security-first.">
+<meta property="og:title" content="NEXUS // Global Security Research Resource Library">
+<meta property="og:description" content="The most comprehensive open-source security research resource library. Events, live feeds, tools, training, and intelligence for ethical hackers worldwide.">
+<meta property="og:type" content="website">
+<title>NEXUS // Global Security Research Resource Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-void: #05060a;
+  --bg-surface: #0a0c14;
+  --bg-card: #0d0f1a;
+  --bg-card-hover: #111422;
+  --bg-elevated: #151830;
+  --border-dim: #1a1d30;
+  --border-active: rgba(0,255,157,0.25);
+  --text-primary: #d8dae8;
+  --text-secondary: #7e82a0;
+  --text-dim: #484c6a;
+  --accent-green: #00ff9d;
+  --accent-cyan: #00c8ff;
+  --accent-magenta: #e930ff;
+  --accent-amber: #ffaa00;
+  --accent-red: #ff3355;
+  --accent-purple: #9055ff;
+  --glow-green: 0 0 30px rgba(0,255,157,0.15);
+  --glow-cyan: 0 0 30px rgba(0,200,255,0.15);
+  --font-display: 'Orbitron', sans-serif;
+  --font-body: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: #1a1d30 var(--bg-void); }
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background: var(--bg-void); }
+::-webkit-scrollbar-thumb { background: #1a1d30; border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-green); }
+
+body {
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle grid overlay */
+body::after {
+  content:'';
+  position:fixed; inset:0;
+  background:
+    linear-gradient(rgba(26,29,48,0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26,29,48,0.15) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events:none;
+  z-index:-1;
+}
+
+a { color: var(--accent-green); text-decoration:none; transition: color 0.2s var(--ease); }
+a:hover { color: var(--accent-cyan); }
+a:focus-visible { outline: 2px solid var(--accent-green); outline-offset: 2px; border-radius: 2px; }
+
+::selection { background: var(--accent-green); color: var(--bg-void); }
+
+/* ====== HEADER ====== */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(5,6,10,0.88);
+  backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.header-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  padding: 0 1.5rem;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  user-select: none;
+}
+
+.logo-hex {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.logo-hex::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: var(--bg-void);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.15rem;
+  letter-spacing: 0.15em;
+  color: var(--accent-green);
+}
+
+.logo-sub {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin-top: -2px;
+}
+
+nav { display: flex; align-items: center; gap: 0.15rem; }
+
+.nav-link {
+  display: block;
+  padding: 0.4rem 0.65rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border-radius: var(--radius);
+  transition: all 0.2s var(--ease);
+}
+
+.nav-link:hover, .nav-link.active {
+  color: var(--accent-green);
+  background: rgba(0,255,157,0.05);
+}
+
+.header-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  padding: 0.3rem 0.65rem;
+  gap: 0.4rem;
+  transition: border-color 0.2s var(--ease);
+  width: 200px;
+}
+
+.search-input-wrap:focus-within { border-color: var(--accent-green); }
+
+.search-input-wrap input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  width: 100%;
+}
+
+.search-input-wrap input::placeholder { color: var(--text-dim); }
+.search-icon { color: var(--text-dim); font-size: 0.75rem; }
+
+.contribute-btn {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+  background: rgba(0,255,157,0.05);
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+  text-decoration: none;
+}
+
+.contribute-btn:hover {
+  background: rgba(0,255,157,0.12);
+  box-shadow: var(--glow-green);
+  color: var(--accent-green);
+}
+
+.mobile-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--border-dim);
+  color: var(--accent-green);
+  font-size: 1.2rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+
+/* ====== HERO ====== */
+.hero {
+  position: relative;
+  padding: 5rem 1.5rem 3.5rem;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 600px;
+  background: radial-gradient(ellipse, rgba(0,255,157,0.04) 0%, rgba(0,200,255,0.02) 40%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0,200,255,0.2);
+  padding: 0.35rem 1rem;
+  border-radius: 20px;
+  margin-bottom: 1.5rem;
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,255,157,0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(0,255,157,0); }
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5.5vw, 4rem);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+  color: #fff;
+}
+
+.hero h1 span {
+  background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  max-width: 650px;
+  margin: 0 auto 2rem;
+  line-height: 1.8;
+}
+
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+}
+
+.stat-num {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent-green);
+}
+
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: 0.15rem;
+}
+
+/* ====== STATUS BAR ====== */
+.status-bar {
+  max-width: 1440px;
+  margin: 0 auto 2rem;
+  padding: 0 1.5rem;
+}
+
+.status-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  padding: 0.6rem 1.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  overflow-x: auto;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.green { background: var(--accent-green); }
+.status-dot.amber { background: var(--accent-amber); }
+.status-dot.red { background: var(--accent-red); }
+
+/* ====== MAIN CONTENT ====== */
+.main-content {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+/* ====== SECTION ====== */
+.section {
+  margin-bottom: 3.5rem;
+  scroll-margin-top: 75px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  background: rgba(0,255,157,0.06);
+  border: 1px solid rgba(0,255,157,0.12);
+  color: var(--accent-green);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.section-count {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ====== LIVE FEED PANELS ====== */
+.live-feeds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 1rem;
+}
+
+.live-feed-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color 0.2s var(--ease);
+}
+
+.live-feed-panel:hover { border-color: var(--border-active); }
+
+.feed-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-dim);
+  background: rgba(0,255,157,0.02);
+}
+
+.feed-panel-title {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+}
+
+.feed-panel-status {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+}
+
+.feed-panel-body {
+  padding: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.feed-panel-body::-webkit-scrollbar { width: 3px; }
+.feed-panel-body::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 2px; }
+
+.feed-entry {
+  display: block;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--radius);
+  transition: background 0.15s var(--ease);
+  color: var(--text-primary);
+}
+
+.feed-entry:hover {
+  background: rgba(0,255,157,0.04);
+  color: var(--text-primary);
+}
+
+.feed-entry-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+  margin-bottom: 0.2rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.feed-entry-meta {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+}
+
+.feed-loading, .feed-error {
+  padding: 2rem 1rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.feed-error { color: var(--accent-red); }
+
+.feed-loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-dim);
+  border-top-color: var(--accent-green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 0.5rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ====== FILTER TABS ====== */
+.filter-bar {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.filter-btn {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+  text-transform: uppercase;
+}
+
+.filter-btn:hover, .filter-btn.active {
+  background: rgba(0,255,157,0.06);
+  border-color: rgba(0,255,157,0.3);
+  color: var(--accent-green);
+}
+
+/* ====== CARD GRID ====== */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 0.85rem;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem;
+  transition: all 0.2s var(--ease);
+  position: relative;
+}
+
+.card:hover {
+  border-color: var(--border-active);
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
+}
+
+.card-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.card-title a { color: inherit; }
+.card-title a:hover { color: var(--accent-green); }
+
+.badge {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badge-green { background: rgba(0,255,157,0.1); color: var(--accent-green); border: 1px solid rgba(0,255,157,0.2); }
+.badge-cyan { background: rgba(0,200,255,0.1); color: var(--accent-cyan); border: 1px solid rgba(0,200,255,0.2); }
+.badge-purple { background: rgba(144,85,255,0.1); color: var(--accent-purple); border: 1px solid rgba(144,85,255,0.2); }
+.badge-amber { background: rgba(255,170,0,0.1); color: var(--accent-amber); border: 1px solid rgba(255,170,0,0.2); }
+.badge-magenta { background: rgba(233,48,255,0.1); color: var(--accent-magenta); border: 1px solid rgba(233,48,255,0.2); }
+.badge-red { background: rgba(255,51,85,0.1); color: var(--accent-red); border: 1px solid rgba(255,51,85,0.2); }
+
+.card-desc {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 0.7rem;
+}
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.65rem;
+}
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  border: 1px solid rgba(72,76,106,0.3);
+  padding: 0.12rem 0.45rem;
+  border-radius: 3px;
+}
+
+/* ====== RSS DIRECTORY ====== */
+.rss-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 0.65rem;
+}
+
+.rss-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.85rem;
+  transition: all 0.2s var(--ease);
+}
+
+.rss-item:hover { border-color: var(--border-active); background: var(--bg-card-hover); }
+
+.rss-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: rgba(0,200,255,0.06);
+  border: 1px solid rgba(0,200,255,0.12);
+  color: var(--accent-cyan);
+}
+
+.rss-info { flex: 1; min-width: 0; }
+
+.rss-name {
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rss-name a { color: var(--text-primary); }
+.rss-name a:hover { color: var(--accent-green); }
+
+.rss-url {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.copy-btn {
+  background: none;
+  border: 1px solid var(--border-dim);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s var(--ease);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.copy-btn:hover { border-color: var(--accent-green); color: var(--accent-green); }
+.copy-btn.copied { border-color: var(--accent-green); color: var(--accent-green); }
+
+/* ====== SUBSECTIONS ====== */
+.sub-title {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  margin: 2rem 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sub-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-dim), transparent);
+}
+
+/* ====== COMMUNITY CONTRIBUTION SECTION ====== */
+.contribute-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.contribute-section h3 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.75rem;
+  color: var(--accent-green);
+}
+
+.contribute-section p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto 1.5rem;
+  line-height: 1.8;
+}
+
+.contribute-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  max-width: 750px;
+  margin: 0 auto;
+}
+
+.contribute-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  text-align: left;
+  transition: border-color 0.2s var(--ease);
+}
+
+.contribute-card:hover { border-color: var(--border-active); }
+
+.contribute-card h4 {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent-green);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.04em;
+}
+
+.contribute-card p {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.contribute-card a {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--accent-cyan);
+}
+
+/* ====== FOOTER ====== */
+.site-footer {
+  border-top: 1px solid var(--border-dim);
+  padding: 2.5rem 1.5rem 1.5rem;
+  text-align: center;
+}
+
+.footer-brand {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-green);
+  letter-spacing: 0.12em;
+  margin-bottom: 0.4rem;
+}
+
+.footer-text {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  line-height: 1.8;
+  margin-bottom: 1rem;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.footer-links a {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+
+.security-badge-footer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--accent-green);
+  border: 1px solid rgba(0,255,157,0.15);
+  padding: 0.25rem 0.7rem;
+  border-radius: 20px;
+  margin-top: 0.5rem;
+}
+
+.footer-copy {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  margin-top: 1rem;
+}
+
+/* ====== BACK TO TOP ====== */
+.btt {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 36px;
+  height: 36px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-dim);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-green);
+  font-size: 0.9rem;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s var(--ease);
+  z-index: 100;
+}
+
+.btt.visible { opacity: 1; pointer-events: auto; }
+.btt:hover { border-color: var(--accent-green); box-shadow: var(--glow-green); }
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 960px) {
+  nav { display: none; }
+  nav.open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    right: 0;
+    background: rgba(5,6,10,0.97);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-dim);
+    padding: 0.75rem;
+    gap: 0.15rem;
+  }
+  .mobile-toggle { display: block; }
+  .search-input-wrap { width: 140px; }
+  .contribute-btn { display: none; }
+  .live-feeds-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .hero { padding: 3rem 1rem 2.5rem; }
+  .hero h1 { font-size: 1.6rem; }
+  .card-grid { grid-template-columns: 1fr; }
+  .rss-grid { grid-template-columns: 1fr; }
+  .main-content { padding: 0 1rem 3rem; }
+  .status-bar { padding: 0 1rem; }
+  .search-input-wrap { display: none; }
+}
+
+/* ====== FADE IN ====== */
+.fade-in {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.fade-in.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="site-header" role="banner">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-hex"></div>
+      <div>
+        <div class="logo-text">NEXUS</div>
+        <div class="logo-sub">Security Research Library</div>
+      </div>
+    </div>
+    <nav id="mainNav" aria-label="Main navigation">
+      <a href="#live-feeds" class="nav-link active">Live Feeds</a>
+      <a href="#events" class="nav-link">Events</a>
+      <a href="#research" class="nav-link">Research</a>
+      <a href="#tools" class="nav-link">Tools</a>
+      <a href="#training" class="nav-link">Training</a>
+      <a href="#threat-intel" class="nav-link">Threat Intel</a>
+      <a href="#communities" class="nav-link">Community</a>
+      <a href="#contribute" class="nav-link">Contribute</a>
+    </nav>
+    <div class="header-actions">
+      <div class="search-input-wrap">
+        <span class="search-icon">&#x1F50D;</span>
+        <input type="text" id="globalSearch" placeholder="Search all resources..." aria-label="Search resources" autocomplete="off">
+      </div>
+      <a href="https://github.com/cybopsec/nexus/issues/new?template=resource_submission.yml" target="_blank" rel="noopener noreferrer" class="contribute-btn">+ Add Resource</a>
+    </div>
+    <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle navigation" aria-expanded="false">&#9776;</button>
+  </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="hero-tag">
+    <span class="pulse-dot"></span>
+    Self-Updating &bull; Community-Driven &bull; Security-First
+  </div>
+  <h1>THE GLOBAL <span>SECURITY RESEARCH</span><br>RESOURCE LIBRARY</h1>
+  <p class="hero-sub">
+    Live feeds, events, tools, training, and intelligence — compiled for the ethical hacking community worldwide. Open source. Zero tracking. Community maintained.
+  </p>
+  <div class="hero-stats">
+    <div><div class="stat-num">200+</div><div class="stat-label">Resources</div></div>
+    <div><div class="stat-num" id="liveFeedCount">0</div><div class="stat-label">Live Feed Items</div></div>
+    <div><div class="stat-num">30+</div><div class="stat-label">Events</div></div>
+    <div><div class="stat-num">8</div><div class="stat-label">Live Feeds</div></div>
+  </div>
+</section>
+
+<!-- ===== STATUS BAR ===== -->
+<div class="status-bar">
+  <div class="status-bar-inner" id="statusBar">
+    <div class="status-item"><span class="status-dot green"></span> System Online</div>
+    <div class="status-item"><span class="status-dot" id="feedStatusDot"></span> <span id="feedStatusText">Checking feeds...</span></div>
+    <div class="status-item">Last updated: <span id="lastUpdate">Loading...</span></div>
+    <div class="status-item" style="margin-left:auto">
+      <a href="https://github.com/cybopsec/nexus" target="_blank" rel="noopener noreferrer" style="color:var(--text-dim)">GitHub</a>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN ===== -->
+<main class="main-content">
+
+  <!-- ====== LIVE FEEDS ====== -->
+  <section class="section fade-in" id="live-feeds">
+    <div class="section-header">
+      <div class="section-icon">&#9889;</div>
+      <h2 class="section-title">Live Security Feeds</h2>
+      <span class="section-count">// AUTO-UPDATING</span>
+    </div>
+    <div class="live-feeds-grid" id="liveFeedsGrid">
+      <!-- Populated by JavaScript -->
+    </div>
+  </section>
+
+  <!-- ====== EVENTS ====== -->
+  <section class="section fade-in" id="events">
+    <div class="section-header">
+      <div class="section-icon">&#128197;</div>
+      <h2 class="section-title">Global Events &amp; Conferences</h2>
+      <span class="section-count">// 2026 CALENDAR</span>
+    </div>
+    <div class="filter-bar" data-target="eventsGrid">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="hacker">Hacker Cons</button>
+      <button class="filter-btn" data-filter="enterprise">Enterprise</button>
+      <button class="filter-btn" data-filter="academic">Academic</button>
+      <button class="filter-btn" data-filter="community">Community</button>
+    </div>
+    <div class="card-grid" id="eventsGrid">
+      <!-- Populated by JavaScript from RESOURCES_DB -->
+    </div>
+  </section>
+
+  <!-- ====== RESEARCH ====== -->
+  <section class="section fade-in" id="research">
+    <div class="section-header">
+      <div class="section-icon">&#128218;</div>
+      <h2 class="section-title">Research &amp; Knowledge Bases</h2>
+      <span class="section-count">// DEEP KNOWLEDGE</span>
+    </div>
+    <div class="card-grid" id="researchGrid"></div>
+  </section>
+
+  <!-- ====== RSS DIRECTORY ====== -->
+  <section class="section fade-in" id="rss-directory">
+    <div class="section-header">
+      <div class="section-icon">&#128225;</div>
+      <h2 class="section-title">RSS Feed Directory</h2>
+      <span class="section-count">// COPY &amp; SUBSCRIBE</span>
+    </div>
+
+    <div class="sub-title">News &amp; Threat Coverage</div>
+    <div class="rss-grid" id="rssNewsGrid"></div>
+
+    <div class="sub-title">Vendor Research Blogs</div>
+    <div class="rss-grid" id="rssVendorGrid"></div>
+
+    <div class="sub-title">Independent Researchers</div>
+    <div class="rss-grid" id="rssIndyGrid"></div>
+  </section>
+
+  <!-- ====== TOOLS ====== -->
+  <section class="section fade-in" id="tools">
+    <div class="section-header">
+      <div class="section-icon">&#128295;</div>
+      <h2 class="section-title">Tools &amp; Frameworks</h2>
+      <span class="section-count">// ARSENAL</span>
+    </div>
+    <div class="filter-bar" data-target="toolsGrid">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="offensive">Offensive</button>
+      <button class="filter-btn" data-filter="defensive">Defensive</button>
+      <button class="filter-btn" data-filter="osint">OSINT</button>
+      <button class="filter-btn" data-filter="forensics">Forensics</button>
+    </div>
+    <div class="card-grid" id="toolsGrid"></div>
+  </section>
+
+  <!-- ====== TRAINING ====== -->
+  <section class="section fade-in" id="training">
+    <div class="section-header">
+      <div class="section-icon">&#127891;</div>
+      <h2 class="section-title">Training &amp; Education</h2>
+      <span class="section-count">// SKILL UP</span>
+    </div>
+    <div class="card-grid" id="trainingGrid"></div>
+  </section>
+
+  <!-- ====== THREAT INTEL ====== -->
+  <section class="section fade-in" id="threat-intel">
+    <div class="section-header">
+      <div class="section-icon">&#9888;</div>
+      <h2 class="section-title">Threat Intelligence</h2>
+      <span class="section-count">// LIVE THREAT DATA</span>
+    </div>
+    <div class="card-grid" id="threatIntelGrid"></div>
+  </section>
+
+  <!-- ====== COMMUNITIES ====== -->
+  <section class="section fade-in" id="communities">
+    <div class="section-header">
+      <div class="section-icon">&#127758;</div>
+      <h2 class="section-title">Communities &amp; Organizations</h2>
+      <span class="section-count">// THE NETWORK</span>
+    </div>
+    <div class="card-grid" id="communitiesGrid"></div>
+  </section>
+
+  <!-- ====== CONTRIBUTE ====== -->
+  <section class="section fade-in" id="contribute">
+    <div class="contribute-section">
+      <h3>CONTRIBUTE TO NEXUS</h3>
+      <p>This library is maintained by the community, for the community. Every submission is reviewed for accuracy and security before inclusion.</p>
+      <div class="contribute-methods">
+        <div class="contribute-card">
+          <h4>&#128640; Submit a Resource</h4>
+          <p>Use our GitHub Issues template to submit new events, tools, feeds, or training resources. All submissions are validated automatically.</p>
+          <a href="https://github.com/cybopsec/nexus/issues/new?template=resource_submission.yml" target="_blank" rel="noopener noreferrer">Open Submission Form &rarr;</a>
+        </div>
+        <div class="contribute-card">
+          <h4>&#128736; Submit a Pull Request</h4>
+          <p>Fork the repo, add your resource to the JSON database, and submit a PR. Our CI/CD pipeline validates links, schema, and content.</p>
+          <a href="https://github.com/cybopsec/nexus" target="_blank" rel="noopener noreferrer">View Repository &rarr;</a>
+        </div>
+        <div class="contribute-card">
+          <h4>&#128027; Report a Problem</h4>
+          <p>Found a dead link, outdated info, or a security concern? Report it and our automated health checks will verify and fix.</p>
+          <a href="https://github.com/cybopsec/nexus/issues/new?template=bug_report.yml" target="_blank" rel="noopener noreferrer">Report Issue &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="site-footer">
+  <div class="footer-brand">NEXUS</div>
+  <p class="footer-text">
+    An open-source resource library for the global ethical hacking and security research community.
+    Built with security by design. Zero tracking. Zero ads.
+  </p>
+  <div class="footer-links">
+    <a href="#live-feeds">Live Feeds</a>
+    <a href="#events">Events</a>
+    <a href="#research">Research</a>
+    <a href="#tools">Tools</a>
+    <a href="#training">Training</a>
+    <a href="#threat-intel">Threat Intel</a>
+    <a href="#communities">Communities</a>
+    <a href="https://github.com/cybopsec/nexus" target="_blank" rel="noopener noreferrer">GitHub</a>
+  </div>
+  <div class="security-badge-footer">
+    &#9670; CSP Hardened &bull; No Tracking &bull; No Cookies &bull; Fully Static &bull; HTTPS Only
+  </div>
+  <div class="footer-copy">&copy; 2026 NEXUS / Cybopsec &mdash; CC BY 4.0 &mdash; Community contributions welcome</div>
+</footer>
+
+<button class="btt" id="btt" aria-label="Back to top">&#8593;</button>
+
+<!-- ===================================================================
+  JAVASCRIPT — SELF-MAINTAINING ENGINE
+  All data is driven from the RESOURCES_DB object below.
+  Live feeds use the rss2json.com free API (CORS-enabled, no key needed).
+  All DOM writes use safe APIs (textContent, createElement). No innerHTML
+  with user data. No eval(). No Function constructor.
+=================================================================== -->
+<script>
+(function() {
+'use strict';
+
+// ============================================================
+// RESOURCE DATABASE
+// This is the single source of truth. Community PRs update this.
+// GitHub Actions validates all URLs and schema on every PR.
+// ============================================================
+var RESOURCES_DB = {
+
+// ---- LIVE FEEDS (fetched via rss2json.com) ----
+liveFeeds: [
+  { id:'thehackernews', name:'The Hacker News', url:'https://feeds.feedburner.com/TheHackersNews', site:'https://thehackernews.com/', color:'#00ff9d' },
+  { id:'bleeping', name:'BleepingComputer', url:'https://www.bleepingcomputer.com/feed/', site:'https://www.bleepingcomputer.com/', color:'#00c8ff' },
+  { id:'darkreading', name:'Dark Reading', url:'https://www.darkreading.com/rss.xml', site:'https://www.darkreading.com/', color:'#9055ff' },
+  { id:'krebs', name:'Krebs on Security', url:'https://krebsonsecurity.com/feed/', site:'https://krebsonsecurity.com/', color:'#ffaa00' },
+  { id:'schneier', name:'Schneier on Security', url:'https://www.schneier.com/feed/atom/', site:'https://www.schneier.com/', color:'#e930ff' },
+  { id:'therecord', name:'The Record', url:'https://therecord.media/feed', site:'https://therecord.media/', color:'#ff3355' },
+  { id:'projectzero', name:'Google Project Zero', url:'https://googleprojectzero.blogspot.com/feeds/posts/default', site:'https://googleprojectzero.blogspot.com/', color:'#00ff9d' },
+  { id:'troyhunt', name:'Troy Hunt', url:'https://www.troyhunt.com/rss/', site:'https://www.troyhunt.com/', color:'#00c8ff' }
+],
+
+// ---- RSS DIRECTORY ----
+rssNews: [
+  { name:'The Hacker News', site:'https://thehackernews.com/', rss:'https://feeds.feedburner.com/TheHackersNews' },
+  { name:'Dark Reading', site:'https://www.darkreading.com/', rss:'https://www.darkreading.com/rss.xml' },
+  { name:'BleepingComputer', site:'https://www.bleepingcomputer.com/', rss:'https://www.bleepingcomputer.com/feed/' },
+  { name:'Krebs on Security', site:'https://krebsonsecurity.com/', rss:'https://krebsonsecurity.com/feed/' },
+  { name:'The Record', site:'https://therecord.media/', rss:'https://therecord.media/feed' },
+  { name:'Security Affairs', site:'https://securityaffairs.com/', rss:'https://securityaffairs.com/feed' },
+  { name:'CyberScoop', site:'https://cyberscoop.com/', rss:'https://cyberscoop.com/feed/' },
+  { name:'HackRead', site:'https://www.hackread.com/', rss:'https://www.hackread.com/feed/' },
+  { name:'Ars Technica Security', site:'https://arstechnica.com/security/', rss:'https://feeds.arstechnica.com/arstechnica/security' },
+  { name:'Tripwire State of Security', site:'https://www.tripwire.com/state-of-security', rss:'https://www.tripwire.com/state-of-security/feed' }
+],
+rssVendor: [
+  { name:'Sophos News', site:'https://news.sophos.com/en-us/', rss:'https://news.sophos.com/en-us/feed/' },
+  { name:'CrowdStrike Blog', site:'https://www.crowdstrike.com/en-us/blog/', rss:'https://www.crowdstrike.com/blog/feed/' },
+  { name:'Cisco Talos', site:'https://blog.talosintelligence.com/', rss:'https://blog.talosintelligence.com/feeds/posts/default' },
+  { name:'Microsoft Security', site:'https://www.microsoft.com/en-us/security/blog/', rss:'https://www.microsoft.com/en-us/security/blog/feed/' },
+  { name:'Unit 42 (Palo Alto)', site:'https://unit42.paloaltonetworks.com/', rss:'https://unit42.paloaltonetworks.com/feed/' },
+  { name:'SentinelLabs', site:'https://www.sentinelone.com/labs/', rss:'https://www.sentinelone.com/labs/feed/' },
+  { name:'Proofpoint Threat Insight', site:'https://www.proofpoint.com/us/blog', rss:'https://www.proofpoint.com/us/rss.xml' },
+  { name:'Google Security Blog', site:'https://security.googleblog.com/', rss:'https://security.googleblog.com/feeds/posts/default' }
+],
+rssIndy: [
+  { name:'Schneier on Security', site:'https://www.schneier.com/', rss:'https://www.schneier.com/feed/atom/' },
+  { name:'Graham Cluley', site:'https://grahamcluley.com/', rss:'https://grahamcluley.com/feed/' },
+  { name:'Troy Hunt', site:'https://www.troyhunt.com/', rss:'https://www.troyhunt.com/rss/' },
+  { name:'Daniel Miessler', site:'https://danielmiessler.com/', rss:'https://danielmiessler.com/feed/' },
+  { name:'Malware Traffic Analysis', site:'https://www.malware-traffic-analysis.net/', rss:'http://www.malware-traffic-analysis.net/blog-entries.rss' },
+  { name:'Google Project Zero', site:'https://googleprojectzero.blogspot.com/', rss:'https://googleprojectzero.blogspot.com/feeds/posts/default' }
+],
+
+// ---- EVENTS (verified URLs) ----
+events: [
+  { title:'DEF CON 34', url:'https://defcon.org/', badge:'Hacker Con', badgeClass:'badge-green', cat:'hacker', desc:'The world\'s largest hacker convention. Lock-picking villages, CTFs, hardware hacking, policy discussions, and the full spectrum of security research.', location:'Las Vegas, NV', date:'Aug 2026', cost:'~$440 cash', tags:['offensive','CTF','hardware','villages'] },
+  { title:'Black Hat USA 2026', url:'https://www.blackhat.com/', badge:'Premier', badgeClass:'badge-cyan', cat:'hacker enterprise', desc:'Hacker Summer Camp cornerstone. World-class training sessions and a two-day briefings conference unveiling the latest vulnerabilities, exploits, and defense research. Arsenal showcases open-source tools.', location:'Las Vegas, NV', date:'Aug 2026', cost:'~$2,500+', tags:['briefings','training','arsenal','0-day'] },
+  { title:'RSAC 2026', url:'https://www.rsaconference.com/', badge:'Enterprise', badgeClass:'badge-purple', cat:'enterprise', desc:'Where the world talks security. The gold-standard conference since 1991. Theme for 2026: "Power of Community." CISO Boot Camp, Innovation Sandbox, massive expo hall.', location:'San Francisco, CA', date:'Mar 23-26, 2026', cost:'$149-$2,995', tags:['enterprise','innovation','CISO'] },
+  { title:'BSides (Global Network)', url:'http://www.securitybsides.com/', badge:'Community', badgeClass:'badge-green', cat:'community', desc:'Community-driven, peer-reviewed security conferences in 100+ cities worldwide. Affordable, welcoming, and technical. The gold standard for grassroots security knowledge sharing.', location:'Worldwide (100+ cities)', date:'Year-round', cost:'~$50-$300', tags:['community','affordable','global'] },
+  { title:'IEEE S&P (Oakland)', url:'https://www.ieee-security.org/TC/SP-Index.html', badge:'Academic', badgeClass:'badge-amber', cat:'academic', desc:'The premier academic forum for computer security and privacy research since 1980. Peer-reviewed papers on cryptography, systems security, network security, and formal methods.', location:'San Francisco, CA', date:'May 2026', cost:'Academic pricing', tags:['top-4','peer-reviewed','cryptography'] },
+  { title:'USENIX Security', url:'https://www.usenix.org/conferences', badge:'Academic', badgeClass:'badge-amber', cat:'academic', desc:'Top-four academic security conference. Practical security research — systems, network, software, hardware, and applied cryptography. Known for high-impact papers with real-world implications.', location:'Varies', date:'Aug 2026', cost:'Academic pricing', tags:['systems','applied-security','top-4'] },
+  { title:'ACM CCS', url:'https://www.sigsac.org/ccs.html', badge:'Academic', badgeClass:'badge-amber', cat:'academic', desc:'ACM Conference on Computer and Communications Security. Flagship venue covering all aspects of information security including systems, theory, and applications.', location:'Varies', date:'Oct/Nov 2026', cost:'Academic pricing', tags:['top-4','theory','systems'] },
+  { title:'NDSS Symposium', url:'https://www.ndss-symposium.org/', badge:'Academic', badgeClass:'badge-amber', cat:'academic', desc:'Network and Distributed System Security Symposium. Top-four academic venue focusing on network security, protocol analysis, web security, and applied cryptography.', location:'San Diego, CA', date:'Feb 2026', cost:'Academic pricing', tags:['top-4','network-sec','protocols'] },
+  { title:'Gartner Security Summit', url:'https://www.gartner.com/en/conferences/na/security-risk-management-us', badge:'Enterprise', badgeClass:'badge-purple', cat:'enterprise', desc:'Leading analyst firm\'s annual event for security and risk leaders. AI in cybersecurity, cyber resilience, governance. Deep strategic insights from Gartner analysts.', location:'National Harbor, MD', date:'Jun 2026', cost:'~$4,475+', tags:['analyst','strategy','AI-security'] },
+  { title:'Wild West Hackin\' Fest', url:'https://wildwesthackinfest.com/', badge:'Hacker Con', badgeClass:'badge-green', cat:'hacker community', desc:'Set in historic Deadwood, SD. Hands-on hacking labs, world-class researchers, and Western-themed fun. Features Antisyphon Training track and Cyber Range.', location:'Deadwood, SD', date:'Oct 2026', cost:'~$400', tags:['hands-on','cyber-range','training'] },
+  { title:'The Diana Initiative', url:'https://www.yourdianainitiative.org/', badge:'Diversity', badgeClass:'badge-magenta', cat:'community', desc:'Nonprofit supporting women and underrepresented groups in cybersecurity. Educational sessions, networking, mentorship. Co-located with Hacker Summer Camp.', location:'Las Vegas, NV', date:'Aug 2026', cost:'Free / Low-cost', tags:['diversity','inclusion','mentorship'] },
+  { title:'Pwn2Own', url:'https://www.zerodayinitiative.com/blog?tag=Pwn2Own', badge:'Competition', badgeClass:'badge-red', cat:'hacker', desc:'The world\'s premier live hacking competition. Researchers demonstrate zero-day exploits against major targets for cash prizes and recognition.', location:'Vancouver / Tokyo', date:'Multiple 2026', cost:'Competition', tags:['0-day','exploit','bounty'] },
+  { title:'Black Hat Europe', url:'https://www.blackhat.com/', badge:'International', badgeClass:'badge-cyan', cat:'enterprise', desc:'European edition bringing world-class training and briefings to London. Same caliber research with a more internationally-diverse attendee base.', location:'London, UK', date:'Dec 2026', cost:'~\u20ac2,000+', tags:['europe','briefings','international'] },
+  { title:'Infosecurity Europe', url:'https://www.infosecurityeurope.com/', badge:'Free Expo', badgeClass:'badge-green', cat:'community', desc:'Europe\'s largest infosec event. Free expo passes for qualified professionals. Excellent entry point for networking and exploring the vendor landscape.', location:'London, UK', date:'Jun 2026', cost:'Free expo pass', tags:['europe','free-expo','networking'] },
+  { title:'Nullcon', url:'https://nullcon.net/', badge:'International', badgeClass:'badge-cyan', cat:'hacker community', desc:'India\'s premier hacker conference in Goa. Cutting-edge research, training workshops, CTFs, and international speaker lineup. Vital for Asia-Pacific security community.', location:'Goa, India', date:'2026', cost:'Varies', tags:['asia-pacific','CTF','training'] },
+  { title:'CrowdStrike Fal.Con', url:'https://www.crowdstrike.com/events/fal-con/', badge:'Enterprise', badgeClass:'badge-purple', cat:'enterprise', desc:'Annual conference bringing together top threat intelligence experts, customers, and executives. Intelligence-driven defense, adversary tradecraft, endpoint protection.', location:'Las Vegas, NV', date:'Sep 2026', cost:'Varies', tags:['threat-intel','endpoint','adversary'] },
+  { title:'ShmooCon', url:'https://www.shmoocon.org/', badge:'Hacker Con', badgeClass:'badge-green', cat:'hacker', desc:'East-coast hacker convention featuring technical talks on exploitation, defense, and hacking culture. Known for its welcoming community and fire talks.', location:'Washington, D.C.', date:'Jan 2026', cost:'~$150', tags:['east-coast','hacker-culture','fire-talks'] },
+  { title:'Blue Team Con', url:'https://blueteamcon.com/', badge:'Defensive', badgeClass:'badge-cyan', cat:'community', desc:'Annual conference for cybersecurity defenders — SOC analysts, incident responders, threat hunters, and CISOs. Networking, training labs, and defensive keynotes.', location:'Chicago, IL', date:'2026', cost:'Varies', tags:['blue-team','defense','SOC'] }
+],
+
+// ---- RESEARCH ----
+research: [
+  { title:'MITRE ATT&CK', url:'https://attack.mitre.org/', badge:'Framework', badgeClass:'badge-amber', desc:'Global knowledge base of adversary tactics, techniques, and procedures (TTPs). Industry standard for threat modeling, detection engineering, and SecOps.', tags:['TTPs','detection','threat-modeling'] },
+  { title:'NIST NVD', url:'https://nvd.nist.gov/', badge:'Gov', badgeClass:'badge-red', desc:'U.S. government repository of vulnerability management data. Comprehensive CVE database with CVSS scoring and CPE matching.', tags:['CVE','CVSS','vulnerability'] },
+  { title:'Exploit Database', url:'https://www.exploit-db.com/', badge:'Database', badgeClass:'badge-amber', desc:'CVE-compliant archive of public exploits. Maintained by OffSec. Essential for penetration testers and vulnerability researchers.', tags:['exploits','CVE','pentest'] },
+  { title:'OWASP', url:'https://owasp.org/', badge:'Foundation', badgeClass:'badge-green', desc:'Home of the OWASP Top 10, Testing Guide, ASVS, ZAP, and dozens of other projects. The definitive open-source application security resource.', tags:['appsec','top-10','web-security'] },
+  { title:'arXiv cs.CR', url:'https://arxiv.org/list/cs.CR/recent', badge:'Preprints', badgeClass:'badge-purple', desc:'Cryptography and Security preprints from the global academic community. Latest research papers on crypto, protocols, privacy, and systems security.', tags:['academic','preprints','crypto'] },
+  { title:'Google Project Zero', url:'https://googleprojectzero.blogspot.com/', badge:'Research', badgeClass:'badge-cyan', desc:'Google\'s elite vulnerability research team. Deep-dive analysis of zero-days, exploitation techniques, and novel attack surfaces.', tags:['0-day','deep-dive','disclosure'] },
+  { title:'MITRE D3FEND', url:'https://d3fend.mitre.org/', badge:'Framework', badgeClass:'badge-amber', desc:'Knowledge graph of cybersecurity countermeasures. The defensive complement to ATT&CK — maps defensive to offensive techniques.', tags:['defensive','countermeasures','detection'] },
+  { title:'CVE Program', url:'https://www.cve.org/', badge:'Standard', badgeClass:'badge-red', desc:'The global standard for identifying cybersecurity vulnerabilities. Backbone of vulnerability management worldwide.', tags:['identifiers','global-standard'] },
+  { title:'VirusTotal', url:'https://www.virustotal.com/', badge:'Analysis', badgeClass:'badge-amber', desc:'Google-backed malware analysis aggregating 70+ AV engines. Analyze files, URLs, domains, IPs with behavioral analysis and relationship graphs.', tags:['malware','scanning','threat-hunting'] },
+  { title:'Shodan', url:'https://www.shodan.io/', badge:'OSINT', badgeClass:'badge-cyan', desc:'Search engine for internet-connected devices. Essential OSINT tool for discovering exposed services and assessing attack surfaces.', tags:['OSINT','recon','IoT'] },
+  { title:'MITRE ATLAS', url:'https://atlas.mitre.org/', badge:'AI Security', badgeClass:'badge-magenta', desc:'Adversarial Threat Landscape for AI Systems. Knowledge base of adversary tactics targeting machine learning and AI.', tags:['AI-sec','ML','adversarial'] },
+  { title:'MITRE CALDERA', url:'https://caldera.mitre.org/', badge:'Emulation', badgeClass:'badge-green', desc:'Automated adversary emulation platform built on ATT&CK. Run autonomous red/blue-team operations in controlled environments.', tags:['red-team','emulation','automation'] }
+],
+
+// ---- TOOLS ----
+tools: [
+  { title:'Metasploit Framework', url:'https://www.metasploit.com/', badge:'Offensive', badgeClass:'badge-red', cat:'offensive', desc:'The world\'s most used penetration testing framework. Open-source exploit development with thousands of modules.', tags:['exploitation','pentest','ruby'] },
+  { title:'Burp Suite', url:'https://portswigger.net/burp', badge:'Web Sec', badgeClass:'badge-amber', cat:'offensive', desc:'Industry-standard web application security testing platform. Intercepting proxy, scanner, intruder. Community Edition free.', tags:['web-app','proxy','scanner'] },
+  { title:'Nmap', url:'https://nmap.org/', badge:'Recon', badgeClass:'badge-cyan', cat:'offensive', desc:'The network mapper. Free utility for discovery, port scanning, service detection, and the Nmap Scripting Engine (NSE).', tags:['scanning','discovery','NSE'] },
+  { title:'Ghidra', url:'https://ghidra-sre.org/', badge:'Reversing', badgeClass:'badge-purple', cat:'offensive', desc:'NSA\'s open-source reverse engineering framework. Disassembler and decompiler supporting dozens of processor architectures.', tags:['reverse-eng','binary','decompiler'] },
+  { title:'Nuclei', url:'https://github.com/projectdiscovery/nuclei', badge:'Scanner', badgeClass:'badge-red', cat:'offensive', desc:'Fast, template-based vulnerability scanner by ProjectDiscovery. Community-driven YAML templates for CVEs and misconfigs.', tags:['templates','automation','community'] },
+  { title:'Wireshark', url:'https://www.wireshark.org/', badge:'Network', badgeClass:'badge-cyan', cat:'defensive', desc:'The world\'s foremost network protocol analyzer. Deep packet inspection for hundreds of protocols. Essential for forensics.', tags:['pcap','protocols','forensics'] },
+  { title:'Suricata', url:'https://suricata.io/', badge:'IDS/IPS', badgeClass:'badge-green', cat:'defensive', desc:'High-performance network IDS/IPS. Multi-threaded, Snort-compatible rules, protocol logging, file extraction, Lua scripting.', tags:['IDS','IPS','NSM'] },
+  { title:'Sigma Rules', url:'https://github.com/SigmaHQ/sigma', badge:'Detection', badgeClass:'badge-green', cat:'defensive', desc:'Generic signature format for SIEM systems. Write detection rules once, convert to any SIEM. Community-driven standard.', tags:['SIEM','detection','sigma'] },
+  { title:'YARA', url:'https://github.com/VirusTotal/yara', badge:'Detection', badgeClass:'badge-green', cat:'defensive', desc:'Pattern matching tool for malware researchers. Create rules to identify and classify malware samples based on binary patterns.', tags:['malware','patterns','classification'] },
+  { title:'Maltego', url:'https://www.maltego.com/', badge:'OSINT', badgeClass:'badge-purple', cat:'osint', desc:'Visual link analysis and intelligence platform. Transforms data from hundreds of sources into interactive graphs. Community Edition free.', tags:['OSINT','graph','investigation'] },
+  { title:'SpiderFoot', url:'https://github.com/smicallef/spiderfoot', badge:'OSINT', badgeClass:'badge-purple', cat:'osint', desc:'Open-source OSINT automation integrating 200+ data sources. DNS, WHOIS, breach databases, social media, dark web.', tags:['automation','recon','self-hosted'] },
+  { title:'theHarvester', url:'https://github.com/laramies/theHarvester', badge:'OSINT', badgeClass:'badge-purple', cat:'osint', desc:'E-mail, subdomain, and name harvester for OSINT. Gathers data from public sources like search engines and PGP servers.', tags:['email','subdomains','recon'] },
+  { title:'Volatility', url:'https://www.volatilityfoundation.org/', badge:'Forensics', badgeClass:'badge-magenta', cat:'forensics', desc:'The world\'s most widely used memory forensics framework. Extract artifacts from RAM dumps. Windows, Linux, macOS.', tags:['memory','IR','malware'] },
+  { title:'Autopsy / Sleuth Kit', url:'https://www.autopsy.com/', badge:'Forensics', badgeClass:'badge-magenta', cat:'forensics', desc:'Open-source digital forensics platform. Disk images, deleted file recovery, timeline analysis, keyword search.', tags:['disk','recovery','timeline'] },
+  { title:'OWASP ZAP', url:'https://www.zaproxy.org/', badge:'Web Sec', badgeClass:'badge-amber', cat:'offensive', desc:'Free and open-source web application security scanner. Automated scanners plus tools for manual testing. Active community.', tags:['web-app','scanner','free'] }
+],
+
+// ---- TRAINING ----
+training: [
+  { title:'Hack The Box', url:'https://www.hackthebox.com/', badge:'Platform', badgeClass:'badge-magenta', desc:'Leading gamified cybersecurity training. Vulnerable machines, challenges, Pro Labs simulating enterprise environments. Active CTF community.', tags:['labs','CTF','pentesting','free-tier'] },
+  { title:'TryHackMe', url:'https://tryhackme.com/', badge:'Platform', badgeClass:'badge-magenta', desc:'Hands-on training with browser-based labs. Learning paths from beginner to advanced covering offensive, defensive, and engineering.', tags:['beginner-friendly','browser-labs','paths'] },
+  { title:'PortSwigger Web Security Academy', url:'https://portswigger.net/web-security', badge:'Free', badgeClass:'badge-green', desc:'Free, comprehensive web app security training. Interactive labs covering SQLi, XSS, CSRF, SSRF, deserialization, and more.', tags:['web-sec','free','labs','interactive'] },
+  { title:'SANS Institute', url:'https://www.sans.org/', badge:'Premium', badgeClass:'badge-amber', desc:'Gold standard in cybersecurity training and GIAC certifications. Pentesting, IR, forensics, cloud, ICS/SCADA. World-class practitioners.', tags:['certifications','GIAC','premium'] },
+  { title:'OffSec (OSCP)', url:'https://www.offsec.com/', badge:'Certification', badgeClass:'badge-red', desc:'Home of the OSCP. Hands-on penetration testing training and certifications. PEN-200, PEN-300, EXP-301. Industry benchmark.', tags:['OSCP','try-harder','certification'] },
+  { title:'picoCTF', url:'https://picoctf.org/', badge:'Free CTF', badgeClass:'badge-green', desc:'Free computer security education by Carnegie Mellon. Progressive challenges teaching crypto, forensics, reversing, web exploitation.', tags:['CTF','students','free','beginner'] },
+  { title:'CTFtime', url:'https://ctftime.org/', badge:'Directory', badgeClass:'badge-cyan', desc:'Definitive global CTF competition directory and ranking system. Calendar, team rankings, writeup archive, and community hub.', tags:['competitions','rankings','writeups'] },
+  { title:'Cybrary', url:'https://www.cybrary.it/', badge:'Platform', badgeClass:'badge-magenta', desc:'Career development with courses, labs, and career paths. Certification prep for CompTIA, ISC2, ISACA. Free and premium tiers.', tags:['career','cert-prep','free-tier'] },
+  { title:'CyberDefenders', url:'https://cyberdefenders.org/', badge:'Blue Team', badgeClass:'badge-cyan', desc:'Free blue team training platform. Real-world investigation challenges for SOC analysts, DFIR, and threat hunting skills.', tags:['blue-team','DFIR','free'] }
+],
+
+// ---- THREAT INTELLIGENCE ----
+threatIntel: [
+  { title:'AlienVault OTX', url:'https://otx.alienvault.com/', badge:'Open Platform', badgeClass:'badge-green', desc:'World\'s largest open threat intelligence sharing platform. Community-contributed IOCs and pulses. Free API access.', tags:['IOCs','sharing','free-API'] },
+  { title:'MISP', url:'https://www.misp-project.org/', badge:'Platform', badgeClass:'badge-cyan', desc:'Open-source threat intelligence platform for sharing, storing, and correlating IOCs. Supports STIX/TAXII. Backbone of national CERTs.', tags:['STIX','sharing','open-source'] },
+  { title:'abuse.ch Projects', url:'https://abuse.ch/', badge:'Free Feeds', badgeClass:'badge-green', desc:'MalwareBazaar, URLhaus, ThreatFox, Feodo Tracker, SSL Blacklist. All free community-driven threat intelligence projects.', tags:['malware','C2','IOCs','free'] },
+  { title:'GreyNoise', url:'https://www.greynoise.io/', badge:'Noise Filter', badgeClass:'badge-amber', desc:'Separates targeted threats from background internet noise. Reduces alert fatigue by identifying mass scanners. Free community tier.', tags:['noise-reduction','mass-scanning','SOC'] },
+  { title:'OpenCTI', url:'https://www.opencti.io/', badge:'Platform', badgeClass:'badge-purple', desc:'Open-source cyber threat intelligence platform. STIX2 standards with connectors for dozens of data sources. Self-hosted.', tags:['STIX2','visualization','self-hosted'] },
+  { title:'Pulsedive', url:'https://pulsedive.com/', badge:'Free Tier', badgeClass:'badge-green', desc:'Free threat intelligence for searching, scanning, and enriching IOCs. Passive DNS, community submissions. Investigate IPs, domains, hashes.', tags:['enrichment','passive-DNS','free'] },
+  { title:'CISA KEV Catalog', url:'https://www.cisa.gov/known-exploited-vulnerabilities-catalog', badge:'Gov', badgeClass:'badge-red', desc:'Known Exploited Vulnerabilities catalog. Authoritative list of actively exploited CVEs. Essential for patch prioritization.', tags:['KEV','patching','federal'] },
+  { title:'CVE-KEV RSS (Community)', url:'https://github.com/CryptoGenNepal/CVE-KEV-RSS', badge:'Community Feed', badgeClass:'badge-green', desc:'Community-maintained RSS/JSON feed for CISA KEV catalog after CISA deprecated its official RSS feeds in May 2025.', tags:['RSS','community','KEV'] }
+],
+
+// ---- COMMUNITIES ----
+communities: [
+  { title:'HackerOne', url:'https://www.hackerone.com/', badge:'Bug Bounty', badgeClass:'badge-green', desc:'World\'s largest hacker-powered security platform. Bug bounty programs from thousands of organizations. Responsible disclosure.', tags:['bug-bounty','VDP','disclosure'] },
+  { title:'Bugcrowd', url:'https://www.bugcrowd.com/', badge:'Bug Bounty', badgeClass:'badge-green', desc:'Crowdsourced security platform connecting organizations with global researchers. Bug bounties, VDP, PTaaS.', tags:['bug-bounty','crowdsourced','PTaaS'] },
+  { title:'Electronic Frontier Foundation', url:'https://www.eff.org/', badge:'Advocacy', badgeClass:'badge-purple', desc:'Leading nonprofit defending civil liberties in the digital world. Privacy, free speech, innovation through litigation and activism.', tags:['privacy','rights','policy'] },
+  { title:'CISA', url:'https://www.cisa.gov/', badge:'Government', badgeClass:'badge-red', desc:'U.S. Cybersecurity and Infrastructure Security Agency. Advisories, KEV catalog, free tools, and best practices for all sectors.', tags:['advisories','KEV','federal'] },
+  { title:'Hacker News (YC)', url:'https://news.ycombinator.com/', badge:'Forum', badgeClass:'badge-amber', desc:'Y Combinator\'s tech news site. High signal-to-noise discussions on security research, tools, and industry trends.', tags:['discussion','tech','community'] },
+  { title:'r/netsec & r/cybersecurity', url:'https://www.reddit.com/r/netsec/', badge:'Forum', badgeClass:'badge-amber', desc:'Reddit\'s premier infosec communities. r/netsec for technical content, r/cybersecurity for broader discussion. Combined 1M+ members.', tags:['reddit','discussion','1M+ members'] },
+  { title:'ISC2', url:'https://www.isc2.org/', badge:'Association', badgeClass:'badge-cyan', desc:'Global nonprofit of certified cybersecurity professionals. Home of CISSP, CCSP, SSCP. Over 600,000 members worldwide.', tags:['CISSP','certifications','professional'] },
+  { title:'ISACA', url:'https://www.isaca.org/', badge:'Association', badgeClass:'badge-cyan', desc:'IT governance, risk management, cybersecurity. CISA, CISM, CRISC certifications. COBIT framework and extensive research.', tags:['governance','CISM','CISA-cert'] }
+]
+
+}; // end RESOURCES_DB
+
+// ============================================================
+// SAFE DOM HELPERS (no innerHTML with data)
+// ============================================================
+function el(tag, cls, attrs) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (attrs) {
+    for (var k in attrs) {
+      if (k === 'text') e.textContent = attrs[k];
+      else if (k === 'html') e.innerHTML = attrs[k]; // only for static trusted HTML
+      else e.setAttribute(k, attrs[k]);
+    }
+  }
+  return e;
+}
+
+function safeText(str) {
+  // Sanitize for display — strip HTML tags
+  return String(str || '').replace(/<[^>]*>/g, '').substring(0, 500);
+}
+
+// ============================================================
+// RENDER CARDS
+// ============================================================
+function renderCards(containerId, items, filterable) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  items.forEach(function(item) {
+    var card = el('div', 'card');
+    if (filterable && item.cat) {
+      card.setAttribute('data-category', item.cat);
+    }
+    card.setAttribute('data-searchable', (item.title + ' ' + item.desc + ' ' + (item.tags||[]).join(' ')).toLowerCase());
+
+    var head = el('div', 'card-head');
+    var titleDiv = el('div', 'card-title');
+    var titleLink = el('a', null, { href: item.url, target: '_blank', rel: 'noopener noreferrer', text: item.title });
+    titleDiv.appendChild(titleLink);
+    head.appendChild(titleDiv);
+    if (item.badge) {
+      head.appendChild(el('span', 'badge ' + item.badgeClass, { text: item.badge }));
+    }
+    card.appendChild(head);
+
+    card.appendChild(el('div', 'card-desc', { text: item.desc }));
+
+    if (item.location || item.date || item.cost) {
+      var meta = el('div', 'card-meta');
+      if (item.location) meta.appendChild(el('span', null, { text: '\uD83D\uDCCD ' + item.location }));
+      if (item.date) meta.appendChild(el('span', null, { text: '\uD83D\uDCC5 ' + item.date }));
+      if (item.cost) meta.appendChild(el('span', null, { text: '\uD83D\uDCB0 ' + item.cost }));
+      card.appendChild(meta);
+    }
+
+    if (item.tags && item.tags.length) {
+      var tagsDiv = el('div', 'card-tags');
+      item.tags.forEach(function(t) {
+        tagsDiv.appendChild(el('span', 'tag', { text: t }));
+      });
+      card.appendChild(tagsDiv);
+    }
+
+    container.appendChild(card);
+  });
+}
+
+// ============================================================
+// RENDER RSS DIRECTORY
+// ============================================================
+function renderRssGrid(containerId, items) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  items.forEach(function(item) {
+    var row = el('div', 'rss-item');
+    row.setAttribute('data-searchable', (item.name + ' ' + item.rss).toLowerCase());
+
+    var icon = el('div', 'rss-icon', { text: item.name.charAt(0).toUpperCase() });
+    row.appendChild(icon);
+
+    var info = el('div', 'rss-info');
+    var nameDiv = el('div', 'rss-name');
+    nameDiv.appendChild(el('a', null, { href: item.site, target: '_blank', rel: 'noopener noreferrer', text: item.name }));
+    info.appendChild(nameDiv);
+    info.appendChild(el('div', 'rss-url', { text: item.rss.replace(/^https?:\/\//, '') }));
+    row.appendChild(info);
+
+    var btn = el('button', 'copy-btn', { text: 'COPY' });
+    btn.addEventListener('click', (function(rssUrl) {
+      return function() { copyToClipboard(this, rssUrl); };
+    })(item.rss));
+    row.appendChild(btn);
+
+    container.appendChild(row);
+  });
+}
+
+// ============================================================
+// LIVE FEED ENGINE
+// Uses rss2json.com free API — CORS-enabled, no API key needed
+// Rate limit: ~10 req/minute free tier (plenty for 8 feeds)
+// ============================================================
+var RSS2JSON_API = 'https://api.rss2json.com/v1/api.json?rss_url=';
+var totalFeedItems = 0;
+var feedsLoaded = 0;
+var feedsFailed = 0;
+
+function renderLiveFeeds() {
+  var grid = document.getElementById('liveFeedsGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  RESOURCES_DB.liveFeeds.forEach(function(feed) {
+    var panel = el('div', 'live-feed-panel');
+
+    var header = el('div', 'feed-panel-header');
+    var title = el('a', 'feed-panel-title', { href: feed.site, target: '_blank', rel: 'noopener noreferrer', text: feed.name });
+    title.style.color = feed.color;
+    header.appendChild(title);
+    var status = el('div', 'feed-panel-status');
+    status.id = 'status-' + feed.id;
+    status.innerHTML = '<div class="feed-loading-spinner"></div>';
+    header.appendChild(status);
+    panel.appendChild(header);
+
+    var body = el('div', 'feed-panel-body');
+    body.id = 'feed-' + feed.id;
+    body.innerHTML = '<div class="feed-loading"><div class="feed-loading-spinner"></div><br>Loading feed...</div>';
+    panel.appendChild(body);
+
+    grid.appendChild(panel);
+    fetchFeed(feed);
+  });
+}
+
+function fetchFeed(feed) {
+  var url = RSS2JSON_API + encodeURIComponent(feed.url);
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.status === 'ok' && data.items && data.items.length) {
+        renderFeedItems(feed.id, data.items.slice(0, 8), feed.color);
+        totalFeedItems += Math.min(data.items.length, 8);
+        feedsLoaded++;
+      } else {
+        showFeedError(feed.id, 'No items returned');
+        feedsFailed++;
+      }
+      updateFeedStatus();
+    })
+    .catch(function(err) {
+      showFeedError(feed.id, 'Failed to load');
+      feedsFailed++;
+      updateFeedStatus();
+    });
+}
+
+function renderFeedItems(feedId, items, color) {
+  var body = document.getElementById('feed-' + feedId);
+  var status = document.getElementById('status-' + feedId);
+  if (!body) return;
+  body.innerHTML = '';
+
+  items.forEach(function(item) {
+    var entry = el('a', 'feed-entry', {
+      href: item.link,
+      target: '_blank',
+      rel: 'noopener noreferrer'
+    });
+
+    var titleEl = el('div', 'feed-entry-title', { text: safeText(item.title) });
+    entry.appendChild(titleEl);
+
+    var dateStr = '';
+    if (item.pubDate) {
+      try {
+        var d = new Date(item.pubDate);
+        dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      } catch(e) { dateStr = item.pubDate; }
+    }
+    entry.appendChild(el('div', 'feed-entry-meta', { text: dateStr }));
+    body.appendChild(entry);
+  });
+
+  if (status) {
+    status.innerHTML = '';
+    var dot = el('span', 'status-dot green');
+    status.appendChild(dot);
+    status.appendChild(document.createTextNode(' ' + items.length + ' items'));
+  }
+}
+
+function showFeedError(feedId, msg) {
+  var body = document.getElementById('feed-' + feedId);
+  var status = document.getElementById('status-' + feedId);
+  if (body) {
+    body.innerHTML = '';
+    body.appendChild(el('div', 'feed-error', { text: msg + ' \u2014 visit site directly' }));
+  }
+  if (status) {
+    status.innerHTML = '';
+    var dot = el('span', 'status-dot amber');
+    status.appendChild(dot);
+    status.appendChild(document.createTextNode(' Offline'));
+  }
+}
+
+function updateFeedStatus() {
+  var total = RESOURCES_DB.liveFeeds.length;
+  var done = feedsLoaded + feedsFailed;
+  document.getElementById('liveFeedCount').textContent = String(totalFeedItems);
+
+  if (done >= total) {
+    var dotEl = document.getElementById('feedStatusDot');
+    var textEl = document.getElementById('feedStatusText');
+    if (feedsFailed === 0) {
+      dotEl.className = 'status-dot green';
+      textEl.textContent = 'All ' + feedsLoaded + ' feeds online';
+    } else if (feedsLoaded > 0) {
+      dotEl.className = 'status-dot amber';
+      textEl.textContent = feedsLoaded + '/' + total + ' feeds online';
+    } else {
+      dotEl.className = 'status-dot red';
+      textEl.textContent = 'Feeds offline — visit sites directly';
+    }
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+  }
+}
+
+// ============================================================
+// CLIPBOARD (safe)
+// ============================================================
+function copyToClipboard(btn, text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      btn.textContent = 'COPIED';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 2000);
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); btn.textContent = 'COPIED'; btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 2000);
+    } catch(e) {}
+    document.body.removeChild(ta);
+  }
+}
+
+// ============================================================
+// FILTER TABS
+// ============================================================
+document.querySelectorAll('.filter-bar').forEach(function(bar) {
+  var targetId = bar.getAttribute('data-target');
+  bar.querySelectorAll('.filter-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      bar.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var filter = btn.getAttribute('data-filter');
+      var grid = document.getElementById(targetId);
+      if (!grid) return;
+      grid.querySelectorAll('.card').forEach(function(card) {
+        if (filter === 'all') { card.style.display = ''; }
+        else {
+          var cats = (card.getAttribute('data-category') || '').split(' ');
+          card.style.display = cats.indexOf(filter) !== -1 ? '' : 'none';
+        }
+      });
+    });
+  });
+});
+
+// ============================================================
+// GLOBAL SEARCH
+// ============================================================
+var searchInput = document.getElementById('globalSearch');
+if (searchInput) {
+  searchInput.addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    document.querySelectorAll('[data-searchable]').forEach(function(el) {
+      if (!q) { el.style.display = ''; return; }
+      el.style.display = el.getAttribute('data-searchable').indexOf(q) !== -1 ? '' : 'none';
+    });
+  });
+}
+
+// ============================================================
+// MOBILE NAV
+// ============================================================
+var mobileToggle = document.getElementById('mobileToggle');
+var mainNav = document.getElementById('mainNav');
+if (mobileToggle && mainNav) {
+  mobileToggle.addEventListener('click', function() {
+    var open = mainNav.classList.toggle('open');
+    mobileToggle.setAttribute('aria-expanded', String(open));
+    mobileToggle.textContent = open ? '\u2715' : '\u2630';
+  });
+  mainNav.querySelectorAll('.nav-link').forEach(function(l) {
+    l.addEventListener('click', function() {
+      mainNav.classList.remove('open');
+      mobileToggle.setAttribute('aria-expanded', 'false');
+      mobileToggle.textContent = '\u2630';
+    });
+  });
+}
+
+// ============================================================
+// SCROLL ANIMATIONS + NAV HIGHLIGHT + BACK TO TOP
+// ============================================================
+var fadeEls = document.querySelectorAll('.fade-in');
+var navLinks = document.querySelectorAll('.nav-link');
+var sections = document.querySelectorAll('.section[id]');
+var btt = document.getElementById('btt');
+
+function onScroll() {
+  // Fade in
+  fadeEls.forEach(function(el) {
+    if (el.getBoundingClientRect().top < window.innerHeight - 50) el.classList.add('visible');
+  });
+  // Active nav
+  var scrollY = window.scrollY + 90;
+  sections.forEach(function(sec) {
+    if (scrollY >= sec.offsetTop && scrollY < sec.offsetTop + sec.offsetHeight) {
+      navLinks.forEach(function(l) {
+        l.classList.toggle('active', l.getAttribute('href') === '#' + sec.id);
+      });
+    }
+  });
+  // Back to top
+  if (btt) btt.classList.toggle('visible', window.scrollY > 500);
+}
+
+window.addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+
+if (btt) btt.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+// ============================================================
+// INIT: Render everything from DB
+// ============================================================
+renderCards('eventsGrid', RESOURCES_DB.events, true);
+renderCards('researchGrid', RESOURCES_DB.research, false);
+renderCards('toolsGrid', RESOURCES_DB.tools, true);
+renderCards('trainingGrid', RESOURCES_DB.training, false);
+renderCards('threatIntelGrid', RESOURCES_DB.threatIntel, false);
+renderCards('communitiesGrid', RESOURCES_DB.communities, false);
+renderRssGrid('rssNewsGrid', RESOURCES_DB.rssNews);
+renderRssGrid('rssVendorGrid', RESOURCES_DB.rssVendor);
+renderRssGrid('rssIndyGrid', RESOURCES_DB.rssIndy);
+renderLiveFeeds();
+
+// Auto-refresh live feeds every 15 minutes
+setInterval(function() {
+  totalFeedItems = 0;
+  feedsLoaded = 0;
+  feedsFailed = 0;
+  renderLiveFeeds();
+}, 15 * 60 * 1000);
+
+})();
+</script>
+</body>
+</html>
