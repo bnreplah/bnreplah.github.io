@@ -1,0 +1,1084 @@
+import { useState, useEffect, useRef, useCallback, useMemo } from “react”;
+import * as THREE from “three”;
+
+const SEV_ORDER = { critical:0, high:1, medium:2, low:3, info:4 };
+const SEV_HEX = { critical:”#ff2d55”, high:”#ff6b35”, medium:”#f0c040”, low:”#38bdf8”, info:”#6366f1” };
+const SEV_INT = { critical:0xff2d55, high:0xff6b35, medium:0xf0c040, low:0x38bdf8, info:0x6366f1 };
+const TYPE_ICONS = { sast:“◆”, dast:“◈”, sca:“◇”, container:“▣”, iac:“△”, pentest:“⬡”, unknown:“○” };
+
+let _fid = 0;
+function mkFind(f) {
+return { id:_fid++, title:f.title||“Untitled”, severity:f.severity||“medium”,
+rule:f.rule||””, cwe:f.cwe||””, cve:f.cve||””, file:f.file||””, line:f.line||0,
+component:f.component||””, description:f.description||””, url:f.url||””,
+scanner:f.scanner||“Unknown”, scanType:f.scanType||“unknown”,
+source:f.source||””, sink:f.sink||””, dataflow:f.dataflow||[],
+correlationGroup:null, correlationScore:0 };
+}
+
+function normSev(s) {
+if (!s) return “medium”;
+const l = String(s).toLowerCase().trim();
+if ([“critical”,“crit”,“4”,“5”,“p0”,“very high”,“urgent”,“blocker”].includes(l)) return “critical”;
+if ([“high”,“3”,“p1”,“major”,“important”,“error”,“severe”].includes(l)) return “high”;
+if ([“medium”,“med”,“2”,“p2”,“moderate”,“warning”,“minor”].includes(l)) return “medium”;
+if ([“low”,“1”,“p3”,“trivial”,“note”,“negligible”].includes(l)) return “low”;
+if ([“info”,“informational”,“information”,“0”,“p4”,“none”,“best_practice”].includes(l)) return “info”;
+return “medium”;
+}
+
+function getFilename(p) { return (p||””).split(”/”).pop().split(”\”).pop(); }
+
+function strSim(a, b) {
+if (!a || !b) return 0;
+const at = a.toLowerCase().split(/[\s-*/.]+/).filter(Boolean);
+const bt = b.toLowerCase().split(/[\s-*/.]+/).filter(Boolean);
+const inter = at.filter(t => bt.includes(t));
+return inter.length / Math.max(at.length, bt.length, 1);
+}
+
+// ═══════════════════════════════════════
+// PARSER ENGINE
+// ═══════════════════════════════════════
+
+function parseCSVLine(line) {
+const r = []; let cur = “”, q = false;
+for (let i = 0; i < line.length; i++) {
+const c = line[i];
+if (c === ‘”’) q = !q;
+else if (c === ‘,’ && !q) { r.push(cur); cur = “”; }
+else cur += c;
+}
+r.push(cur); return r;
+}
+
+function parseCSV(data, st) {
+const str = typeof data === “string” ? data : String(data);
+const lines = str.split(”\n”).filter(l => l.trim());
+if (lines.length < 2) return [];
+const hdr = lines[0].split(”,”).map(h => h.trim().toLowerCase().replace(/[’”]/g,””));
+const out = [];
+for (let i = 1; i < lines.length; i++) {
+const v = parseCSVLine(lines[i]);
+const r = {}; hdr.forEach((h,j) => { r[h] = (v[j]||””).trim().replace(/^[”’]|[”’]$/g,””); });
+out.push(mkFind({
+title:r.title||r.name||r.vulnerability||r.finding||r.issue||r.summary||r.flaw_name||“Finding”,
+severity:normSev(r.severity||r.risk||r.priority||r.level||“medium”),
+rule:r.rule||r.rule_id||r.ruleid||r.cwe||””,
+cwe:r.cwe||””, cve:r.cve||r.cve_id||””,
+file:r.file||r.path||r.location||r.filename||r.source_file||r.sourcefile||””,
+line:parseInt(r.line||r.line_number||r.lineno||“0”)||0,
+component:r.component||r.package||r.library||r.dependency||r.module||””,
+description:r.description||r.detail||r.details||r.message||””,
+scanner:r.scanner||r.tool||r.source_tool||“CSV”,
+scanType:r.scan_type||r.type||st||“unknown”,
+url:r.url||r.endpoint||””,
+source:r.source_function||r.source_call||””,
+sink:r.sink_function||r.sink_call||””
+}));
+}
+return out;
+}
+
+function parseSARIF(data, st) {
+const j = typeof data === “string” ? JSON.parse(data) : data;
+const out = [];
+(j.runs||[]).forEach(run => {
+const tool = run.tool?.driver?.name||“Unknown”;
+const rls = {}; (run.tool?.driver?.rules||[]).forEach(r => { rls[r.id] = r; });
+(run.results||[]).forEach(r => {
+const rl = rls[r.ruleId]||{};
+const loc = r.locations?.[0]?.physicalLocation;
+const tags = rl.properties?.tags||[];
+const cwt = tags.find(t => /CWE-\d+/i.test(t));
+const df = [];
+(r.codeFlows||[]).forEach(cf => {
+(cf.threadFlows||[]).forEach(tf => {
+(tf.locations||[]).forEach(tfl => {
+const pl = tfl.location?.physicalLocation;
+if (pl) df.push({ file:pl.artifactLocation?.uri||””, line:pl.region?.startLine||0, msg:tfl.location?.message?.text||”” });
+});
+});
+});
+out.push(mkFind({
+title:r.message?.text||rl.shortDescription?.text||r.ruleId||“Finding”,
+severity:({error:“high”,warning:“medium”,note:“low”,none:“info”})[r.level]||“medium”,
+rule:r.ruleId||””, cwe:cwt?cwt.match(/CWE-\d+/i)[0]:””,
+file:loc?.artifactLocation?.uri||””, line:loc?.region?.startLine||0,
+description:rl.fullDescription?.text||r.message?.text||””,
+scanner:tool, scanType:st||“sast”,
+source:df.length>0?(df[0].file+”:”+df[0].line):””,
+sink:df.length>1?(df[df.length-1].file+”:”+df[df.length-1].line):””,
+dataflow:df
+}));
+});
+});
+return out;
+}
+
+function parseVeracodePipeline(data) {
+const j = typeof data === “string” ? JSON.parse(data) : data;
+return (j.findings||[]).map(f => mkFind({
+title:f.title||f.issue_type||f.cwe_name||“Veracode Finding”,
+severity:normSev(String(f.severity)),
+cwe:f.cwe_id?“CWE-”+f.cwe_id:””,
+file:f.files?.source_file?.file||f.source_file||””,
+line:f.files?.source_file?.line||f.line||0,
+description:f.display_text||f.description||””,
+rule:f.issue_type||f.issue_type_id||””,
+scanner:“Veracode Pipeline”, scanType:“sast”,
+source:f.files?.source_file?.qualified_function_name||””,
+sink:f.files?.source_file?.function_prototype||””
+}));
+}
+
+function parseVeracodeXML(data) {
+const str = typeof data === “string” ? data : String(data);
+const doc = new DOMParser().parseFromString(str, “text/xml”);
+const out = [];
+doc.querySelectorAll(“flaw”).forEach(fl => {
+const df = [];
+fl.querySelectorAll(“datapath, node, trace_node”).forEach(tn => {
+df.push({ file:tn.getAttribute(“file_path”)||tn.getAttribute(“source_file”)||””, line:parseInt(tn.getAttribute(“line”)||“0”), msg:tn.getAttribute(“description”)||tn.textContent||”” });
+});
+out.push(mkFind({
+title:fl.getAttribute(“categoryname”)||fl.getAttribute(“issuetype”)||fl.getAttribute(“cwename”)||“Veracode Flaw”,
+severity:normSev(fl.getAttribute(“severity”)||“3”),
+cwe:fl.getAttribute(“cweid”)?“CWE-”+fl.getAttribute(“cweid”):””,
+file:fl.getAttribute(“sourcefile”)||fl.getAttribute(“source_file_path”)||””,
+line:parseInt(fl.getAttribute(“line”)||“0”),
+component:fl.getAttribute(“module”)||””,
+description:fl.getAttribute(“description”)||fl.getAttribute(“remediation_desc”)||””,
+rule:fl.getAttribute(“issuetype”)||””,
+scanner:“Veracode Detailed”, scanType:“sast”,
+source:fl.getAttribute(“sourcefunction”)||fl.getAttribute(“functionrelativelocation”)||””,
+sink:fl.getAttribute(“scope”)||fl.getAttribute(“functionprototype”)||””,
+dataflow:df
+}));
+});
+doc.querySelectorAll(“vulnerability”).forEach(v => {
+out.push(mkFind({
+title:v.getAttribute(“cve_id”)||v.getAttribute(“title”)||“Veracode SCA”,
+severity:normSev(v.getAttribute(“severity”)||“medium”),
+cve:v.getAttribute(“cve_id”)||””,
+component:v.getAttribute(“library”)||””,
+scanner:“Veracode SCA”, scanType:“sca”
+}));
+});
+return out;
+}
+
+function parseCheckmarx(data) {
+const str = typeof data === “string” ? data : JSON.stringify(data);
+if (str.trim().startsWith(”<”)) {
+const doc = new DOMParser().parseFromString(str, “text/xml”);
+const out = [];
+doc.querySelectorAll(“Result, Query”).forEach(q => {
+const qname = q.getAttribute(“name”)||q.querySelector(“Name”)?.textContent||””;
+const targets = q.querySelectorAll(“Result, Path”);
+(targets.length ? targets : [q]).forEach(r => {
+const nodes = r.querySelectorAll(“PathNode, Node”);
+const df = []; nodes.forEach(n => { df.push({ file:n.querySelector(“FileName”)?.textContent||””, line:parseInt(n.querySelector(“Line”)?.textContent||“0”), msg:n.querySelector(“Name,Snippet”)?.textContent||”” }); });
+out.push(mkFind({
+title:qname||r.getAttribute(“name”)||“Checkmarx Finding”,
+severity:normSev(r.getAttribute(“Severity”)||q.getAttribute(“Severity”)||“medium”),
+cwe:r.getAttribute(“cweId”)?“CWE-”+r.getAttribute(“cweId”):q.getAttribute(“cweId”)?“CWE-”+q.getAttribute(“cweId”):””,
+file:df[0]?.file||””, line:df[0]?.line||0, scanner:“Checkmarx”, scanType:“sast”,
+source:df.length>0?`${df[0].file}:${df[0].line}`:””,
+sink:df.length>1?`${df[df.length-1].file}:${df[df.length-1].line}`:””,
+dataflow:df
+}));
+});
+});
+return out;
+}
+const j = JSON.parse(str);
+return (j.results||j.queries||j.vulnerabilities||[]).flatMap(q => (q.results||q.nodes||[q]).map(r => mkFind({
+title:q.name||r.queryName||r.title||“Checkmarx Finding”,
+severity:normSev(r.severity||q.severity||“medium”),
+cwe:r.cweId?“CWE-”+r.cweId:””, file:r.fileName||””, line:r.line||0,
+scanner:“Checkmarx”, scanType:“sast”, source:r.sourceNode||””, sink:r.sinkNode||””
+})));
+}
+
+function parseSnyk(data) {
+const j = typeof data === “string” ? JSON.parse(data) : data;
+return (j.vulnerabilities||[]).map(v => mkFind({
+title:v.title||v.id||“Snyk Finding”, severity:normSev(v.severity||“medium”),
+cve:v.identifiers?.CVE?.[0]||””, cwe:v.identifiers?.CWE?.[0]||””,
+component:v.packageName||v.moduleName||””, description:v.description||””,
+file:v.from?.join(” > “)||””, scanner:“Snyk”, scanType:“sca”
+}));
+}
+
+function parseSonarQube(data) {
+const j = typeof data === “string” ? JSON.parse(data) : data;
+return (j.issues||j.hotspots||[]).map(i => mkFind({
+title:i.message||i.rule||“SonarQube Finding”, severity:normSev(i.severity||“medium”),
+rule:i.rule||””, file:i.component?.split(”:”).pop()||””,
+line:i.line||i.textRange?.startLine||0, scanner:“SonarQube”, scanType:“sast”
+}));
+}
+
+function parseBurp(data) {
+const str = typeof data === “string” ? data : String(data);
+if (!str.includes(”<”)) return [];
+const doc = new DOMParser().parseFromString(str, “text/xml”);
+const out = [];
+doc.querySelectorAll(“issue”).forEach(n => { out.push(mkFind({
+title:n.querySelector(“name,type”)?.textContent||“Burp Finding”,
+severity:normSev(n.querySelector(“severity”)?.textContent||“medium”),
+url:(n.querySelector(“host”)?.textContent||””)+(n.querySelector(“path”)?.textContent||””),
+description:n.querySelector(“issueDetail,issueBackground”)?.textContent||””,
+scanner:“Burp Suite”, scanType:“dast”
+})); });
+return out;
+}
+
+function parseZAP(data) {
+const str = typeof data === “string” ? data.trim() : JSON.stringify(data);
+if (str.startsWith(”{”)) {
+const j = JSON.parse(str); const out = [];
+(j.site||[]).forEach(site => { (site.alerts||[]).forEach(a => { out.push(mkFind({
+title:a.name||a.alert||“ZAP Finding”,
+severity:normSev([“info”,“low”,“medium”,“high”,“critical”][parseInt(a.riskcode)]||“medium”),
+cwe:a.cweid?“CWE-”+a.cweid:””, url:a.instances?.[0]?.uri||site[”@name”]||””,
+description:a.desc||””, scanner:“OWASP ZAP”, scanType:“dast”
+})); }); });
+return out;
+}
+const doc = new DOMParser().parseFromString(str, “text/xml”); const out = [];
+doc.querySelectorAll(“alertitem, alert”).forEach(n => { out.push(mkFind({
+title:n.querySelector(“alert,name”)?.textContent||“ZAP Finding”,
+severity:normSev([“info”,“low”,“medium”,“high”,“critical”][parseInt(n.querySelector(“riskcode”)?.textContent||“2”)]||“medium”),
+cwe:n.querySelector(“cweid”)?.textContent?“CWE-”+n.querySelector(“cweid”).textContent:””,
+url:n.querySelector(“uri,url”)?.textContent||””,
+description:n.querySelector(“desc,description”)?.textContent||””,
+scanner:“OWASP ZAP”, scanType:“dast”
+})); });
+return out;
+}
+
+function parseTrivy(data) {
+const j = typeof data === “string” ? JSON.parse(data) : data; const out = [];
+(j.Results||[j]).forEach(r => {
+(r.Vulnerabilities||r.vulnerabilities||[]).forEach(v => { out.push(mkFind({
+title:(v.VulnerabilityID||v.id||””)+(v.Title||v.title?” — “+(v.Title||v.title):””),
+severity:normSev(v.Severity||v.severity||“medium”),
+cve:String(v.VulnerabilityID||””).startsWith(“CVE”)?v.VulnerabilityID:””,
+component:v.PkgName||v.pkgName||r.Target||””,
+description:v.Description||v.description||””, scanner:“Trivy”,
+scanType:String(r.Type||””).includes(“container”)?“container”:“sca”
+})); });
+(r.Misconfigurations||[]).forEach(m => { out.push(mkFind({
+title:m.Title||m.ID||“Trivy Misconfig”, severity:normSev(m.Severity||“medium”),
+file:r.Target||””, description:m.Description||m.Message||””,
+scanner:“Trivy”, scanType:“iac”, rule:m.ID||””
+})); });
+});
+return out;
+}
+
+function parseSemgrep(data) {
+const j = typeof data === “string” ? JSON.parse(data) : data;
+return (j.results||[]).map(r => mkFind({
+title:r.check_id?.split(”.”).pop()||r.check_id||“Finding”,
+severity:normSev(r.extra?.severity||r.severity||“medium”),
+rule:r.check_id||””, cwe:r.extra?.metadata?.cwe?.[0]||””,
+file:r.path||””, line:r.start?.line||0,
+description:r.extra?.message||””, scanner:“Semgrep”, scanType:“sast”
+}));
+}
+
+function parseBandit(data) {
+const j = typeof data === “string” ? JSON.parse(data) : data;
+return (j.results||[]).map(r => mkFind({
+title:r.issue_text||r.test_name||“Bandit Finding”,
+severity:normSev(r.issue_severity||“medium”), rule:r.test_id||r.test_name||””,
+cwe:r.issue_cwe?.id?“CWE-”+r.issue_cwe.id:””,
+file:r.filename||””, line:r.line_number||0,
+description:r.more_info||””, scanner:“Bandit”, scanType:“sast”
+}));
+}
+
+function parseCycloneDX(data) {
+const j = typeof data === “string” ? JSON.parse(data) : data;
+return (j.vulnerabilities||[]).map(v => mkFind({
+title:v.id+(v.description?” — “+v.description.slice(0,60):””),
+severity:normSev(v.ratings?.[0]?.severity||“medium”),
+cve:String(v.id||””).startsWith(“CVE”)?v.id:””,
+cwe:v.cwes?.[0]?“CWE-”+v.cwes[0]:””,
+component:v.affects?.[0]?.ref||””,
+description:v.description||””, scanner:“CycloneDX”, scanType:“sca”
+}));
+}
+
+function parseFortify(data) {
+const str = typeof data === “string” ? data : String(data);
+if (str.trim().startsWith(”{”)) {
+const j = JSON.parse(str);
+return (j.issues||j.vulnerabilities||j.data||[]).map(i => mkFind({
+title:i.issueName||i.category||“Fortify Finding”,
+severity:normSev(i.frilessPriority||i.severity||“medium”),
+cwe:i.cwe?“CWE-”+i.cwe:””, file:i.primaryLocation?.file||i.sourcePath||””,
+line:i.primaryLocation?.line||i.lineNumber||0,
+description:i.issueAbstract||i.explanation||””,
+rule:i.category||””, scanner:“Fortify”, scanType:“sast”,
+source:i.source?.file?i.source.file+”:”+(i.source.line||0):””,
+sink:i.sink?.file?i.sink.file+”:”+(i.sink.line||0):””
+}));
+}
+return [];
+}
+
+function parseGenericJSON(data, st) {
+const arr = typeof data === “string” ? JSON.parse(data) : (Array.isArray(data)?data:[data]);
+return arr.map(i => mkFind({
+title:i.title||i.name||i.vulnerability||i.message||i.finding||“Finding”,
+severity:normSev(i.severity||i.risk||i.level||i.priority||“medium”),
+rule:i.rule||i.ruleId||i.rule_id||i.check_id||””,
+cwe:i.cwe||i.cweId||””, cve:i.cve||i.cveId||””,
+file:i.file||i.path||i.location||i.filename||””,
+line:i.line||i.lineNumber||0,
+component:i.component||i.package||i.library||””,
+description:i.description||i.detail||i.message||””,
+url:i.url||i.endpoint||””,
+scanner:i.scanner||i.tool||“JSON”,
+scanType:i.scanType||i.scan_type||st||“unknown”,
+source:i.source_function||””, sink:i.sink_function||””
+}));
+}
+
+function autoDetect(data, st) {
+const str = typeof data === “string” ? data.trim() : JSON.stringify(data);
+if (str.startsWith(”<”)||str.startsWith(”<?xml”)) {
+const lo = str.toLowerCase();
+if (lo.includes(“detailedreport”)||lo.includes(“veracode”)||(lo.includes(”<flaw”)&&lo.includes(“cweid”))) return parseVeracodeXML(str);
+if (lo.includes(”<issues”)&&lo.includes(“burp”)) return parseBurp(str);
+if (lo.includes(“owaspzapreport”)||lo.includes(“alertitem”)) return parseZAP(str);
+if (lo.includes(“checkmarx”)||(lo.includes(”<query”)&&lo.includes(”<result”))) return parseCheckmarx(str);
+const doc = new DOMParser().parseFromString(str, “text/xml”); const out = [];
+doc.querySelectorAll(“issue,vulnerability,result,finding,alert,flaw,defect,violation”).forEach(n => {
+const gt = tags => { for (const t of tags.split(”,”)) { const el = n.querySelector(t.trim())||n.getAttribute(t.trim()); if (el) return typeof el===“string”?el:el.textContent; } return “”; };
+out.push(mkFind({ title:gt(“name,title,message,alert”)||“XML Finding”, severity:normSev(gt(“severity,risk,priority”)||“medium”),
+cwe:gt(“cwe,cweid”), file:gt(“file,path,sourcefile”), line:parseInt(gt(“line”)||“0”),
+description:gt(“description,detail,desc”), url:gt(“url,uri”), scanner:“XML Import”, scanType:st||“unknown” }));
+});
+return out;
+}
+try {
+const j = typeof data === “object” ? data : JSON.parse(str);
+if (j.$schema && String(j.$schema).includes(“sarif”)) return parseSARIF(j, st);
+if (j.bomFormat) return parseCycloneDX(j);
+if (j.findings && (j.pipeline_scan||j.scan_id||str.includes(“veracode”))) return parseVeracodePipeline(j);
+if (j.Results && (j.SchemaVersion||j.CreatedAt)) return parseTrivy(j);
+if (j.results && j.results[0]?.check_id) return parseSemgrep(j);
+if (j.results && j.results[0]?.test_id) return parseBandit(j);
+if (j.vulnerabilities && (j.packageManager||j.projectName||str.includes(“snyk”))) return parseSnyk(j);
+if (j.issues||j.hotspots) return parseSonarQube(j);
+if (j.site && j.site[0]?.alerts) return parseZAP(j);
+if (Array.isArray(j)) return parseGenericJSON(j, st);
+return parseGenericJSON([j], st);
+} catch(e) {}
+if (str.includes(”,”) && str.includes(”\n”) && !str.startsWith(”{”)) return parseCSV(str, st);
+return [];
+}
+
+function parseFindings(data, format, fileName) {
+const st = inferType(format, fileName);
+try {
+const map = { sarif:parseSARIF, csv:parseCSV, veracode_pipeline:parseVeracodePipeline,
+veracode_xml:parseVeracodeXML, fortify:parseFortify, checkmarx:parseCheckmarx,
+snyk:parseSnyk, sonarqube:parseSonarQube, burp:parseBurp, zap:parseZAP, trivy:parseTrivy,
+semgrep:parseSemgrep, bandit:parseBandit, cyclonedx:parseCycloneDX };
+if (map[format]) return map[format](data, st);
+if (format === “generic”) return typeof data===“string”&&data.includes(”,”)&&data.includes(”\n”)&&!data.trim().startsWith(”{”) ? parseCSV(data,st) : parseGenericJSON(data,st);
+return autoDetect(data, st);
+} catch(e) { console.error(“Parse error:”,e); return autoDetect(data, st); }
+}
+
+function inferType(fmt, fn) {
+const n = (fn||””).toLowerCase();
+if ([“burp”,“zap”].includes(fmt)) return “dast”;
+if ([“trivy”].includes(fmt)) return “container”;
+if ([“snyk”,“cyclonedx”].includes(fmt)) return “sca”;
+if ([“checkmarx”,“sonarqube”,“semgrep”,“veracode_pipeline”,“veracode_xml”,“fortify”,“bandit”].includes(fmt)) return “sast”;
+if (n.includes(“dast”)||n.includes(“dynamic”)) return “dast”;
+if (n.includes(“sast”)||n.includes(“static”)||n.includes(“veracode”)||n.includes(“fortify”)) return “sast”;
+if (n.includes(“sca”)||n.includes(“dependency”)||n.includes(“sbom”)) return “sca”;
+if (n.includes(“container”)||n.includes(“docker”)) return “container”;
+if (n.includes(“iac”)||n.includes(“terraform”)) return “iac”;
+return “unknown”;
+}
+
+// ═══════════════════════════════════════
+// CORRELATION
+// ═══════════════════════════════════════
+function computeCorrelations(findings, threshold) {
+const groups = []; const used = new Set();
+for (let i = 0; i < findings.length; i++) {
+if (used.has(i)) continue;
+const g = { ids:[findings[i].id], score:0, type:“heuristic” };
+for (let j = i+1; j < findings.length; j++) {
+if (used.has(j)) continue;
+const s = simScore(findings[i], findings[j]);
+if (s >= threshold) { g.ids.push(findings[j].id); g.score=Math.max(g.score,s); used.add(j); }
+}
+if (g.ids.length > 1) {
+used.add(i);
+const gf = g.ids.map(id=>findings.find(f=>f.id===id)).filter(Boolean);
+const types = new Set(gf.map(f=>f.scanType));
+if (gf.some(f=>f.cve)) g.type = “CVE match”;
+else if (gf.filter(f=>f.cwe).length>1) g.type = “CWE match”;
+else if (types.size > 1) g.type = “Cross-scan”;
+else if (gf.some(f=>f.sink||f.source)) g.type = “Dataflow”;
+else g.type = “Heuristic”;
+groups.push(g);
+}
+}
+return groups;
+}
+
+function simScore(a, b) {
+let s = 0, f = 0;
+if (a.cve&&b.cve&&a.cve===b.cve) { s+=1; f++; }
+if (a.cwe&&b.cwe&&a.cwe===b.cwe) { s+=0.8; f++; }
+if (a.file&&b.file) { if (a.file===b.file) { s+=0.7; f++; } else if (getFilename(a.file)===getFilename(b.file)) { s+=0.5; f++; } }
+if (a.component&&b.component) { if (a.component===b.component) { s+=0.7; f++; } else if (a.component.includes(b.component)||b.component.includes(a.component)) { s+=0.4; f++; } }
+if (a.sink&&b.sink&&a.sink===b.sink) { s+=0.9; f++; }
+if (a.source&&b.source&&a.source===b.source) { s+=0.7; f++; }
+if ((a.sink&&b.source&&a.sink===b.source)||(a.source&&b.sink&&a.source===b.sink)) { s+=0.6; f++; }
+const ts = strSim(a.title, b.title);
+if (ts > 0.4) { s+=ts*0.6; f++; }
+if (a.scanType!==b.scanType&&a.severity===b.severity) { s+=0.2; f++; }
+return f > 0 ? Math.min(s/Math.max(f,1),1) : 0;
+}
+
+// ═══════════════════════════════════════
+// DEMO DATA
+// ═══════════════════════════════════════
+function createDemoData() {
+_fid = 0;
+const sast = [
+{ title:“SQL Injection in user query handler”, severity:“critical”, rule:“sql-injection”, cwe:“CWE-89”, file:“src/api/users.js”, line:142, component:“user-api”, scanner:“Semgrep”, scanType:“sast”, description:“User input flows into SQL query without parameterization.”, source:“req.query.search (users.js:138)”, sink:“db.query() (users.js:142)” },
+{ title:“Cross-Site Scripting (Reflected XSS)”, severity:“high”, rule:“xss-reflected”, cwe:“CWE-79”, file:“src/views/search.jsx”, line:87, component:“search-view”, scanner:“Semgrep”, scanType:“sast”, description:“User input reflected without sanitization.”, source:“req.params.q (search.jsx:72)”, sink:“innerHTML (search.jsx:87)” },
+{ title:“Hardcoded API credentials”, severity:“critical”, rule:“hardcoded-secret”, cwe:“CWE-798”, file:“src/config/db.js”, line:12, component:“config”, scanner:“Semgrep”, scanType:“sast”, description:“Database password hardcoded.” },
+{ title:“Path Traversal in file download”, severity:“high”, rule:“path-traversal”, cwe:“CWE-22”, file:“src/api/files.js”, line:56, component:“file-api”, scanner:“SonarQube”, scanType:“sast”, description:“File path from user input.”, source:“req.params.name (files.js:50)”, sink:“fs.readFile (files.js:56)” },
+{ title:“Insecure random number generation”, severity:“medium”, rule:“insecure-random”, cwe:“CWE-338”, file:“src/utils/token.js”, line:23, component:“utils”, scanner:“SonarQube”, scanType:“sast” },
+{ title:“Missing CSRF protection”, severity:“medium”, rule:“csrf-missing”, cwe:“CWE-352”, file:“src/api/settings.js”, line:78, component:“settings-api”, scanner:“Checkmarx”, scanType:“sast” },
+{ title:“Unvalidated redirect”, severity:“medium”, rule:“open-redirect”, cwe:“CWE-601”, file:“src/auth/callback.js”, line:34, component:“auth”, scanner:“Checkmarx”, scanType:“sast”, source:“req.query.next (callback.js:30)”, sink:“res.redirect (callback.js:34)” },
+{ title:“Prototype Pollution in merge”, severity:“high”, rule:“prototype-pollution”, cwe:“CWE-1321”, file:“src/utils/merge.js”, line:15, component:“utils”, scanner:“Semgrep”, scanType:“sast”, source:“userInput (merge.js:10)”, sink:“target[key] (merge.js:15)” },
+].map(mkFind);
+const veracode = [
+{ title:“SQL Injection via string concat”, severity:“critical”, cwe:“CWE-89”, file:“src/api/users.js”, line:145, component:“user-api”, scanner:“Veracode Pipeline”, scanType:“sast”, description:“Tainted data in SQL query.”, source:“getParameter (users.js:130)”, sink:“executeQuery (users.js:145)”, rule:“taint_sql” },
+{ title:“Improper Output Neutralization for Logs”, severity:“medium”, cwe:“CWE-117”, file:“src/utils/logger.js”, line:28, component:“utils”, scanner:“Veracode Pipeline”, scanType:“sast”, source:“req.headers (logger.js:20)”, sink:“console.log (logger.js:28)” },
+{ title:“Use of Hard-coded Password”, severity:“critical”, cwe:“CWE-259”, file:“src/config/db.js”, line:12, component:“config”, scanner:“Veracode Detailed”, scanType:“sast”, sink:“createConnection (db.js:15)” },
+].map(mkFind);
+const dast = [
+{ title:“SQL Injection on /api/users/search”, severity:“critical”, cwe:“CWE-89”, url:“https://app.example.com/api/users/search”, component:“user-api”, scanner:“OWASP ZAP”, scanType:“dast” },
+{ title:“Reflected XSS in search parameter”, severity:“high”, cwe:“CWE-79”, url:“https://app.example.com/search”, component:“search-view”, scanner:“OWASP ZAP”, scanType:“dast” },
+{ title:“Missing Content-Security-Policy”, severity:“medium”, cwe:“CWE-693”, url:“https://app.example.com/”, scanner:“Burp Suite”, scanType:“dast” },
+{ title:“Server information disclosure”, severity:“low”, cwe:“CWE-200”, url:“https://app.example.com/”, scanner:“Burp Suite”, scanType:“dast” },
+{ title:“Cookie without Secure flag”, severity:“medium”, cwe:“CWE-614”, url:“https://app.example.com/login”, scanner:“OWASP ZAP”, scanType:“dast” },
+{ title:“CORS wildcard with credentials”, severity:“high”, cwe:“CWE-942”, url:“https://app.example.com/api/”, scanner:“Burp Suite”, scanType:“dast” },
+].map(mkFind);
+const sca = [
+{ title:“CVE-2024-21538: lodash prototype pollution”, severity:“critical”, cve:“CVE-2024-21538”, cwe:“CWE-1321”, component:“lodash@4.17.20”, scanner:“Snyk”, scanType:“sca” },
+{ title:“CVE-2023-44487: HTTP/2 Rapid Reset”, severity:“high”, cve:“CVE-2023-44487”, component:“express@4.18.1”, scanner:“Snyk”, scanType:“sca” },
+{ title:“CVE-2024-29041: express open redirect”, severity:“medium”, cve:“CVE-2024-29041”, cwe:“CWE-601”, component:“express@4.18.1”, scanner:“Trivy”, scanType:“sca” },
+{ title:“CVE-2023-26136: tough-cookie pollution”, severity:“medium”, cve:“CVE-2023-26136”, cwe:“CWE-1321”, component:“tough-cookie@2.5.0”, scanner:“Snyk”, scanType:“sca” },
+{ title:“Outdated: jsonwebtoken@8.5.1”, severity:“low”, component:“jsonwebtoken@8.5.1”, scanner:“Trivy”, scanType:“sca” },
+].map(mkFind);
+const container = [
+{ title:“Container running as root”, severity:“high”, cwe:“CWE-250”, file:“Dockerfile”, scanner:“Trivy”, scanType:“container” },
+{ title:“CVE-2024-3596: OpenSSL overflow”, severity:“critical”, cve:“CVE-2024-3596”, component:“openssl@1.1.1w”, scanner:“Trivy”, scanType:“container” },
+{ title:“Credentials in env variables”, severity:“high”, cwe:“CWE-526”, file:“docker-compose.yml”, scanner:“Trivy”, scanType:“container” },
+].map(mkFind);
+const iac = [
+{ title:“S3 bucket public read access”, severity:“high”, cwe:“CWE-284”, file:“terraform/storage.tf”, line:34, scanner:“Checkov”, scanType:“iac” },
+{ title:“Security group unrestricted SSH”, severity:“critical”, cwe:“CWE-284”, file:“terraform/network.tf”, line:56, scanner:“Checkov”, scanType:“iac” },
+{ title:“RDS without encryption”, severity:“medium”, file:“terraform/database.tf”, line:12, scanner:“Checkov”, scanType:“iac” },
+].map(mkFind);
+return { sources:[
+{ id:0, name:“semgrep-sast.sarif”, type:“sast”, format:“sarif”, findings:sast, count:sast.length },
+{ id:1, name:“veracode-pipeline.json”, type:“sast”, format:“veracode_pipeline”, findings:veracode, count:veracode.length },
+{ id:2, name:“zap-dast.json”, type:“dast”, format:“zap”, findings:dast, count:dast.length },
+{ id:3, name:“snyk-sca.json”, type:“sca”, format:“snyk”, findings:sca, count:sca.length },
+{ id:4, name:“trivy-container.json”, type:“container”, format:“trivy”, findings:container, count:container.length },
+{ id:5, name:“checkov-iac.json”, type:“iac”, format:“generic”, findings:iac, count:iac.length },
+], findings:[…sast,…veracode,…dast,…sca,…container,…iac] };
+}
+
+// ═══════════════════════════════════════
+// THREE.JS VIEWPORT
+// ═══════════════════════════════════════
+function ThreeView({ findings, correlations, onSelect, hlGroup, viewMode, focusNodeId, viewTick }) {
+const mountRef = useRef(null);
+const rendRef = useRef(null);
+const frameRef = useRef(null);
+const nodesRef = useRef([]);
+const particlesRef = useRef([]);
+const labelsRef = useRef([]);
+const edgesRef = useRef([]);
+const cs = useRef({ rot:{x:0.3,y:0.5}, pan:{x:0,y:0,z:0}, dist:55, drag:false, panMode:false, start:{x:0,y:0}, mouse:new THREE.Vector2(), hov:null,
+targetRot:null, targetPan:null, targetDist:null, selectedMesh:null });
+const tipRef = useRef(null);
+
+const build = useCallback(() => {
+const box = mountRef.current;
+if (!box) return;
+if (rendRef.current) { rendRef.current.dispose(); try { rendRef.current.domElement.remove(); } catch(e){} }
+if (frameRef.current) cancelAnimationFrame(frameRef.current);
+const W = box.clientWidth, H = box.clientHeight;
+if (!W || !H) return;
+
+```
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x06080d, 0.005);
+const cam = new THREE.PerspectiveCamera(55, W/H, 0.1, 500);
+const rend = new THREE.WebGLRenderer({ antialias:true });
+rend.setSize(W,H); rend.setPixelRatio(Math.min(devicePixelRatio,2)); rend.setClearColor(0x06080d);
+box.appendChild(rend.domElement); rendRef.current = rend;
+
+scene.add(new THREE.AmbientLight(0x334466, 0.7));
+const l1 = new THREE.PointLight(0x6366f1, 1.2, 200); l1.position.set(30,40,30); scene.add(l1);
+const l2 = new THREE.PointLight(0xff2d55, 0.5, 150); l2.position.set(-30,-20,-30); scene.add(l2);
+const grid = new THREE.GridHelper(100, 40, 0x1a2233, 0x111720); grid.position.y = -15; scene.add(grid);
+
+const nodes = [], particles = [], labels = [];
+let wire = null;
+
+if (findings.length > 0) {
+  const comps = {};
+  findings.forEach(f => { const k = f.component||f.file||f.rule||"Unknown"; if (!comps[k]) comps[k]={name:k,findings:[],severity:f.severity}; comps[k].findings.push(f); if (SEV_ORDER[f.severity]<SEV_ORDER[comps[k].severity]) comps[k].severity=f.severity; });
+  const keys = Object.keys(comps), cnt = keys.length;
+
+  const cM = new THREE.Mesh(new THREE.IcosahedronGeometry(2.5,1), new THREE.MeshPhongMaterial({ color:0x6366f1, emissive:0x6366f1, emissiveIntensity:0.5, transparent:true, opacity:0.9 }));
+  cM.userData = { label:"Application Core", nodeType:"core", findingCount:findings.length, isCenter:true };
+  scene.add(cM); nodes.push(cM);
+  wire = new THREE.Mesh(new THREE.IcosahedronGeometry(3,1), new THREE.MeshBasicMaterial({ color:0x6366f1, wireframe:true, transparent:true, opacity:0.2 }));
+  scene.add(wire);
+
+  keys.forEach((k, i) => {
+    const c = comps[k], a = (i/cnt)*Math.PI*2, rad = 14+Math.random()*10;
+    const px = Math.cos(a)*rad+(Math.random()-0.5)*4, py = (Math.random()-0.5)*10, pz = Math.sin(a)*rad+(Math.random()-0.5)*4;
+    const ns = Math.max(0.7, 2-SEV_ORDER[c.severity]*0.3);
+    const col = SEV_INT[c.severity]||0x6366f1;
+    const geo = c.findings.length>3 ? new THREE.OctahedronGeometry(ns,0) : new THREE.SphereGeometry(ns,12,8);
+    const m = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color:col, emissive:col, emissiveIntensity:0.3, transparent:true, opacity:0.85 }));
+    m.position.set(px,py,pz);
+    m.userData = { label:k.length>35?k.slice(0,35)+"…":k, nodeType:c.findings[0]?.scanType||"unknown", severity:c.severity, findingCount:c.findings.length, baseY:py, baseEmissive:0.3, findingIds:c.findings.map(f=>f.id), componentFindings:c.findings };
+    scene.add(m); nodes.push(m);
+
+    if (c.severity==="critical") {
+      const gm = new THREE.Mesh(new THREE.SphereGeometry(ns*1.6,12,8), new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:0.12 }));
+      gm.position.set(px,py,pz); scene.add(gm); m.userData.glowMesh = gm;
+    }
+
+    const eg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(px,py,pz)]);
+    scene.add(new THREE.Line(eg, new THREE.LineBasicMaterial({ color:0x1a2233, transparent:true, opacity:0.35 })));
+
+    const lb = mkLabel(m.userData.label, col);
+    lb.position.set(px, py+ns+1.2, pz); scene.add(lb); labels.push(lb);
+
+    const ps = mkPart({x:0,y:0,z:0},{x:px,y:py,z:pz},col);
+    scene.add(ps); particles.push(ps);
+
+    if (c.findings.length>1 && c.findings.length<=6) {
+      c.findings.forEach((f, fi) => {
+        const sa = (fi/c.findings.length)*Math.PI*2, sr = 2.2+ns;
+        const sx=px+Math.cos(sa)*sr, sy=py+(Math.random()-0.5)*1.5, sz=pz+Math.sin(sa)*sr;
+        const sc2 = SEV_INT[f.severity]||0x6366f1;
+        const sm = new THREE.Mesh(new THREE.SphereGeometry(0.35,8,6), new THREE.MeshPhongMaterial({ color:sc2, emissive:sc2, emissiveIntensity:0.4, transparent:true, opacity:0.8 }));
+        sm.position.set(sx,sy,sz);
+        sm.userData = { label:f.title, severity:f.severity, nodeType:f.scanType, file:f.file, findingId:f.id, baseY:sy, baseEmissive:0.4, source:f.source, sink:f.sink };
+        scene.add(sm); nodes.push(sm);
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(px,py,pz), new THREE.Vector3(sx,sy,sz)]), new THREE.LineBasicMaterial({ color:0x1a2233, transparent:true, opacity:0.2 })));
+      });
+    }
+  });
+
+  (correlations||[]).forEach(cr => {
+    if (cr.ids.length<2) return;
+    for (let a=0; a<cr.ids.length-1; a++) {
+      const n1 = nodes.find(n=>n.userData.findingId===cr.ids[a]||(n.userData.findingIds&&n.userData.findingIds.includes(cr.ids[a])));
+      const n2 = nodes.find(n=>n.userData.findingId===cr.ids[a+1]||(n.userData.findingIds&&n.userData.findingIds.includes(cr.ids[a+1])));
+      if (n1&&n2&&n1!==n2) {
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([n1.position.clone(), n2.position.clone()]), new THREE.LineBasicMaterial({ color:0x6366f1, transparent:true, opacity:0.2+cr.score*0.5 })));
+        const cp = mkPart(n1.position, n2.position, 0x6366f1); scene.add(cp); particles.push(cp);
+      }
+    }
+  });
+}
+
+nodesRef.current = nodes; particlesRef.current = particles; labelsRef.current = labels;
+const ray = new THREE.Raycaster();
+const el = rend.domElement;
+const st = cs.current;
+let didDrag = false;
+
+const lerp = (a,b,t) => a+(b-a)*t;
+
+const animate = () => {
+  frameRef.current = requestAnimationFrame(animate);
+  const t = Date.now()*0.001;
+
+  // Smooth camera transitions
+  if (st.targetRot) {
+    st.rot.x = lerp(st.rot.x, st.targetRot.x, 0.08);
+    st.rot.y = lerp(st.rot.y, st.targetRot.y, 0.08);
+    if (Math.abs(st.rot.x-st.targetRot.x)<0.001 && Math.abs(st.rot.y-st.targetRot.y)<0.001) st.targetRot = null;
+  }
+  if (st.targetPan) {
+    st.pan.x = lerp(st.pan.x, st.targetPan.x, 0.08);
+    st.pan.y = lerp(st.pan.y, st.targetPan.y, 0.08);
+    st.pan.z = lerp(st.pan.z, st.targetPan.z, 0.08);
+    if (Math.abs(st.pan.x-st.targetPan.x)<0.01 && Math.abs(st.pan.y-st.targetPan.y)<0.01 && Math.abs(st.pan.z-st.targetPan.z)<0.01) st.targetPan = null;
+  }
+  if (st.targetDist !== null) {
+    st.dist = lerp(st.dist, st.targetDist, 0.08);
+    if (Math.abs(st.dist-st.targetDist)<0.1) st.targetDist = null;
+  }
+
+  const cx2 = st.pan.x+st.dist*Math.sin(st.rot.y)*Math.cos(st.rot.x);
+  const cy2 = st.pan.y+st.dist*Math.sin(st.rot.x);
+  const cz2 = st.pan.z+st.dist*Math.cos(st.rot.y)*Math.cos(st.rot.x);
+  cam.position.set(cx2,cy2,cz2); cam.lookAt(st.pan.x,st.pan.y,st.pan.z);
+
+  // Selection ring pulse
+  if (st.selectedMesh) {
+    const sm = st.selectedMesh;
+    if (sm.userData._ring) {
+      sm.userData._ring.rotation.z += 0.02;
+      sm.userData._ring.position.copy(sm.position);
+      sm.userData._ring.material.opacity = 0.3 + Math.sin(t*3)*0.15;
+    }
+  }
+
+  nodes.forEach((m,i) => {
+    if (m.userData.baseY!==undefined) m.position.y = m.userData.baseY+Math.sin(t*0.5+i*0.3)*0.25;
+    if (m.userData.glowMesh) { m.userData.glowMesh.position.y=m.position.y; m.userData.glowMesh.scale.setScalar(1+Math.sin(t*2+i)*0.12); m.userData.glowMesh.material.opacity=0.1+Math.sin(t*2+i)*0.06; }
+  });
+  if (wire) { wire.rotation.x+=0.001; wire.rotation.y+=0.002; }
+  particles.forEach(ps => {
+    const p = ps.geometry.attributes.position.array;
+    for (let i=0;i<p.length;i+=3) {
+      ps.userData.prog[i/3]+=ps.userData.spd[i/3];
+      if (ps.userData.prog[i/3]>1) ps.userData.prog[i/3]=0;
+      const tt=ps.userData.prog[i/3], e2=ps.userData.edge;
+      p[i]=e2.s.x+(e2.e.x-e2.s.x)*tt; p[i+1]=e2.s.y+(e2.e.y-e2.s.y)*tt; p[i+2]=e2.s.z+(e2.e.z-e2.s.z)*tt;
+    }
+    ps.geometry.attributes.position.needsUpdate=true;
+  });
+  labels.forEach(l=>l.lookAt(cam.position));
+  rend.render(scene, cam);
+};
+animate();
+
+// Focus camera on a node position
+const focusOn = (pos, dist) => {
+  st.targetPan = { x:pos.x, y:pos.y, z:pos.z };
+  st.targetDist = dist || 25;
+};
+
+// Clear selection ring
+const clearSelection = () => {
+  if (st.selectedMesh && st.selectedMesh.userData._ring) {
+    scene.remove(st.selectedMesh.userData._ring);
+    st.selectedMesh.userData._ring = null;
+  }
+  // Restore all node opacity
+  nodes.forEach(m => {
+    m.material.opacity = 0.85;
+    m.material.emissiveIntensity = m.userData.baseEmissive || 0.3;
+  });
+  st.selectedMesh = null;
+};
+
+// Select and highlight a node
+const selectNode = (mesh) => {
+  clearSelection();
+  st.selectedMesh = mesh;
+  // Create selection ring
+  const ringGeo = new THREE.RingGeometry(
+    (mesh.userData.findingId !== undefined ? 0.8 : 2.5),
+    (mesh.userData.findingId !== undefined ? 1.1 : 3.0),
+    32
+  );
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.position.copy(mesh.position);
+  ring.lookAt(cam.position);
+  scene.add(ring);
+  mesh.userData._ring = ring;
+
+  // Dim non-related nodes
+  nodes.forEach(m => {
+    if (m === mesh) {
+      m.material.emissiveIntensity = 1.0;
+      m.material.opacity = 1.0;
+    } else {
+      m.material.opacity = 0.25;
+      m.material.emissiveIntensity = 0.1;
+    }
+  });
+
+  // Highlight connected edges: find correlation group
+  const fid = mesh.userData.findingId;
+  const fids = mesh.userData.findingIds || (fid !== undefined ? [fid] : []);
+  if (fids.length > 0) {
+    const relatedIds = new Set(fids);
+    (correlations||[]).forEach(cr => {
+      if (cr.ids.some(id => relatedIds.has(id))) {
+        cr.ids.forEach(id => relatedIds.add(id));
+      }
+    });
+    // Brighten correlated nodes
+    nodes.forEach(m => {
+      const mfid = m.userData.findingId;
+      const mfids = m.userData.findingIds || (mfid !== undefined ? [mfid] : []);
+      if (mfids.some(id => relatedIds.has(id))) {
+        m.material.opacity = 0.9;
+        m.material.emissiveIntensity = 0.6;
+      }
+    });
+  }
+
+  // Focus camera
+  focusOn(mesh.position, mesh.userData.isCenter ? 50 : 22);
+
+  // Fire selection
+  const d = mesh.userData;
+  if (d.findingId !== undefined) onSelect(d.findingId);
+  else if (d.componentFindings && d.componentFindings.length > 0) onSelect(d.componentFindings[0].id);
+  else if (d.isCenter) onSelect(null);
+};
+
+const onDown=e=>{
+  didDrag = false;
+  if(e.shiftKey){st.panMode=true;}else{st.drag=true;}
+  st.start={x:e.clientX,y:e.clientY};
+};
+const onMove=e=>{
+  const rect=el.getBoundingClientRect();
+  st.mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+  st.mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  if (st.drag){
+    const dx = e.clientX-st.start.x, dy = e.clientY-st.start.y;
+    if (Math.abs(dx)>2||Math.abs(dy)>2) didDrag = true;
+    st.rot.y+=dx*0.005;
+    st.rot.x=Math.max(-1.4,Math.min(1.4,st.rot.x+dy*0.005));
+    st.start={x:e.clientX,y:e.clientY};
+    // Cancel any animated transition during manual drag
+    st.targetRot = null; st.targetPan = null; st.targetDist = null;
+    return;
+  }
+  if (st.panMode){const dx=(e.clientX-st.start.x)*0.05,dy=(e.clientY-st.start.y)*0.05;const rv=new THREE.Vector3();rv.crossVectors(cam.getWorldDirection(new THREE.Vector3()),new THREE.Vector3(0,1,0)).normalize();st.pan.x-=rv.x*dx;st.pan.z-=rv.z*dx;st.pan.y+=dy;st.start={x:e.clientX,y:e.clientY};st.targetPan=null;return;}
+  ray.setFromCamera(st.mouse, cam);
+  const hits=ray.intersectObjects(nodes);const tip=tipRef.current;
+  if(hits.length>0){const o=hits[0].object;if(st.hov&&st.hov!==o)st.hov.material.emissiveIntensity=st.hov.userData.baseEmissive||0.3;st.hov=o;if(!st.selectedMesh||st.selectedMesh!==o) o.material.emissiveIntensity=0.9;el.style.cursor="pointer";
+    if(tip){tip.style.display="block";tip.style.left=(e.clientX-rect.left+14)+"px";tip.style.top=(e.clientY-rect.top-10)+"px";
+      const d=o.userData;let h=`<div style="font-weight:600;font-size:12px;margin-bottom:3px">${d.label||""}</div><div style="font-size:10px;color:#8896ab;margin-bottom:4px">${d.nodeType||""} ${d.file?"· "+d.file:""}</div>`;
+      if(d.severity)h+=`<span style="font-size:9px;padding:1px 6px;border-radius:4px;background:${SEV_HEX[d.severity]}22;color:${SEV_HEX[d.severity]};font-weight:600">${d.severity.toUpperCase()}</span>`;
+      if(d.findingCount)h+=`<span style="font-size:10px;color:#4a5568;margin-left:6px">${d.findingCount} findings</span>`;
+      if(d.source)h+=`<div style="font-size:9px;color:#22c55e;margin-top:4px">Source: ${d.source}</div>`;
+      if(d.sink)h+=`<div style="font-size:9px;color:#ff6b35;margin-top:2px">Sink: ${d.sink}</div>`;
+      tip.innerHTML=h;}
+  }else{if(st.hov){st.hov.material.emissiveIntensity=st.hov.userData.baseEmissive||0.3;st.hov=null;}el.style.cursor="grab";if(tip)tip.style.display="none";}
+};
+const onUp=e=>{
+  const wasDrag = didDrag;
+  st.drag=false;st.panMode=false;
+  // Single click (no drag) = select node
+  if (!wasDrag) {
+    ray.setFromCamera(st.mouse, cam);
+    const hits = ray.intersectObjects(nodes);
+    if (hits.length > 0) {
+      selectNode(hits[0].object);
+    } else {
+      // Click on empty space = deselect
+      clearSelection();
+      onSelect(null);
+    }
+  }
+};
+const onWheel=e=>{e.preventDefault();st.dist=Math.max(10,Math.min(150,st.dist+e.deltaY*0.05));st.targetDist=null;};
+
+el.addEventListener("mousedown",onDown);el.addEventListener("mousemove",onMove);el.addEventListener("mouseup",onUp);
+el.addEventListener("wheel",onWheel,{passive:false});
+const onR=()=>{const nw=box.clientWidth,nh=box.clientHeight;if(nw&&nh){cam.aspect=nw/nh;cam.updateProjectionMatrix();rend.setSize(nw,nh);}};
+window.addEventListener("resize",onR);
+return ()=>{if(frameRef.current)cancelAnimationFrame(frameRef.current);el.removeEventListener("mousedown",onDown);el.removeEventListener("mousemove",onMove);el.removeEventListener("mouseup",onUp);el.removeEventListener("wheel",onWheel);window.removeEventListener("resize",onR);rend.dispose();try{el.remove();}catch(e){}};
+```
+
+}, [findings, correlations, onSelect]);
+
+useEffect(()=>{const c=build();return c;}, [build]);
+
+useEffect(()=>{
+if(hlGroup===null||hlGroup===undefined)return;
+const cr=correlations?.[hlGroup];if(!cr)return;
+nodesRef.current.forEach(m=>{const match=cr.ids.includes(m.userData.findingId)||(m.userData.findingIds&&m.userData.findingIds.some(id=>cr.ids.includes(id)));m.material.emissiveIntensity=match?1:0.1;m.scale.setScalar(match?1.5:1);});
+const tm=setTimeout(()=>{nodesRef.current.forEach(m=>{m.material.emissiveIntensity=m.userData.baseEmissive||0.3;m.scale.setScalar(1);});},3000);
+return ()=>clearTimeout(tm);
+},[hlGroup,correlations]);
+
+// View mode changes
+useEffect(()=>{
+const st = cs.current;
+switch(viewMode) {
+case “top”: st.targetRot={x:1.45,y:0}; st.targetPan={x:0,y:0,z:0}; st.targetDist=65; break;
+case “front”: st.targetRot={x:0,y:0}; st.targetPan={x:0,y:0,z:0}; st.targetDist=55; break;
+case “side”: st.targetRot={x:0,y:Math.PI/2}; st.targetPan={x:0,y:0,z:0}; st.targetDist=55; break;
+case “3d”: st.targetRot={x:0.3,y:0.5}; st.targetPan={x:0,y:0,z:0}; st.targetDist=55; break;
+default: break;
+}
+},[viewMode, viewTick]);
+
+// Focus on a specific node from outside (e.g., clicking a finding in the list)
+useEffect(()=>{
+if (focusNodeId === null || focusNodeId === undefined) return;
+const node = nodesRef.current.find(n => n.userData.findingId === focusNodeId || (n.userData.findingIds && n.userData.findingIds.includes(focusNodeId)));
+if (node) {
+const st = cs.current;
+st.targetPan = { x:node.position.x, y:node.position.y, z:node.position.z };
+st.targetDist = node.userData.isCenter ? 50 : 22;
+// Highlight
+nodesRef.current.forEach(m => {
+if (m === node) { m.material.emissiveIntensity = 1.0; m.material.opacity = 1.0; }
+else { m.material.opacity = 0.3; m.material.emissiveIntensity = 0.1; }
+});
+// Restore after 4s
+const tm = setTimeout(()=>{ nodesRef.current.forEach(m=>{m.material.emissiveIntensity=m.userData.baseEmissive||0.3;m.material.opacity=0.85;}); },4000);
+return ()=>clearTimeout(tm);
+}
+},[focusNodeId]);
+
+return (<div ref={mountRef} style={{width:“100%”,height:“100%”,position:“relative”}}>
+<div ref={tipRef} style={{position:“absolute”,display:“none”,padding:“10px 14px”,background:“rgba(15,20,29,0.95)”,backdropFilter:“blur(12px)”,border:“1px solid #2a3a55”,borderRadius:8,zIndex:20,pointerEvents:“none”,maxWidth:300,boxShadow:“0 8px 32px rgba(0,0,0,0.5)”,color:”#e2e8f0”,fontFamily:“monospace”}} />
+
+  </div>);
+}
+
+function mkLabel(text,color){const c=document.createElement(“canvas”),ctx=c.getContext(“2d”);c.width=256;c.height=64;ctx.font=“16px monospace”;ctx.fillStyle=”#”+new THREE.Color(color).getHexString();ctx.globalAlpha=0.7;ctx.textAlign=“center”;ctx.fillText(text.slice(0,22),128,36);const tex=new THREE.CanvasTexture(c);tex.minFilter=THREE.LinearFilter;const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));spr.scale.set(7,1.8,1);return spr;}
+function mkPart(s,e,color){const n=5,pos=new Float32Array(n*3),prog=[],spd=[];for(let i=0;i<n;i++){prog.push(Math.random());spd.push(0.002+Math.random()*0.004);pos[i*3]=s.x||0;pos[i*3+1]=s.y||0;pos[i*3+2]=s.z||0;}const g=new THREE.BufferGeometry();g.setAttribute(“position”,new THREE.BufferAttribute(pos,3));const pts=new THREE.Points(g,new THREE.PointsMaterial({color,size:0.35,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending,depthWrite:false}));pts.userData={prog,spd,edge:{s:s instanceof THREE.Vector3?s:new THREE.Vector3(s.x||0,s.y||0,s.z||0),e:e instanceof THREE.Vector3?e:new THREE.Vector3(e.x||0,e.y||0,e.z||0)}};return pts;}
+
+// ═══════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════
+const FORMATS=[
+{id:“auto”,name:“Auto-Detect”,desc:“Detect format from content”},
+{id:“csv”,name:“CSV”,desc:“Generic CSV”},
+{id:“sarif”,name:“SARIF”,desc:“OASIS standard”},
+{id:“veracode_pipeline”,name:“Veracode Pipeline”,desc:“Pipeline Scan JSON”},
+{id:“veracode_xml”,name:“Veracode XML”,desc:“Detailed XML Report”},
+{id:“checkmarx”,name:“Checkmarx”,desc:“CxSAST/CxOne XML/JSON”},
+{id:“fortify”,name:“Fortify”,desc:“FPR/FVDL/JSON”},
+{id:“snyk”,name:“Snyk”,desc:“CLI JSON output”},
+{id:“sonarqube”,name:“SonarQube”,desc:“API JSON export”},
+{id:“semgrep”,name:“Semgrep”,desc:“JSON output”},
+{id:“bandit”,name:“Bandit”,desc:“Python Bandit JSON”},
+{id:“trivy”,name:“Trivy”,desc:“Container/SCA/IaC JSON”},
+{id:“burp”,name:“Burp Suite”,desc:“XML export (DAST)”},
+{id:“zap”,name:“OWASP ZAP”,desc:“JSON/XML report”},
+{id:“cyclonedx”,name:“CycloneDX”,desc:“SBOM/VEX JSON”},
+{id:“generic”,name:“Generic JSON”,desc:“JSON array of objects”},
+];
+
+export default function NexusApp(){
+const [sources,setSrc]=useState([]);
+const [findings,setFind]=useState([]);
+const [corrs,setCorrs]=useState([]);
+const [filter,setFilter]=useState(“all”);
+const [search,setSearch]=useState(””);
+const [selId,setSelId]=useState(null);
+const [tab,setTab]=useState(“sources”);
+const [hlG,setHlG]=useState(null);
+const [impOpen,setImpOpen]=useState(false);
+const [impFmt,setImpFmt]=useState(“auto”);
+const [impTxt,setImpTxt]=useState(””);
+const [expOpen,setExpOpen]=useState(false);
+const [viewMode,setViewMode]=useState(“3d”);
+const [viewTick,setViewTick]=useState(0);
+const fRef=useRef(null);const mfRef=useRef(null);
+
+const counts=useMemo(()=>{const c={critical:0,high:0,medium:0,low:0,info:0};findings.forEach(f=>{if(c[f.severity]!==undefined)c[f.severity]++;});return c;},[findings]);
+const filtered=useMemo(()=>{let r=findings;if(filter!==“all”)r=r.filter(f=>f.severity===filter);if(search){const t=search.toLowerCase();r=r.filter(f=>f.title.toLowerCase().includes(t)||f.file.toLowerCase().includes(t)||f.component.toLowerCase().includes(t)||f.cwe.toLowerCase().includes(t)||f.cve.toLowerCase().includes(t)||f.scanner.toLowerCase().includes(t)||(f.source||””).toLowerCase().includes(t)||(f.sink||””).toLowerCase().includes(t));}return[…r].sort((a,b)=>(SEV_ORDER[a.severity]||9)-(SEV_ORDER[b.severity]||9));},[findings,filter,search]);
+const detail=useMemo(()=>selId!==null?findings.find(f=>f.id===selId)||null:null,[selId,findings]);
+const detCorr=useMemo(()=>{if(!detail)return[];const g=corrs.find(g=>g.ids.includes(detail.id));if(!g)return[];return g.ids.filter(id=>id!==detail.id).map(id=>findings.find(f=>f.id===id)).filter(Boolean);},[detail,corrs,findings]);
+
+const exportJSON=useMemo(()=>{if(!expOpen)return””;return JSON.stringify({nexusReport:true,exportDate:new Date().toISOString(),summary:{totalFindings:findings.length,sources:sources.length,correlationGroups:corrs.length,severityCounts:counts},findings:findings.map(f=>({…f})),correlations:corrs,sources:sources.map(s=>({name:s.name,format:s.format,type:s.type,count:s.count}))},null,2);},[expOpen,findings,sources,corrs,counts]);
+
+const loadDemo=useCallback(()=>{_fid=0;const{sources:s,findings:f}=createDemoData();setSrc(s);setFind(f);setSelId(null);setCorrs([]);setTimeout(()=>setCorrs(computeCorrelations(f,0.45)),100);},[]);
+const handleFiles=useCallback(files=>{Array.from(files).forEach(file=>{const rd=new FileReader();rd.onload=e=>{const parsed=parseFindings(e.target.result,“auto”,file.name);if(parsed.length>0){const st=parsed[0]?.scanType||“unknown”;setSrc(p=>[…p,{id:Date.now()+Math.random(),name:file.name,type:st,format:“auto”,findings:parsed,count:parsed.length}]);setFind(p=>[…p,…parsed]);}};rd.readAsText(file);});},[]);
+const processImport=useCallback(()=>{if(!impTxt.trim())return;const parsed=parseFindings(impTxt,impFmt===“auto”?“auto”:impFmt,“import.”+impFmt);if(parsed.length>0){const st=parsed[0]?.scanType||“unknown”;setSrc(p=>[…p,{id:Date.now(),name:`Import (${impFmt.toUpperCase()})`,type:st,format:impFmt,findings:parsed,count:parsed.length}]);setFind(p=>[…p,…parsed]);setImpOpen(false);setImpTxt(””);}},[impTxt,impFmt]);
+const runCorr=useCallback(()=>setCorrs(computeCorrelations(findings,0.45)),[findings]);
+const resetAll=useCallback(()=>{_fid=0;setSrc([]);setFind([]);setCorrs([]);setSelId(null);setHlG(null);},[]);
+const onDrop=useCallback(e=>{e.preventDefault();e.stopPropagation();if(e.dataTransfer.files.length)handleFiles(e.dataTransfer.files);},[handleFiles]);
+const onDragOver=e=>{e.preventDefault();e.stopPropagation();};
+const sc=s=>SEV_HEX[s]||”#6366f1”;
+
+return (
+<div style={{display:“grid”,gridTemplateRows:“52px 1fr”,gridTemplateColumns:“310px 1fr 330px”,height:“100vh”,gap:1,background:”#1a2233”,fontFamily:”‘Courier New’,monospace”,fontSize:13,color:”#e2e8f0”}}>
+<header style={{gridColumn:“1/-1”,background:”#0c1017”,display:“flex”,alignItems:“center”,justifyContent:“space-between”,padding:“0 16px”,borderBottom:“1px solid #1a2233”}}>
+<div style={{display:“flex”,alignItems:“center”,gap:10}}>
+<div style={{width:28,height:28,background:“linear-gradient(135deg,#ff2d55,#6366f1)”,borderRadius:6,display:“flex”,alignItems:“center”,justifyContent:“center”,fontWeight:700,fontSize:14,color:“white”,boxShadow:“0 0 20px rgba(255,45,85,0.3)”}}>N</div>
+<span style={{fontWeight:700,fontSize:15,letterSpacing:3}}>NEXUS</span>
+</div>
+<div style={{display:“flex”,alignItems:“center”,gap:8}}>
+<div style={{display:“flex”,gap:10,marginRight:16}}>
+{[“critical”,“high”,“medium”,“low”].map(s=>(<div key={s} style={{display:“flex”,alignItems:“center”,gap:5,padding:“4px 10px”,background:”#111720”,border:“1px solid #1a2233”,borderRadius:20,fontSize:11}}><div style={{width:7,height:7,borderRadius:“50%”,background:sc(s),boxShadow:`0 0 6px ${sc(s)}`,animation:“pulse 2s infinite”}}/><span style={{fontWeight:600}}>{counts[s]}</span><span style={{color:”#8896ab”,textTransform:“capitalize”}}>{s}</span></div>))}
+</div>
+<Btn onClick={()=>setImpOpen(true)}>⬆ Import</Btn>
+<Btn primary onClick={loadDemo}>◆ Demo</Btn>
+<Btn onClick={()=>setExpOpen(true)}>⬇ Export</Btn>
+<Btn danger onClick={resetAll}>✕ Reset</Btn>
+</div>
+</header>
+
+```
+  {/* LEFT */}
+  <div style={{background:"#0c1017",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+    <div style={{display:"flex",borderBottom:"1px solid #1a2233",flexShrink:0}}>
+      {["sources","correlation","config"].map(t=>(<div key={t} onClick={()=>setTab(t)} style={{flex:1,padding:"10px 8px",fontSize:11,fontWeight:500,textAlign:"center",cursor:"pointer",borderBottom:tab===t?"2px solid #6366f1":"2px solid transparent",color:tab===t?"#6366f1":"#4a5568",textTransform:"capitalize"}}>{t}</div>))}
+    </div>
+    <div style={{flex:1,overflowY:"auto",padding:12}}>
+      {tab==="sources"&&(<>
+        <div onClick={()=>fRef.current?.click()} onDrop={onDrop} onDragOver={onDragOver} style={{border:"2px dashed #1a2233",borderRadius:12,padding:"20px 16px",textAlign:"center",cursor:"pointer",marginBottom:12}} onMouseOver={e=>e.currentTarget.style.borderColor="#6366f1"} onMouseOut={e=>e.currentTarget.style.borderColor="#1a2233"}>
+          <div style={{fontSize:24,marginBottom:6,opacity:0.5}}>⬆</div>
+          <div style={{fontWeight:600,fontSize:13}}>Import Scan Results</div>
+          <div style={{fontSize:11,color:"#4a5568",marginTop:2}}>Drop files — auto-detects format</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:4,justifyContent:"center",marginTop:8}}>
+            {["SARIF","CSV","Veracode","Checkmarx","Fortify","Snyk","Trivy","ZAP","Burp","CycloneDX"].map(f=>(<span key={f} style={{fontSize:9,padding:"2px 6px",background:"#111720",border:"1px solid #1a2233",borderRadius:4,color:"#4a5568"}}>{f}</span>))}
+          </div>
+        </div>
+        <input ref={fRef} type="file" multiple accept=".csv,.json,.sarif,.xml,.fpr,.html" style={{display:"none"}} onChange={e=>{if(e.target.files.length)handleFiles(e.target.files);}}/>
+        {sources.map((s,i)=>(<div key={s.id} style={{padding:"10px 12px",border:"1px solid #1a2233",borderRadius:8,marginBottom:6,display:"flex",alignItems:"center",gap:10,animation:`fadeIn 0.3s ease-out ${i*50}ms both`}}>
+          <div style={{width:32,height:32,borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0,background:s.type==="sast"?"rgba(99,102,241,0.15)":s.type==="dast"?"rgba(255,107,53,0.15)":s.type==="sca"?"rgba(6,182,212,0.15)":s.type==="container"?"rgba(255,45,85,0.15)":"rgba(240,192,64,0.15)",color:s.type==="sast"?"#6366f1":s.type==="dast"?"#ff6b35":s.type==="sca"?"#06b6d4":s.type==="container"?"#ff2d55":"#f0c040"}}>{TYPE_ICONS[s.type]||"○"}</div>
+          <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:12,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div><div style={{fontSize:10,color:"#4a5568",marginTop:2}}>{s.format.toUpperCase()} · {s.type.toUpperCase()}</div></div>
+          <span style={{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:10,background:"#111720"}}>{s.count}</span>
+        </div>))}
+        {sources.length===0&&<div style={{textAlign:"center",padding:"30px 20px",color:"#4a5568"}}><div style={{fontSize:36,marginBottom:8,opacity:0.3}}>◇</div><div style={{fontSize:13,fontWeight:500,color:"#8896ab"}}>No sources</div><div style={{fontSize:11,marginTop:4}}>Import or click Demo</div></div>}
+      </>)}
+      {tab==="correlation"&&(<>
+        <p style={{fontSize:11,color:"#4a5568",marginBottom:8}}>Correlates via CWE/CVE, file paths, components, source/sink dataflow overlap, and title similarity.</p>
+        <Btn primary onClick={runCorr} style={{width:"100%",justifyContent:"center"}}>▶ Run Correlation</Btn>
+        {corrs.length>0&&<div style={{marginTop:12}}>
+          <div style={{padding:8,background:"#111720",borderRadius:8,border:"1px solid #1a2233",marginBottom:8}}><div style={{fontSize:18,fontWeight:700,color:"#6366f1"}}>{corrs.length}</div><div style={{fontSize:11,color:"#4a5568"}}>Correlation groups</div></div>
+          {corrs.map((g,i)=>{const gf=g.ids.map(id=>findings.find(f=>f.id===id)).filter(Boolean);const ms=gf.reduce((a,f)=>SEV_ORDER[f.severity]<SEV_ORDER[a]?f.severity:a,"info");
+            return(<div key={i} onClick={()=>setHlG(i)} style={{padding:"10px 12px",border:"1px solid #1a2233",borderRadius:8,marginBottom:6,cursor:"pointer"}} onMouseOver={e=>e.currentTarget.style.borderColor="#2a3a55"} onMouseOut={e=>e.currentTarget.style.borderColor="#1a2233"}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:9,padding:"1px 6px",borderRadius:4,fontWeight:600,background:`${sc(ms)}22`,color:sc(ms)}}>{ms.toUpperCase()}</span><span style={{fontSize:9,padding:"2px 8px",borderRadius:10,background:"rgba(99,102,241,0.15)",color:"#6366f1",border:"1px solid rgba(99,102,241,0.3)"}}>⬡ {g.ids.length} · {Math.round(g.score*100)}%</span></div>
+              <div style={{fontSize:11,color:"#8896ab",marginTop:4}}>{g.type}</div>
+              <div style={{fontSize:10,color:"#4a5568",marginTop:2}}>{gf.map(f=>f.title).slice(0,2).join(", ")}{gf.length>2?"…":""}</div>
+            </div>);})}
+        </div>}
+      </>)}
+      {tab==="config"&&<div style={{fontSize:12}}><STitle>Supported Formats</STitle><p style={{color:"#8896ab",fontSize:11,lineHeight:1.6}}>SARIF, CSV, Veracode Pipeline JSON, Veracode Detailed XML, Checkmarx XML/JSON, Fortify JSON, Snyk JSON, SonarQube JSON, Semgrep, Bandit, Trivy, Burp XML, OWASP ZAP, CycloneDX, Generic JSON/XML</p><STitle style={{marginTop:16}}>Dataflow</STitle><p style={{color:"#8896ab",fontSize:11,lineHeight:1.6}}>Source/sink extracted from SARIF codeFlows, Veracode traces, Checkmarx path nodes, and Fortify metadata for cross-tool taint correlation.</p></div>}
+    </div>
+  </div>
+
+  {/* CENTER */}
+  <div style={{position:"relative",background:"#06080d",overflow:"hidden"}} onDrop={onDrop} onDragOver={onDragOver}>
+    <ThreeView findings={findings} correlations={corrs} onSelect={id=>setSelId(id)} hlGroup={hlG} viewMode={viewMode} focusNodeId={selId} viewTick={viewTick}/>
+    <div style={{position:"absolute",top:12,left:12,display:"flex",gap:6,zIndex:10}}>
+      {[{k:"3d",l:"3D"},{k:"top",l:"Top"},{k:"front",l:"Front"},{k:"side",l:"Side"}].map(({k,l})=>(<div key={l} onClick={()=>{setViewMode(k);setViewTick(t=>t+1);}} style={{fontSize:10,padding:"5px 10px",background:viewMode===k?"rgba(99,102,241,0.2)":"rgba(12,16,23,0.85)",border:viewMode===k?"1px solid #6366f1":"1px solid #1a2233",borderRadius:6,color:viewMode===k?"#e2e8f0":"#8896ab",cursor:"pointer",transition:"all 0.2s",userSelect:"none"}}>{l}</div>))}
+      <div onClick={()=>{setViewMode("3d");setViewTick(t=>t+1);setSelId(null);}} style={{fontSize:10,padding:"5px 10px",background:"rgba(12,16,23,0.85)",border:"1px solid #1a2233",borderRadius:6,color:"#8896ab",cursor:"pointer",userSelect:"none"}}>⟳ Reset</div>
+    </div>
+    {findings.length>0&&<div style={{position:"absolute",top:12,right:12,zIndex:10,padding:"10px 12px",background:"rgba(12,16,23,0.85)",border:"1px solid #1a2233",borderRadius:8,fontSize:9,color:"#8896ab"}}>
+      {[{c:"#6366f1",l:"App Core"},{c:"#ff2d55",l:"Critical"},{c:"#ff6b35",l:"High"},{c:"#f0c040",l:"Medium"},{c:"#38bdf8",l:"Low/Info"},{c:"#22c55e",l:"Source"},{c:"#ff6b35",l:"Sink"},{c:"#555",l:"Correlation"}].map(({c,l})=>(<div key={l} style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}><div style={{width:8,height:8,borderRadius:"50%",background:c}}/>{l}</div>))}
+    </div>}
+    <div style={{position:"absolute",bottom:12,left:12,right:12,display:"flex",justifyContent:"space-between",zIndex:10,pointerEvents:"none"}}>
+      <div style={{padding:"6px 10px",background:"rgba(12,16,23,0.85)",border:"1px solid #1a2233",borderRadius:6,fontSize:10,color:"#8896ab"}}>{findings.length} findings · {corrs.length} correlations</div>
+      <div style={{padding:"6px 10px",background:"rgba(12,16,23,0.85)",border:"1px solid #1a2233",borderRadius:6,fontSize:10,color:"#8896ab"}}>Scroll: zoom · Drag: rotate · Shift: pan</div>
+    </div>
+
+    {detail&&<div style={{position:"absolute",top:0,right:0,bottom:0,width:370,background:"#0c1017",borderLeft:"1px solid #1a2233",zIndex:50,overflowY:"auto",boxShadow:"-8px 0 32px rgba(0,0,0,0.4)"}}>
+      <div style={{padding:16,borderBottom:"1px solid #1a2233",display:"flex",justifyContent:"space-between",alignItems:"start",position:"sticky",top:0,background:"#0c1017",zIndex:1}}>
+        <div><span style={{fontSize:10,padding:"2px 8px",borderRadius:4,fontWeight:600,background:`${sc(detail.severity)}22`,color:sc(detail.severity)}}>{detail.severity.toUpperCase()}</span><h3 style={{fontSize:14,fontWeight:600,marginTop:6,lineHeight:1.4}}>{detail.title}</h3></div>
+        <div onClick={()=>setSelId(null)} style={{width:24,height:24,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#4a5568",fontSize:16}}>✕</div>
+      </div>
+      <div style={{padding:16}}>
+        <STitle>Details</STitle>
+        {[["Scanner",detail.scanner],["Type",detail.scanType.toUpperCase()],["Rule",detail.rule],["CWE",detail.cwe],["CVE",detail.cve],["File",detail.file?(detail.file+(detail.line?":"+detail.line:"")):""],["Component",detail.component],["URL",detail.url]].filter(([,v])=>v).map(([k,v])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:12}}><span style={{color:"#4a5568"}}>{k}</span><span style={{fontWeight:500,fontSize:11,wordBreak:"break-all",maxWidth:"60%",textAlign:"right"}}>{v}</span></div>))}
+        {(detail.source||detail.sink)&&<div style={{marginTop:12}}><STitle>Dataflow</STitle>
+          {detail.source&&<div style={{fontSize:11,color:"#22c55e",padding:"4px 0"}}>⬤ Source: {detail.source}</div>}
+          {detail.dataflow?.length>0&&detail.dataflow.map((d,i)=>(<div key={i} style={{fontSize:10,color:"#8896ab",padding:"2px 0 2px 16px",borderLeft:"1px solid #1a2233"}}>↓ {d.file}:{d.line} {d.msg?`(${d.msg})`:""}</div>))}
+          {detail.sink&&<div style={{fontSize:11,color:"#ff6b35",padding:"4px 0"}}>⬤ Sink: {detail.sink}</div>}
+        </div>}
+        {detail.description&&<div style={{marginTop:12}}><STitle>Description</STitle><p style={{fontSize:12,color:"#8896ab",lineHeight:1.6}}>{detail.description}</p></div>}
+        {detCorr.length>0&&<div style={{marginTop:12}}><STitle>Correlated ({detCorr.length})</STitle>
+          {detCorr.map(cf=>(<div key={cf.id} onClick={()=>setSelId(cf.id)} style={{padding:"8px 10px",border:"1px solid #1a2233",borderRadius:8,marginBottom:4,fontSize:11,display:"flex",gap:8,alignItems:"center",cursor:"pointer"}} onMouseOver={e=>e.currentTarget.style.borderColor="#2a3a55"} onMouseOut={e=>e.currentTarget.style.borderColor="#1a2233"}>
+            <div style={{width:3,height:20,borderRadius:2,background:sc(cf.severity),flexShrink:0}}/><div><div style={{fontWeight:500}}>{cf.title}</div><div style={{fontSize:9,color:"#4a5568"}}>{cf.scanner} · {cf.scanType.toUpperCase()}{cf.source?" · dataflow":""}</div></div>
+          </div>))}
+        </div>}
+      </div>
+    </div>}
+  </div>
+
+  {/* RIGHT */}
+  <div style={{background:"#0c1017",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+    <div style={{padding:"14px 16px",borderBottom:"1px solid #1a2233",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}><span style={{fontSize:11,fontWeight:600,letterSpacing:1.5,color:"#8896ab",textTransform:"uppercase"}}>Findings</span><span style={{fontSize:11,color:"#4a5568"}}>{filtered.length}/{findings.length}</span></div>
+    <div style={{padding:"8px 12px",borderBottom:"1px solid #1a2233",flexShrink:0}}><input type="text" placeholder="Search findings, CWE, source, sink…" value={search} onChange={e=>setSearch(e.target.value)} style={{width:"100%",padding:"7px 10px",background:"#111720",border:"1px solid #1a2233",borderRadius:8,color:"#e2e8f0",fontFamily:"inherit",fontSize:12,outline:"none"}}/></div>
+    <div style={{display:"flex",gap:4,padding:"8px 12px",borderBottom:"1px solid #1a2233",flexWrap:"wrap",flexShrink:0}}>
+      {["all","critical","high","medium","low"].map(s=>(<span key={s} onClick={()=>setFilter(s)} style={{fontSize:10,padding:"3px 8px",borderRadius:12,cursor:"pointer",border:filter===s?`1px solid ${s==="all"?"#6366f1":sc(s)}`:"1px solid #1a2233",color:filter===s?(s==="all"?"#6366f1":sc(s)):"#4a5568",background:filter===s?(s==="all"?"rgba(99,102,241,0.1)":`${sc(s)}15`):"transparent",textTransform:"capitalize"}}>{s}</span>))}
+    </div>
+    <div style={{flex:1,overflowY:"auto",padding:12}}>
+      {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:"#4a5568"}}><div style={{fontSize:40,marginBottom:12,opacity:0.3}}>◇</div><div style={{fontSize:14,color:"#8896ab"}}>No findings</div><div style={{fontSize:11,marginTop:4}}>Import or load demo</div></div>}
+      {filtered.map((f,i)=>{const isCr=corrs.some(g=>g.ids.includes(f.id));
+        return(<div key={f.id} onClick={()=>setSelId(f.id)} style={{padding:"10px 12px",border:selId===f.id?"1px solid #6366f1":"1px solid #1a2233",borderRadius:8,marginBottom:6,cursor:"pointer",background:selId===f.id?"rgba(99,102,241,0.08)":"transparent",animation:`fadeIn 0.3s ease-out ${Math.min(i,15)*25}ms both`}} onMouseOver={e=>{if(selId!==f.id)e.currentTarget.style.borderColor="#2a3a55";}} onMouseOut={e=>{if(selId!==f.id)e.currentTarget.style.borderColor="#1a2233";}}>
+          <div style={{display:"flex",alignItems:"start",gap:8}}><div style={{width:4,minHeight:28,borderRadius:2,background:sc(f.severity),flexShrink:0,marginTop:2}}/><div style={{fontWeight:600,fontSize:12,lineHeight:1.4}}>{f.title}</div></div>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:4,marginLeft:12}}>
+            <MT>{f.scanner}</MT><MT>{f.scanType.toUpperCase()}</MT>
+            {f.cwe&&<MT>{f.cwe}</MT>}{f.cve&&<MT>{f.cve}</MT>}
+            {f.file&&<MT>{getFilename(f.file)}{f.line?":"+f.line:""}</MT>}
+            {(f.source||f.sink)&&<MT hl="green">↔ Dataflow</MT>}
+            {isCr&&<MT hl="blue">⬡ Correlated</MT>}
+          </div>
+        </div>);})}
+    </div>
+  </div>
+
+  {/* IMPORT MODAL */}
+  {impOpen&&<div onClick={()=>setImpOpen(false)} style={{position:"fixed",inset:0,background:"rgba(6,8,13,0.85)",backdropFilter:"blur(4px)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <div onClick={e=>e.stopPropagation()} style={{background:"#0c1017",border:"1px solid #1a2233",borderRadius:12,width:620,maxHeight:"85vh",overflowY:"auto",boxShadow:"0 24px 64px rgba(0,0,0,0.6)"}}>
+      <div style={{padding:"16px 20px",borderBottom:"1px solid #1a2233",display:"flex",justifyContent:"space-between",alignItems:"center"}}><h2 style={{fontSize:15,fontWeight:600}}>Import Scan Results</h2><div onClick={()=>setImpOpen(false)} style={{cursor:"pointer",color:"#4a5568",fontSize:16}}>✕</div></div>
+      <div style={{padding:20}}>
+        <STitle>Select Format</STitle>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:16}}>
+          {FORMATS.map(fmt=>(<div key={fmt.id} onClick={()=>setImpFmt(fmt.id)} style={{padding:10,border:impFmt===fmt.id?"1px solid #6366f1":"1px solid #1a2233",borderRadius:8,cursor:"pointer",background:impFmt===fmt.id?"rgba(99,102,241,0.08)":"transparent"}}><div style={{fontSize:11,fontWeight:600}}>{fmt.name}</div><div style={{fontSize:9,color:"#4a5568",marginTop:2}}>{fmt.desc}</div></div>))}
+        </div>
+        <STitle>Paste Data</STitle>
+        <textarea value={impTxt} onChange={e=>setImpTxt(e.target.value)} placeholder="Paste JSON, XML, or CSV scan results…" style={{width:"100%",height:140,background:"#111720",border:"1px solid #1a2233",borderRadius:8,color:"#e2e8f0",fontFamily:"monospace",fontSize:11,padding:10,resize:"vertical",outline:"none"}}/>
+        <div style={{display:"flex",gap:8,marginTop:12}}>
+          <Btn onClick={()=>mfRef.current?.click()} style={{flex:1,justifyContent:"center"}}>📁 File</Btn>
+          <Btn primary onClick={processImport} style={{flex:1,justifyContent:"center"}}>▶ Import</Btn>
+        </div>
+        <input ref={mfRef} type="file" accept=".csv,.json,.sarif,.xml,.fpr,.html" style={{display:"none"}} onChange={e=>{if(e.target.files[0]){const r=new FileReader();r.onload=ev=>setImpTxt(ev.target.result);r.readAsText(e.target.files[0]);}}}/>
+      </div>
+    </div>
+  </div>}
+
+  {/* EXPORT MODAL */}
+  {expOpen&&<div onClick={()=>setExpOpen(false)} style={{position:"fixed",inset:0,background:"rgba(6,8,13,0.85)",backdropFilter:"blur(4px)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <div onClick={e=>e.stopPropagation()} style={{background:"#0c1017",border:"1px solid #1a2233",borderRadius:12,width:620,maxHeight:"85vh",display:"flex",flexDirection:"column",boxShadow:"0 24px 64px rgba(0,0,0,0.6)"}}>
+      <div style={{padding:"16px 20px",borderBottom:"1px solid #1a2233",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}><h2 style={{fontSize:15,fontWeight:600}}>Export JSON Report</h2><div onClick={()=>setExpOpen(false)} style={{cursor:"pointer",color:"#4a5568",fontSize:16}}>✕</div></div>
+      <div style={{padding:20,flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}}>
+        <div style={{display:"flex",gap:12,marginBottom:12}}>
+          {[["Findings",findings.length],["Correlations",corrs.length],["Sources",sources.length]].map(([l,v])=>(<div key={l} style={{flex:1,padding:10,background:"#111720",borderRadius:8,border:"1px solid #1a2233",textAlign:"center"}}><div style={{fontSize:18,fontWeight:700,color:"#6366f1"}}>{v}</div><div style={{fontSize:10,color:"#4a5568"}}>{l}</div></div>))}
+        </div>
+        <textarea readOnly value={exportJSON} style={{flex:1,minHeight:250,width:"100%",background:"#111720",border:"1px solid #1a2233",borderRadius:8,color:"#e2e8f0",fontFamily:"monospace",fontSize:10,padding:10,resize:"none",outline:"none"}} onClick={e=>e.target.select()}/>
+        <Btn primary onClick={()=>{try{navigator.clipboard.writeText(exportJSON);}catch(e){}}} style={{marginTop:12,width:"100%",justifyContent:"center"}}>📋 Copy JSON to Clipboard</Btn>
+      </div>
+    </div>
+  </div>}
+
+  <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#1a2233;border-radius:4px}`}</style>
+</div>
+```
+
+);
+}
+
+function STitle({children,style}){return <div style={{fontSize:10,fontWeight:600,letterSpacing:1,color:”#4a5568”,textTransform:“uppercase”,marginBottom:8,…style}}>{children}</div>;}
+function Btn({children,primary,danger,onClick,style}){return <button onClick={onClick} style={{fontFamily:“inherit”,fontSize:12,fontWeight:500,padding:“6px 14px”,border:danger?“1px solid #ff2d55”:primary?“1px solid #6366f1”:“1px solid #1a2233”,borderRadius:8,cursor:“pointer”,display:“inline-flex”,alignItems:“center”,gap:6,background:primary?”#6366f1”:”#111720”,color:danger?”#ff2d55”:primary?“white”:”#e2e8f0”,…style}}>{children}</button>;}
+function MT({children,hl}){return <span style={{fontSize:9,padding:“2px 6px”,borderRadius:4,background:hl===“blue”?“rgba(99,102,241,0.1)”:hl===“green”?“rgba(34,197,94,0.1)”:”#111720”,border:hl===“blue”?“1px solid rgba(99,102,241,0.3)”:hl===“green”?“1px solid rgba(34,197,94,0.3)”:“1px solid #1a2233”,color:hl===“blue”?”#6366f1”:hl===“green”?”#22c55e”:”#4a5568”}}>{children}</span>;}
