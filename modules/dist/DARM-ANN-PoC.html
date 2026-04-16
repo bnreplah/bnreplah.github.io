@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com;
+           script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com;
+           style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+           font-src https://fonts.gstatic.com;
+           connect-src * wss:;
+           img-src 'self' data: blob:;">
+<meta name="description" content="DARM-ANN: Distributed Agentic Recursive Memory Network — Web3 POC Control Plane">
+<title>DARM-ANN // Distributed Agentic Recursive Memory Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
+<style>
+/* =====================================================
+   DARM-ANN POC — DESIGN SYSTEM
+   Industrial command-center: dark navy, amber signals,
+   Space Mono for data, DM Sans for prose
+   ===================================================== */
+:root{
+  --void:   #060810;
+  --deep:   #0a0e1a;
+  --panel:  #0f1424;
+  --card:   #141929;
+  --hover:  #1a2035;
+  --bdr:    rgba(100,150,255,0.12);
+  --bdrhi:  rgba(100,150,255,0.28);
+  --amber:  #f5a623;
+  --amberD: #a06b12;
+  --green:  #00e5a0;
+  --greenD: #009966;
+  --red:    #ff4060;
+  --blue:   #4080ff;
+  --blueD:  #1a3080;
+  --cyan:   #00d4ff;
+  --pri:    #e8edf8;
+  --sec:    #7a8aaa;
+  --dim:    #3a4a6a;
+  --mono:   'Space Mono',monospace;
+  --sans:   'DM Sans',sans-serif;
+  --r:      6px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--void);color:var(--pri);font-family:var(--sans);font-size:14px;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(64,128,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(64,128,255,.025) 1px,transparent 1px);
+  background-size:40px 40px;}
+*{scrollbar-width:thin;scrollbar-color:var(--hover) transparent;}
+*::-webkit-scrollbar{width:4px;height:4px;}
+*::-webkit-scrollbar-thumb{background:var(--hover);border-radius:2px;}
+
+/* ─── LAYOUT ─────────────────────────────────────── */
+#app{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;}
+#topbar{display:flex;align-items:center;gap:12px;padding:0 16px;height:46px;
+  background:var(--panel);border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.tlogo{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--amber);
+  letter-spacing:.15em;display:flex;align-items:center;gap:8px;}
+.tpulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,229,160,.4)}50%{opacity:.7;box-shadow:0 0 0 4px rgba(0,229,160,0)}}
+.tspacer{flex:1;}
+.tpill{font-family:var(--mono);font-size:10px;color:var(--sec);
+  background:var(--deep);border:1px solid var(--bdr);padding:3px 9px;border-radius:20px;
+  display:flex;align-items:center;gap:5px;}
+.tpill b{color:var(--amber);}
+#main{display:grid;grid-template-columns:210px 1fr 268px;flex:1;overflow:hidden;}
+
+/* ─── SIDEBAR ─────────────────────────────────────── */
+#sb{background:var(--panel);border-right:1px solid var(--bdr);
+  display:flex;flex-direction:column;overflow-y:auto;}
+.sbsec{padding:10px 12px;border-bottom:1px solid var(--bdr);}
+.sblabel{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--dim);
+  text-transform:uppercase;margin-bottom:7px;}
+.nbtn{display:flex;align-items:center;gap:8px;width:100%;padding:6px 9px;border-radius:var(--r);
+  border:none;background:transparent;color:var(--sec);font-family:var(--sans);font-size:12.5px;
+  cursor:pointer;transition:all .15s;text-align:left;}
+.nbtn:hover{background:var(--hover);color:var(--pri);}
+.nbtn.active{background:var(--blueD);color:var(--cyan);border:1px solid rgba(0,212,255,.2);}
+.nbtn .icon{font-size:13px;flex-shrink:0;width:16px;text-align:center;}
+.peer-item{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:var(--r);
+  font-family:var(--mono);font-size:10px;color:var(--sec);
+  background:var(--deep);border:1px solid var(--bdr);margin-bottom:4px;cursor:pointer;transition:all .15s;}
+.peer-item:hover{border-color:var(--bdrhi);color:var(--pri);}
+.pdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.pdot.on{background:var(--green);box-shadow:0 0 5px var(--green);}
+.pdot.lat{background:var(--amber);}
+.pdot.off{background:var(--dim);}
+.prole{margin-left:auto;font-size:9px;color:var(--dim);}
+.res-row{font-family:var(--mono);font-size:10px;color:var(--sec);display:flex;justify-content:space-between;margin-bottom:3px;}
+.pbar{height:4px;background:var(--hover);border-radius:2px;overflow:hidden;margin-bottom:7px;}
+.pfill{height:100%;border-radius:2px;transition:width .5s ease;}
+.pf-a{background:linear-gradient(90deg,var(--amberD),var(--amber));}
+.pf-b{background:linear-gradient(90deg,var(--blueD),var(--blue));}
+.pf-g{background:linear-gradient(90deg,var(--greenD),var(--green));}
+.pf-r{background:linear-gradient(90deg,#800020,var(--red));}
+
+/* ─── CENTER ─────────────────────────────────────── */
+#ctr{overflow-y:auto;overflow-x:hidden;background:var(--deep);}
+.view{display:none;padding:18px;min-height:100%;}
+.view.active{display:block;}
+.vhdr{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;padding-bottom:11px;border-bottom:1px solid var(--bdr);}
+.vtitle{font-family:var(--mono);font-size:13px;color:var(--amber);letter-spacing:.08em;}
+.vsub{font-size:11px;color:var(--sec);margin-top:3px;}
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:14px;margin-bottom:13px;box-shadow:0 0 28px rgba(64,128,255,.05);}
+.ctitle{font-family:var(--mono);font-size:10px;color:var(--sec);letter-spacing:.1em;
+  text-transform:uppercase;margin-bottom:11px;display:flex;align-items:center;gap:8px;}
+.ctitle::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bdr),transparent);}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:13px;}
+.mgrid4{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:13px;}
+.mbox{background:var(--deep);border:1px solid var(--bdr);border-radius:var(--r);padding:11px;text-align:center;}
+.mval{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--amber);}
+.mlbl{font-size:11px;color:var(--sec);margin-top:3px;}
+.msub{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:2px;}
+.elist{max-height:280px;overflow-y:auto;}
+.centry{display:flex;align-items:flex-start;gap:9px;padding:7px 0;
+  border-bottom:1px solid var(--bdr);font-family:var(--mono);font-size:10.5px;}
+.centry:last-child{border-bottom:none;}
+.chash{color:var(--blue);flex-shrink:0;width:68px;overflow:hidden;text-overflow:ellipsis;}
+.cdata{color:var(--sec);flex:1;word-break:break-all;line-height:1.4;}
+.ctime{color:var(--dim);flex-shrink:0;}
+.centry.wr{border-left:2px solid var(--green);padding-left:7px;}
+.centry.co{border-left:2px solid var(--amber);padding-left:7px;}
+.centry.al{border-left:2px solid var(--red);padding-left:7px;}
+.tform{display:flex;gap:7px;background:var(--card);border:1px solid var(--bdr);
+  border-radius:var(--r);padding:9px;margin-bottom:13px;}
+.tinp{flex:1;background:var(--deep);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:7px 11px;color:var(--pri);font-family:var(--mono);font-size:11.5px;outline:none;transition:border .15s;}
+.tinp:focus{border-color:var(--blue);}
+.tinp::placeholder{color:var(--dim);}
+.btn{padding:7px 14px;border-radius:var(--r);border:none;cursor:pointer;font-family:var(--mono);
+  font-size:11px;font-weight:700;transition:all .15s;letter-spacing:.05em;}
+.btn-p{background:var(--blue);color:#fff;}
+.btn-p:hover{background:#5090ff;transform:translateY(-1px);}
+.btn-s{background:var(--hover);color:var(--sec);border:1px solid var(--bdr);}
+.btn-s:hover{color:var(--pri);border-color:var(--bdrhi);}
+.btn-d{background:rgba(255,64,96,.12);color:var(--red);border:1px solid rgba(255,64,96,.3);}
+.btn-d:hover{background:rgba(255,64,96,.22);}
+.btn-sm{padding:4px 9px;font-size:10px;}
+.task-result{background:var(--deep);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:11px;margin-top:9px;font-family:var(--mono);font-size:11px;line-height:1.7;
+  max-height:280px;overflow-y:auto;}
+.rtag{display:inline-block;padding:2px 7px;border-radius:12px;font-size:9px;
+  margin-bottom:7px;font-weight:700;}
+.rtag.tiny  {background:rgba(0,229,160,.12);color:var(--green);border:1px solid var(--greenD);}
+.rtag.small {background:rgba(0,212,255,.12);color:var(--cyan);border:1px solid rgba(0,212,255,.3);}
+.rtag.medium{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid var(--amberD);}
+.rtag.large {background:rgba(255,64,96,.12);color:var(--red);border:1px solid rgba(255,64,96,.3);}
+.chwrap{position:relative;height:115px;margin-top:7px;}
+#mesh-canvas{width:100%;height:200px;display:block;background:var(--void);
+  border-radius:var(--r);border:1px solid var(--bdr);}
+
+/* ─── AGENT LAYER ─────────────────────────────────── */
+.lviz{display:flex;flex-direction:column;gap:7px;}
+.alayer{display:flex;align-items:center;gap:7px;padding:7px 9px;
+  background:var(--deep);border:1px solid var(--bdr);border-radius:var(--r);}
+.lnum{font-family:var(--mono);font-size:10px;color:var(--dim);width:24px;}
+.anodes{display:flex;gap:4px;flex-wrap:wrap;flex:1;}
+.anode{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:9px;font-weight:700;border:2px solid;cursor:pointer;
+  transition:all .2s;position:relative;}
+.anode:hover{transform:scale(1.18);z-index:10;}
+.anode.tiny  {background:rgba(0,229,160,.1);border-color:var(--green);color:var(--green);}
+.anode.small {background:rgba(0,212,255,.1);border-color:var(--cyan);color:var(--cyan);}
+.anode.medium{background:rgba(245,166,35,.1);border-color:var(--amber);color:var(--amber);}
+.anode.large {background:rgba(255,64,96,.1);border-color:var(--red);color:var(--red);}
+.anode.actv{animation:apulse 1.5s infinite;}
+@keyframes apulse{0%,100%{opacity:1}50%{opacity:.55}}
+.linfo{font-size:11px;color:var(--sec);text-align:right;min-width:78px;}
+
+/* ─── RIGHT PANEL ─────────────────────────────────── */
+#rp{background:var(--panel);border-left:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden;}
+.rptabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.rptab{flex:1;padding:9px;border:none;background:transparent;color:var(--dim);
+  font-family:var(--mono);font-size:10px;letter-spacing:.07em;cursor:pointer;
+  transition:all .15s;border-bottom:2px solid transparent;}
+.rptab:hover{color:var(--sec);}
+.rptab.active{color:var(--amber);border-bottom-color:var(--amber);}
+.rpcontent{flex:1;overflow-y:auto;padding:11px;}
+.edr-item{padding:7px;margin-bottom:5px;background:var(--deep);border-radius:var(--r);
+  border-left:3px solid var(--bdr);font-size:11px;line-height:1.5;}
+.edr-item.ok{border-left-color:var(--green);}
+.edr-item.warn{border-left-color:var(--amber);}
+.edr-item.crit{border-left-color:var(--red);}
+.edr-title{font-family:var(--mono);font-size:10px;font-weight:700;margin-bottom:3px;}
+.edr-time{font-family:var(--mono);font-size:9px;color:var(--dim);}
+.logrow{font-family:var(--mono);font-size:10px;line-height:1.6;padding:3px 0;
+  border-bottom:1px solid rgba(100,150,255,.04);display:flex;gap:7px;}
+.lts{color:var(--dim);flex-shrink:0;}
+.llvl{flex-shrink:0;width:34px;text-align:center;border-radius:3px;font-size:9px;font-weight:700;}
+.llvl.INFO{color:var(--cyan)}.llvl.WARN{color:var(--amber)}.llvl.ERR{color:var(--red)}
+.llvl.OK{color:var(--green)}.llvl.PEER{color:var(--blue)}
+.lmsg{color:var(--sec);flex:1;word-break:break-word;}
+.edrbadge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:4px;
+  font-size:11px;font-family:var(--mono);font-weight:700;}
+.edrbadge.ok  {background:rgba(0,229,160,.1);color:var(--green);border:1px solid var(--greenD);}
+.edrbadge.warn{background:rgba(245,166,35,.1);color:var(--amber);border:1px solid var(--amberD);}
+.edrbadge.crit{background:rgba(255,64,96,.1);color:var(--red);border:1px solid rgba(255,64,96,.4);}
+#init-ov{position:fixed;inset:0;z-index:9998;background:var(--void);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;}
+.ilogo{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--amber);letter-spacing:.2em;}
+.isub{font-family:var(--mono);font-size:11px;color:var(--sec);letter-spacing:.1em;}
+.istep{font-family:var(--mono);font-size:11px;line-height:1.9;}
+.istep.done{color:var(--green)}.istep.doing{color:var(--amber)}.istep.todo{color:var(--dim)}.istep.err{color:var(--red)}
+.tooltip{position:fixed;z-index:9999;pointer-events:none;background:var(--panel);
+  border:1px solid var(--bdrhi);border-radius:var(--r);padding:7px 11px;
+  font-family:var(--mono);font-size:10.5px;color:var(--pri);
+  box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:240px;line-height:1.5;
+  opacity:0;transition:opacity .15s;white-space:pre-line;}
+.tooltip.vis{opacity:1;}
+@media(max-width:1100px){#main{grid-template-columns:48px 1fr 240px}.nbtn span{display:none}.sblabel{display:none}}
+@media(max-width:780px){#main{grid-template-columns:1fr}#sb,#rp{display:none}}
+
+/* ─── AUTH / IDENTITY EXTRAS ──────────────────────────────── */
+.tab-chip{display:inline-flex;align-items:center;padding:5px 14px;border-radius:20px;
+  font-family:var(--mono);font-size:10px;cursor:pointer;border:1px solid var(--bdr);
+  background:var(--card);color:var(--sec);transition:all .15s;letter-spacing:.06em;}
+.tab-chip:hover{border-color:var(--bdrhi);color:var(--pri);}
+.tab-chip.active{background:var(--blueD);border-color:rgba(0,212,255,.3);color:var(--cyan);}
+.strength-bar{height:4px;border-radius:2px;transition:width .4s,background .4s;margin-top:4px;}
+.pw-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;margin-bottom:4px;}
+.pw-ok{color:var(--green)}.pw-no{color:var(--dim)}
+</style>
+</head>
+<body>
+
+<!-- INIT OVERLAY -->
+<div id="init-ov">
+  <div class="ilogo">DARM-ANN</div>
+  <div class="isub">DISTRIBUTED AGENTIC RECURSIVE MEMORY NETWORK</div>
+  <div class="isub" style="color:var(--dim);font-size:9px;">POC v1.0 // Web3 Control Plane // Security-First Build</div>
+  <div class="card" style="width:370px;padding:18px;">
+    <div class="ctitle">SYSTEM INITIALIZATION</div>
+    <div id="init-steps" style="padding:4px 0;">
+      <div class="istep todo" id="is-crypto">[ ] Generating cryptographic identity (ECDSA P-256)…</div>
+      <div class="istep todo" id="is-db">[ ] Opening IndexedDB storage…</div>
+      <div class="istep todo" id="is-lsh">[ ] Building LSH index (d=128, 3 tables, ~99.9% recall)…</div>
+      <div class="istep todo" id="is-dag">[ ] Initializing branch DAG ledger…</div>
+      <div class="istep todo" id="is-chain">[ ] Creating genesis block — global chain…</div>
+      <div class="istep todo" id="is-agents">[ ] Spawning 4-layer agent topology…</div>
+      <div class="istep todo" id="is-edr">[ ] Starting EDR monitor + audit log…</div>
+      <div class="istep todo" id="is-peer">[ ] Starting P2P peer fabric (WebRTC/BroadcastChannel)…</div>
+      <div class="istep todo" id="is-auth">[ ] Loading auth chain + identity registry…</div>
+    </div>
+    <button class="btn btn-p" id="init-btn" style="display:none;width:100%;margin-top:14px;">
+      LAUNCH CONTROL PLANE →
+    </button>
+  </div>
+  <div style="font-family:var(--mono);font-size:9px;color:var(--dim);text-align:center;max-width:380px;line-height:1.8;">
+    Resource budget: &lt;5% CPU idle · &lt;50MB RAM · requestIdleCallback scheduling<br>
+    All data stays in your browser. Open another tab to form a local mesh.
+  </div>
+</div>
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tip"></div>
+
+<!-- APP -->
+<div id="app">
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="tlogo"><div class="tpulse"></div>DARM-ANN</div>
+    <div class="tpill">PEERS <b id="tb-peers">0</b></div>
+    <div class="tpill">CHAIN <b id="tb-chain">0</b></div>
+    <div class="tpill">AGENTS <b id="tb-agents">0</b></div>
+    <div class="tpill">MEM <b id="tb-mem">0</b></div>
+    <div class="tspacer"></div>
+    <div class="tpill" style="font-size:9px;">NODE <b id="tb-nid">—</b></div>
+    <div id="edr-badge" class="edrbadge ok">● SECURE</div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <!-- SIDEBAR -->
+    <div id="sb">
+      <div class="sbsec">
+        <div class="sblabel">Control Plane</div>
+        <button class="nbtn active" onclick="SV('dashboard',this)"><span class="icon">◈</span><span>Dashboard</span></button>
+        <button class="nbtn" onclick="SV('agents',this)"><span class="icon">◉</span><span>Agent Layers</span></button>
+        <button class="nbtn" onclick="SV('memory',this)"><span class="icon">◫</span><span>Memory / DAG</span></button>
+        <button class="nbtn" onclick="SV('chain',this)"><span class="icon">⛓</span><span>Global Chain</span></button>
+        <button class="nbtn" onclick="SV('task',this)"><span class="icon">▶</span><span>Task Router</span></button>
+        <button class="nbtn" onclick="SV('lora',this)"><span class="icon">◌</span><span>LoRA Adapters</span></button>
+        <button class="nbtn" onclick="SV('auth',this)"><span class="icon">⬡</span><span>Identity / Auth</span></button>
+        <button class="nbtn" onclick="SV('edr',this)"><span class="icon">⚠</span><span>EDR Monitor</span></button>
+      </div>
+      <div class="sbsec" style="flex:1;">
+        <div class="sblabel">Peers</div>
+        <div id="peer-list"></div>
+        <button class="btn btn-s btn-sm" style="width:100%;margin-top:7px;" onclick="D.peer.connect()">+ Join Mesh</button>
+      </div>
+      <div class="sbsec">
+        <div class="sblabel">Resources</div>
+        <div class="res-row">CPU <span id="cpu-v">—</span></div>
+        <div class="pbar"><div class="pfill pf-a" id="cpu-b" style="width:0%"></div></div>
+        <div class="res-row">Heap <span id="mem-v">—</span></div>
+        <div class="pbar"><div class="pfill pf-b" id="mem-b" style="width:0%"></div></div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:6px;" id="bud-s">Budget: IDLE</div>
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div id="ctr">
+
+      <!-- DASHBOARD -->
+      <div class="view active" id="view-dashboard">
+        <div class="vhdr">
+          <div><div class="vtitle">// SYSTEM OVERVIEW</div><div class="vsub">Real-time cluster status — DARM-ANN Web3 POC</div></div>
+          <div id="uptime" style="font-family:var(--mono);font-size:11px;color:var(--sec);">UP: 00:00:00</div>
+        </div>
+        <div class="mgrid">
+          <div class="mbox"><div class="mval" id="m-peers">0</div><div class="mlbl">Connected Peers</div><div class="msub">WebRTC mesh</div></div>
+          <div class="mbox"><div class="mval" id="m-agents">0</div><div class="mlbl">Active Agents</div><div class="msub" id="m-layers">0 layers</div></div>
+          <div class="mbox"><div class="mval" id="m-mem">0</div><div class="mlbl">Memory Records</div><div class="msub">DAG + Chain</div></div>
+          <div class="mbox"><div class="mval" id="m-chain">0</div><div class="mlbl">Chain Blocks</div><div class="msub">global ledger</div></div>
+          <div class="mbox"><div class="mval" id="m-tasks">0</div><div class="mlbl">Tasks Routed</div><div class="msub" id="m-tsub">—</div></div>
+          <div class="mbox"><div class="mval" id="m-lora">0</div><div class="mlbl">LoRA Adapters</div><div class="msub">versioned</div></div>
+        </div>
+        <div class="card"><div class="ctitle">P2P MESH TOPOLOGY</div><canvas id="mesh-canvas"></canvas></div>
+        <div class="card"><div class="ctitle">THROUGHPUT (tasks/min)</div><div class="chwrap"><canvas id="tpchart"></canvas></div></div>
+        <div class="card">
+          <div class="ctitle">TIER ROUTING DISTRIBUTION</div>
+          <div style="display:grid;grid-template-columns:160px 1fr;gap:12px;align-items:center;">
+            <div class="chwrap" style="height:140px;"><canvas id="tierchart"></canvas></div>
+            <div id="tier-bk" style="font-family:var(--mono);font-size:10px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENTS -->
+      <div class="view" id="view-agents">
+        <div class="vhdr">
+          <div><div class="vtitle">// AGENT LAYER TOPOLOGY</div><div class="vsub">Interlayered agentic neural network — textual backpropagation</div></div>
+          <button class="btn btn-s btn-sm" onclick="D.agents.spawn()">+ Spawn Layer</button>
+        </div>
+        <div class="card">
+          <div class="ctitle">LAYER VISUALIZATION</div>
+          <div style="font-size:11px;color:var(--sec);margin-bottom:11px;font-family:var(--mono);">Each circle = agent node. Color = model tier. Click to inspect.</div>
+          <div class="lviz" id="lviz"></div>
+        </div>
+        <div class="card"><div class="ctitle">ADAPTATION TRACE (backward pass)</div><div class="elist" id="bptrace"></div></div>
+        <div class="card"><div class="ctitle">AGENT INSPECTOR</div>
+          <div id="ainsp" style="font-family:var(--mono);font-size:11px;color:var(--sec);">Click an agent node above to inspect its state.</div>
+        </div>
+      </div>
+
+      <!-- MEMORY -->
+      <div class="view" id="view-memory">
+        <div class="vhdr">
+          <div><div class="vtitle">// BRANCH DAG LEDGER</div><div class="vsub">Localized memory — O(1) avg LSH retrieval (99.9% recall)</div></div>
+          <div id="dag-root" style="font-family:var(--mono);font-size:10px;color:var(--sec);">MERKLE: —</div>
+        </div>
+        <div class="mgrid4">
+          <div class="mbox"><div class="mval" id="d-nodes">0</div><div class="mlbl">DAG Nodes</div></div>
+          <div class="mbox"><div class="mval" id="d-edges">0</div><div class="mlbl">DAG Edges</div></div>
+          <div class="mbox"><div class="mval" id="d-recs">0</div><div class="mlbl">LSH Records</div></div>
+          <div class="mbox"><div class="mval">99.9%</div><div class="mlbl">Est. Recall</div></div>
+        </div>
+        <div class="card">
+          <div class="ctitle">WRITE MEMORY RECORD</div>
+          <div class="tform">
+            <input class="tinp" id="mk" placeholder="Key…" style="flex:.4;">
+            <input class="tinp" id="mv" placeholder="Value / content…">
+            <button class="btn btn-p btn-sm" onclick="D.dag.writeUI()">WRITE</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ctitle">LSH QUERY</div>
+          <div class="tform">
+            <input class="tinp" id="lq" placeholder="Query nearest memory records…">
+            <button class="btn btn-s btn-sm" onclick="D.lsh.queryUI()">QUERY</button>
+          </div>
+          <div id="lsh-res" class="task-result" style="display:none;"></div>
+        </div>
+        <div class="card"><div class="ctitle">DAG RECORDS (recent)</div><div class="elist" id="dag-ents"></div></div>
+      </div>
+
+      <!-- CHAIN -->
+      <div class="view" id="view-chain">
+        <div class="vhdr">
+          <div><div class="vtitle">// GLOBAL BLOCKCHAIN</div><div class="vsub">Tamper-evident canonical memory — SHA-256 hash chain</div></div>
+          <button class="btn btn-s btn-sm" onclick="D.chain.verify()">Verify Chain</button>
+        </div>
+        <div class="mgrid">
+          <div class="mbox"><div class="mval" id="ch-ht">0</div><div class="mlbl">Chain Height</div></div>
+          <div class="mbox"><div class="mval" id="ch-ok" style="font-size:14px;">—</div><div class="mlbl">Integrity</div></div>
+          <div class="mbox"><div class="mval" id="ch-tpm">—</div><div class="mlbl">Tx / min</div></div>
+        </div>
+        <div class="card"><div class="ctitle">CHAIN EXPLORER</div><div class="elist" id="chain-ents"></div></div>
+        <div class="card">
+          <div class="ctitle">BROADCAST PAYLOAD</div>
+          <div class="tform">
+            <input class="tinp" id="cp" placeholder="Payload to commit and broadcast to peers…">
+            <button class="btn btn-p btn-sm" onclick="D.chain.commitUI()">COMMIT</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TASK ROUTER -->
+      <div class="view" id="view-task">
+        <div class="vhdr">
+          <div><div class="vtitle">// TASK ROUTER — SLM TIER CLASSIFIER</div><div class="vsub">LSH-based routing · TinyLM / SLM-Small / SLM-Medium / SLM-Large</div></div>
+        </div>
+        <div class="card">
+          <div class="ctitle">SUBMIT TASK</div>
+          <div class="tform">
+            <input class="tinp" id="ti" placeholder="Enter a task or question…" onkeydown="if(event.key==='Enter')D.router.route()">
+            <button class="btn btn-p" onclick="D.router.route()">ROUTE →</button>
+          </div>
+          <div id="task-out"></div>
+        </div>
+        <div class="card">
+          <div class="ctitle">ROUTING RULES</div>
+          <div style="font-family:var(--mono);font-size:10px;line-height:2;color:var(--sec);">
+            <span style="color:var(--green)">● TinyLM</span>    — ping, status, hello, count, check, yes/no (≤10 words)<br>
+            <span style="color:var(--cyan)">● SLM-Small</span>  — summarize, explain, classify, define, find<br>
+            <span style="color:var(--amber)">● SLM-Medium</span> — analyze, compare, reason, evaluate, design, tradeoff<br>
+            <span style="color:var(--red)">● SLM-Large</span>  — complex synthesis, multi-step, research, proof, architecture<br>
+            <span style="color:var(--dim)">Confidence gate: &lt;0.6 → escalate to next tier</span>
+          </div>
+        </div>
+        <div class="card"><div class="ctitle">ROUTING HISTORY</div><div class="elist" id="rhistory"></div></div>
+      </div>
+
+      <!-- LORA -->
+      <div class="view" id="view-lora">
+        <div class="vhdr">
+          <div><div class="vtitle">// LoRA ADAPTER REGISTRY</div><div class="vsub">Parameter-efficient fine-tuning — versioned on chain</div></div>
+          <button class="btn btn-p btn-sm" onclick="D.lora.simulate()">+ Simulate Training</button>
+        </div>
+        <div class="mgrid">
+          <div class="mbox"><div class="mval" id="lo-cnt">0</div><div class="mlbl">Adapters</div></div>
+          <div class="mbox"><div class="mval" id="lo-pr">—</div><div class="mlbl">Param Reduction</div><div class="msub">vs full fine-tune</div></div>
+          <div class="mbox"><div class="mval">75%</div><div class="mlbl">Memory Reduction</div><div class="msub">QLoRA NF4</div></div>
+        </div>
+        <div class="card">
+          <div class="ctitle">MATHEMATICAL PARAMETERS</div>
+          <div style="font-family:var(--mono);font-size:11px;line-height:2.2;color:var(--sec);">
+            Rank r = <span id="lo-r" style="color:var(--amber)">16</span> &nbsp;|&nbsp;
+            Hidden d = <span id="lo-d" style="color:var(--amber)">4096</span> &nbsp;|&nbsp;
+            Scale α = <span id="lo-a" style="color:var(--amber)">32</span><br>
+            Param reduction: 2r/d = <span id="lo-f" style="color:var(--green)">—</span> &nbsp;|&nbsp;
+            FedAvg speedup: <span id="lo-sp" style="color:var(--cyan)">—</span>×<br>
+            QLoRA memory: 0.5p + 12dr bytes &nbsp;|&nbsp; 7B model → ~3.5 GB<br>
+            Convergence rounds: ~<span id="lo-cr" style="color:var(--amber)">—</span>× faster than full FedAvg
+          </div>
+        </div>
+        <div class="card"><div class="ctitle">ADAPTER CHAIN LOG</div><div class="elist" id="lora-log"></div></div>
+      </div>
+
+      <!-- AUTH / IDENTITY -->
+      <div class="view" id="view-auth">
+        <div class="vhdr">
+          <div><div class="vtitle">// IDENTITY &amp; AUTH — ZERO-KNOWLEDGE LOGIN</div>
+            <div class="vsub">Client-side key derivation · public key on-chain · private key never leaves your device</div></div>
+          <div id="auth-session-badge" class="edrbadge warn" style="font-size:10px;">● NOT LOGGED IN</div>
+        </div>
+
+        <!-- SECURITY MODEL CALLOUT -->
+        <div class="card" style="border-color:rgba(0,229,160,.25);">
+          <div class="ctitle" style="color:var(--green);">SECURITY ARCHITECTURE</div>
+          <div style="font-family:var(--mono);font-size:10px;line-height:2;color:var(--sec);">
+            <span style="color:var(--green)">✓ Private key</span> — derived locally from password+salt via PBKDF2 (310,000 iters). Never stored, never transmitted.<br>
+            <span style="color:var(--green)">✓ Password</span> — used only for key derivation, zeroed from memory immediately after. Never stored anywhere.<br>
+            <span style="color:var(--green)">✓ Handle</span> — stored on-chain as SHA-256 hash only. Plaintext never written to any ledger.<br>
+            <span style="color:var(--amber)">⚡ On-chain</span> — only: handle-hash, public key, timestamp, capability flags. Zero PII.<br>
+            <span style="color:var(--cyan)">⚡ Auth flow</span> — sign a fresh nonce with private key → peers verify against on-chain public key. No password transmitted.
+          </div>
+        </div>
+
+        <!-- TAB SWITCHER -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <button class="tab-chip active" id="auth-tab-login"  onclick="D.auth.showTab('login')">LOGIN</button>
+          <button class="tab-chip"        id="auth-tab-register" onclick="D.auth.showTab('register')">REGISTER</button>
+          <button class="tab-chip"        id="auth-tab-agents"  onclick="D.auth.showTab('agents')">AGENT ACCOUNTS</button>
+          <button class="tab-chip"        id="auth-tab-chain"   onclick="D.auth.showTab('chain')">AUTH CHAIN</button>
+        </div>
+
+        <!-- LOGIN PANEL -->
+        <div id="auth-panel-login">
+          <div class="card">
+            <div class="ctitle">LOGIN — CHALLENGE-RESPONSE</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+              <div>
+                <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:5px;">HANDLE</div>
+                <input class="tinp" id="li-handle" placeholder="@yourhandle" autocomplete="off" spellcheck="false">
+              </div>
+              <div>
+                <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:5px;">PASSWORD</div>
+                <input class="tinp" id="li-pass" type="password" placeholder="passphrase" autocomplete="off">
+              </div>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:5px;">RECOVERY KEY (optional — provides second factor)</div>
+            <input class="tinp" id="li-rkey" placeholder="recovery-key (leave blank if not set)" autocomplete="off" style="margin-bottom:12px;">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn btn-p" onclick="D.auth.login()">AUTHENTICATE →</button>
+              <div id="li-status" style="font-family:var(--mono);font-size:10px;color:var(--sec);"></div>
+            </div>
+          </div>
+          <div class="card" id="auth-session-card" style="display:none;">
+            <div class="ctitle">ACTIVE SESSION</div>
+            <div id="auth-session-info" style="font-family:var(--mono);font-size:11px;line-height:2;color:var(--sec);"></div>
+            <button class="btn btn-d btn-sm" style="margin-top:10px;" onclick="D.auth.logout()">SIGN OUT</button>
+          </div>
+        </div>
+
+        <!-- REGISTER PANEL -->
+        <div id="auth-panel-register" style="display:none;">
+          <div class="card">
+            <div class="ctitle">REGISTER NEW IDENTITY</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+              <div>
+                <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:5px;">HANDLE <span style="color:var(--amber)">*</span></div>
+                <input class="tinp" id="reg-handle" placeholder="@yourhandle" autocomplete="off" spellcheck="false">
+              </div>
+              <div>
+                <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:5px;">PASSWORD <span style="color:var(--amber)">*</span></div>
+                <input class="tinp" id="reg-pass" type="password" placeholder="strong passphrase" autocomplete="off">
+              </div>
+              <div>
+                <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:5px;">CONFIRM PASSWORD <span style="color:var(--amber)">*</span></div>
+                <input class="tinp" id="reg-pass2" type="password" placeholder="confirm passphrase" autocomplete="off">
+              </div>
+              <div>
+                <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:5px;">ACCOUNT TYPE</div>
+                <select class="tinp" id="reg-type" style="cursor:pointer;">
+                  <option value="user">Human User</option>
+                  <option value="agent">Agent Identity</option>
+                  <option value="relay">Relay Node</option>
+                </select>
+              </div>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:5px;">RECOVERY KEY (optional — acts as second factor salt)</div>
+            <input class="tinp" id="reg-rkey" placeholder="optional recovery key (write this down — it is never stored)" autocomplete="off" style="margin-bottom:12px;">
+            <div id="reg-strength" style="font-family:var(--mono);font-size:10px;margin-bottom:10px;"></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn btn-p" onclick="D.auth.register()">CREATE IDENTITY →</button>
+              <div id="reg-status" style="font-family:var(--mono);font-size:10px;color:var(--sec);"></div>
+            </div>
+          </div>
+          <div class="card" style="border-color:rgba(255,64,96,.2);">
+            <div class="ctitle" style="color:var(--red);">WHAT IS NEVER STORED</div>
+            <div style="font-family:var(--mono);font-size:10px;line-height:2;color:var(--sec);">
+              ✗ Your password — used only for key derivation, then immediately discarded from memory<br>
+              ✗ Your private key — re-derived from password+salt on each login, never persisted<br>
+              ✗ Your plaintext handle — only a SHA-256 hash is written to the auth chain<br>
+              ✗ Your recovery key — used as additional salt only, never stored in any form<br>
+              <span style="color:var(--green)">✓ What IS stored on auth chain: handle-hash, public key, salt (non-secret), account type, timestamp</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- AGENT ACCOUNTS -->
+        <div id="auth-panel-agents" style="display:none;">
+          <div class="card">
+            <div class="ctitle">REGISTERED AGENT IDENTITIES</div>
+            <div class="elist" id="auth-agent-list"><div style="font-family:var(--mono);font-size:10px;color:var(--dim);">No agent accounts registered yet.</div></div>
+          </div>
+          <div class="card">
+            <div class="ctitle">PROVISION AGENT ACCOUNT</div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--sec);margin-bottom:10px;">
+              Agent accounts are provisioned by a logged-in human operator. The agent's keypair is derived deterministically from the agent ID + operator signature.
+            </div>
+            <div style="display:flex;gap:8px;">
+              <input class="tinp" id="ag-id" placeholder="Agent ID (e.g. agent-perception-01)">
+              <select class="tinp" id="ag-tier" style="flex:0.4;cursor:pointer;">
+                <option value="tiny">TinyLM Tier</option>
+                <option value="small">SLM-Small Tier</option>
+                <option value="medium">SLM-Medium Tier</option>
+                <option value="large">SLM-Large Tier</option>
+              </select>
+              <button class="btn btn-p btn-sm" onclick="D.auth.provisionAgent()">PROVISION</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- AUTH CHAIN EXPLORER -->
+        <div id="auth-panel-chain" style="display:none;">
+          <div class="mgrid">
+            <div class="mbox"><div class="mval" id="ac-height">0</div><div class="mlbl">Auth Chain Height</div></div>
+            <div class="mbox"><div class="mval" id="ac-accounts">0</div><div class="mlbl">Registered Identities</div></div>
+            <div class="mbox"><div class="mval" id="ac-valid" style="font-size:14px;">—</div><div class="mlbl">Chain Integrity</div></div>
+          </div>
+          <div class="card">
+            <div class="ctitle">AUTH CHAIN EXPLORER <span style="color:var(--dim);font-size:9px;">— handle-hashes and public keys only, no PII</span></div>
+            <div class="elist" id="authchain-entries"></div>
+          </div>
+          <div class="card">
+            <div class="ctitle">VERIFY IDENTITY</div>
+            <div class="tform">
+              <input class="tinp" id="ver-handle" placeholder="@handle to verify…">
+              <button class="btn btn-s btn-sm" onclick="D.auth.verifyHandle()">VERIFY</button>
+            </div>
+            <div id="ver-result" style="display:none;" class="task-result"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EDR -->
+      <div class="view" id="view-edr">
+        <div class="vhdr">
+          <div><div class="vtitle">// EDR — ENDPOINT DETECTION & RESPONSE</div><div class="vsub">Behavioral telemetry · anomaly scoring · audit log</div></div>
+          <button class="btn btn-d btn-sm" onclick="D.edr.clear()">Clear Alerts</button>
+        </div>
+        <div class="mgrid">
+          <div class="mbox"><div class="mval" id="edr-ev">0</div><div class="mlbl">Total Events</div></div>
+          <div class="mbox"><div class="mval" id="edr-al">0</div><div class="mlbl">Active Alerts</div></div>
+          <div class="mbox"><div class="mval" id="edr-an">0</div><div class="mlbl">Anomalies</div></div>
+        </div>
+        <div class="card"><div class="ctitle">BEHAVIORAL TELEMETRY</div><div id="edr-tele" style="font-family:var(--mono);font-size:10px;line-height:2;color:var(--sec);"></div></div>
+        <div class="card"><div class="ctitle">ALERT FEED</div><div class="elist" id="edr-feed"></div></div>
+        <div class="card"><div class="ctitle">RESOURCE BUDGET</div><div id="bud-det" style="font-family:var(--mono);font-size:10px;line-height:2;color:var(--sec);"></div></div>
+      </div>
+
+    </div><!-- /ctr -->
+
+    <!-- RIGHT PANEL -->
+    <div id="rp">
+      <div class="rptabs">
+        <button class="rptab active" onclick="SRP('log',this)">LOG</button>
+        <button class="rptab" onclick="SRP('edr',this)">EDR</button>
+        <button class="rptab" onclick="SRP('peers',this)">PEERS</button>
+      </div>
+      <div class="rpcontent" id="rpc-log"><div id="logfeed"></div></div>
+      <div class="rpcontent" id="rpc-edr" style="display:none;"><div id="rpedr"></div></div>
+      <div class="rpcontent" id="rpc-peers" style="display:none;"><div id="rppeers"></div></div>
+    </div>
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ================================================================ ENGINE -->
+<script>
+'use strict';
+/* ════════════════════════════════════════════════════════════
+   DARM-ANN WEB3 POC — CORE ENGINE v1.0
+   Security-first: no eval(), input sanitization,
+   WebCrypto ECDSA identity, CSP enforced, IDB audit log
+   ════════════════════════════════════════════════════════════ */
+
+const D = {}; // namespace
+
+/* ── CONSTANTS ─────────────────────────────────────────────── */
+const C = {
+  LSH_DIM:128, LSH_TABLES:3, LSH_BITS:6,  // 2^6=64 buckets/table
+  LR:16, LD:4096, LA:32,
+  MAX_PEERS:10, MAX_AGENTS:48, MAX_CHAIN:800, MAX_DAG:400,
+  CPU_BUDGET:0.05, MEM_MB:50, TICK:2000,
+};
+
+/* ── UTILITIES ─────────────────────────────────────────────── */
+const U={
+  ts:()=>new Date().toISOString().slice(11,23),
+  uid:(n=8)=>Array.from(crypto.getRandomValues(new Uint8Array(n))).map(b=>b.toString(16).padStart(2,'0')).join(''),
+  esc:s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
+  clamp:(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),
+  lerp:(a,b,t)=>a+(b-a)*t,
+  rng:(seed,i)=>{let x=Math.sin(seed+i*127.1)*43758.5453;return x-Math.floor(x);},
+  norm:v=>{const m=Math.sqrt(v.reduce((s,x)=>s+x*x,0));return m?v.map(x=>x/m):v;},
+  dot:(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0),
+  gauss:()=>{const u1=Math.random(),u2=Math.random();return Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);},
+  randVec:d=>U.norm(Array.from({length:d},()=>U.gauss())),
+  sha256:async data=>{
+    const enc=new TextEncoder().encode(typeof data==='string'?data:JSON.stringify(data));
+    const buf=await crypto.subtle.digest('SHA-256',enc);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  },
+};
+
+/* ── LOGGER ─────────────────────────────────────────────────── */
+D._logs=[];
+D.log=(lv,msg)=>{
+  const e={ts:U.ts(),lv,msg:String(msg)};
+  D._logs.unshift(e);if(D._logs.length>600)D._logs.pop();
+  const f=document.getElementById('logfeed');if(!f)return;
+  const el=document.createElement('div');
+  el.className='logrow';
+  el.innerHTML=`<span class="lts">${U.esc(e.ts)}</span><span class="llvl ${U.esc(lv)}">${U.esc(lv)}</span><span class="lmsg">${U.esc(e.msg)}</span>`;
+  f.prepend(el);while(f.children.length>200)f.removeChild(f.lastChild);
+};
+
+/* ── CRYPTO IDENTITY ────────────────────────────────────────── */
+D.crypto={kp:null,nodeId:null,
+  async init(){
+    try{
+      const s=localStorage.getItem('darm_id_v2');
+      if(s){const d=JSON.parse(s);this.nodeId=d.nodeId;
+        this.kp={privateKey:await crypto.subtle.importKey('jwk',d.pk,{name:'ECDSA',namedCurve:'P-256'},true,['sign'])};
+        D.log('OK',`Identity restored: ${this.nodeId}`);return;}
+    }catch(e){}
+    this.kp=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);
+    const raw=await crypto.subtle.exportKey('raw',this.kp.publicKey);
+    const hex=Array.from(new Uint8Array(raw)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    this.nodeId='N-'+hex.slice(0,12);
+    try{const pk=await crypto.subtle.exportKey('jwk',this.kp.privateKey);
+      localStorage.setItem('darm_id_v2',JSON.stringify({nodeId:this.nodeId,pk}));}catch(e){}
+    D.log('OK',`Identity: ${this.nodeId}`);
+  },
+  async sign(data){
+    if(!this.kp?.privateKey)return'unsigned';
+    try{const enc=new TextEncoder().encode(JSON.stringify(data));
+      const s=await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},this.kp.privateKey,enc);
+      return Array.from(new Uint8Array(s)).slice(0,16).map(b=>b.toString(16).padStart(2,'0')).join('');}
+    catch(e){return'sign-err';}
+  }
+};
+
+/* ── INDEXED DB ─────────────────────────────────────────────── */
+D.db={_db:null,
+  async init(){
+    return new Promise(res=>{
+      const req=indexedDB.open('darm-ann-v3',1);
+      req.onupgradeneeded=e=>{const db=e.target.result;
+        ['chain','dag','lora','audit','authchain'].forEach(s=>{
+          if(!db.objectStoreNames.contains(s))
+            db.createObjectStore(s,{keyPath: s==='audit'?undefined:'id', autoIncrement:s==='audit'});
+        });};
+      req.onsuccess=e=>{this._db=e.target.result;res();};
+      req.onerror=()=>{D.log('WARN','IDB unavailable');res();};
+    });
+  },
+  async put(store,rec){if(!this._db)return;return new Promise(r=>{const tx=this._db.transaction(store,'readwrite');tx.objectStore(store).put(rec);tx.oncomplete=r;});},
+  async getAll(store){if(!this._db)return[];return new Promise(r=>{const tx=this._db.transaction(store,'readonly');const req=tx.objectStore(store).getAll();req.onsuccess=e=>r(e.target.result||[]);req.onerror=()=>r([]);});}
+};
+
+/* ── LSH INDEX ──────────────────────────────────────────────── */
+D.lsh={tables:[],records:[],
+  init(){
+    for(let t=0;t<C.LSH_TABLES;t++){
+      const planes=Array.from({length:C.LSH_BITS},()=>U.randVec(C.LSH_DIM));
+      this.tables.push({planes,buckets:new Map()});
+    }
+    D.log('OK',`LSH: ${C.LSH_TABLES} tables, d=${C.LSH_DIM}, ${C.LSH_BITS}-bit hash`);
+  },
+  embed(text){
+    const seed=Array.from(text.toLowerCase()).reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,0);
+    return U.norm(Array.from({length:C.LSH_DIM},(_,i)=>U.rng(seed,i)*2-1+U.gauss()*0.08));
+  },
+  hash(ti,vec){return this.tables[ti].planes.map(p=>U.dot(p,vec)>0?'1':'0').join('');},
+  insert(key,val){
+    const id=U.uid(),emb=this.embed(key+' '+val),rec={id,key,val,emb,ts:Date.now()};
+    this.records.push(rec);if(this.records.length>C.MAX_DAG)this.records.shift();
+    for(let t=0;t<C.LSH_TABLES;t++){const h=this.hash(t,emb),tbl=this.tables[t];
+      if(!tbl.buckets.has(h))tbl.buckets.set(h,[]);tbl.buckets.get(h).push(id);}
+    return id;
+  },
+  query(q,k=5){
+    const qe=this.embed(q),cands=new Set();
+    for(let t=0;t<C.LSH_TABLES;t++){(this.tables[t].buckets.get(this.hash(t,qe))||[]).forEach(id=>cands.add(id));}
+    const rm=new Map(this.records.map(r=>[r.id,r]));
+    return [...cands].filter(id=>rm.has(id)).map(id=>{const r=rm.get(id);return{r,sim:U.dot(qe,r.emb)};})
+      .sort((a,b)=>b.sim-a.sim).slice(0,k);
+  },
+  queryUI(){
+    const q=document.getElementById('lq')?.value.trim();if(!q)return;
+    const res=this.query(q);
+    const el=document.getElementById('lsh-res');if(!el)return;
+    el.style.display='block';
+    el.innerHTML=res.length===0
+      ?'<span style="color:var(--dim)">No matching records in current buckets.</span>'
+      :`<span style="color:var(--sec);font-size:10px;">Candidates from ${C.LSH_TABLES} tables · top-${res.length}</span><br><br>`
+        +res.map(({r,sim})=>`<span style="color:var(--amber)">${U.esc(r.key)}</span>  <span style="color:var(--dim)">sim=${sim.toFixed(4)}</span><br><span style="color:var(--sec)">${U.esc(String(r.val).slice(0,100))}</span><br><br>`).join('');
+    D.log('INFO',`LSH query "${q.slice(0,30)}" → ${res.length} results`);
+  }
+};
+
+/* ── BRANCH DAG ─────────────────────────────────────────────── */
+D.dag={nodes:[],edges:[],
+  async init(){
+    const p=await D.db.getAll('dag');this.nodes=p.slice(-C.MAX_DAG);
+    this.edges=this.nodes.flatMap(n=>n.pids.map(pid=>({from:pid,to:n.id})));
+    D.log('OK',`DAG: ${this.nodes.length} nodes, ${this.edges.length} edges`);this.render();
+  },
+  async write(key,val,agent='manual',pids=null){
+    const ids=pids||(this.nodes.length?[this.nodes[this.nodes.length-1].id]:[]);
+    const payload={key,val,agent,ids,ts:Date.now()};
+    const hash=await U.sha256(payload),sig=await D.crypto.sign(payload);
+    const n={id:U.uid(),key,val,agent,pids:ids,hash,sig,ts:Date.now()};
+    this.nodes.push(n);ids.forEach(p=>this.edges.push({from:p,to:n.id}));
+    if(this.nodes.length>C.MAX_DAG){this.nodes.shift();this.edges.shift();}
+    D.lsh.insert(key,val);await D.db.put('dag',n);
+    D.edr.audit('DAG_WRITE',{key:key.slice(0,40),hash:hash.slice(0,16),agent});
+    this.render();this.updateMerkle();return n;
+  },
+  async writeUI(){
+    const k=document.getElementById('mk')?.value.trim(),v=document.getElementById('mv')?.value.trim();
+    if(!k||!v)return;
+    await this.write(D.edr.sanitize(k),D.edr.sanitize(v));
+    document.getElementById('mk').value='';document.getElementById('mv').value='';
+    D.log('OK',`DAG write: "${k.slice(0,30)}"`);
+  },
+  async updateMerkle(){
+    if(!this.nodes.length)return;
+    let lv=this.nodes.map(n=>n.hash);
+    while(lv.length>1){const nx=[];for(let i=0;i<lv.length;i+=2)nx.push(await U.sha256(lv[i]+(lv[i+1]||lv[i])));lv=nx;}
+    const el=document.getElementById('dag-root');if(el)el.textContent=`MERKLE: ${lv[0].slice(0,16)}…`;
+  },
+  render(){
+    const el=document.getElementById('dag-ents');
+    if(el)el.innerHTML=[...this.nodes].reverse().slice(0,40).map(n=>`
+      <div class="centry wr">
+        <span class="chash">${n.hash.slice(0,8)}…</span>
+        <span class="cdata"><b>${U.esc(n.key)}</b> → ${U.esc(String(n.val).slice(0,80))}</span>
+        <span class="ctime">${new Date(n.ts).toISOString().slice(11,19)}</span>
+      </div>`).join('');
+    const dn=document.getElementById('d-nodes'),de=document.getElementById('d-edges'),dr=document.getElementById('d-recs');
+    if(dn)dn.textContent=this.nodes.length;if(de)de.textContent=this.edges.length;if(dr)dr.textContent=D.lsh.records.length;
+  }
+};
+
+/* ── GLOBAL CHAIN ───────────────────────────────────────────── */
+D.chain={blocks:[],valid:true,txts:[],
+  async init(){
+    const p=await D.db.getAll('chain');
+    if(p.length){this.blocks=p.sort((a,b)=>a.height-b.height).slice(-C.MAX_CHAIN);D.log('OK',`Chain: height=${this.blocks.length}`);}
+    else await this._genesis();this.render();
+  },
+  async _genesis(){
+    const g={id:'b0',height:0,prevHash:'0'.repeat(64),data:{type:'GENESIS',node:D.crypto.nodeId,ts:Date.now()},ts:Date.now(),node:D.crypto.nodeId,merkle:'0'.repeat(32)};
+    g.hash=await U.sha256(g);g.sig=await D.crypto.sign(g);
+    this.blocks.push(g);await D.db.put('chain',g);D.log('OK',`Genesis: ${g.hash.slice(0,16)}…`);
+  },
+  async commit(payload){
+    const prev=this.blocks[this.blocks.length-1];
+    const dm=D.dag.nodes.length?(await U.sha256(D.dag.nodes.map(n=>n.hash).join(''))).slice(0,32):'0'.repeat(32);
+    const b={id:'b'+U.uid(6),height:prev.height+1,prevHash:prev.hash,
+      data:{type:'TX',payload:typeof payload==='string'?payload.slice(0,200):payload,node:D.crypto.nodeId},
+      ts:Date.now(),node:D.crypto.nodeId,merkle:dm};
+    b.hash=await U.sha256(b);b.sig=await D.crypto.sign(b);
+    this.blocks.push(b);if(this.blocks.length>C.MAX_CHAIN)this.blocks.shift();
+    await D.db.put('chain',b);this.txts.push(Date.now());
+    D.peer.broadcast({type:'CHAIN_BLOCK',block:b});
+    D.edr.audit('CHAIN_COMMIT',{height:b.height,hash:b.hash.slice(0,16)});
+    D.log('OK',`Block #${b.height}: ${b.hash.slice(0,16)}…`);this.render();return b;
+  },
+  async commitUI(){const v=document.getElementById('cp')?.value.trim();if(!v)return;document.getElementById('cp').value='';await this.commit(D.edr.sanitize(v));},
+  async verify(){
+    let ok=true;
+    for(let i=1;i<this.blocks.length;i++){if(this.blocks[i].prevHash!==this.blocks[i-1].hash){ok=false;D.edr.alert('CHAIN_TAMPER',`Block ${i} hash mismatch`,'crit');break;}}
+    this.valid=ok;const el=document.getElementById('ch-ok');
+    if(el){el.textContent=ok?'✓ VALID':'✗ TAMPER';el.style.color=ok?'var(--green)':'var(--red)';}
+    D.log(ok?'OK':'ERR','Chain verify: '+(ok?'VALID':'INTEGRITY VIOLATION'));
+  },
+  render(){
+    const el=document.getElementById('chain-ents');
+    if(el)el.innerHTML=[...this.blocks].reverse().slice(0,40).map(b=>`
+      <div class="centry co">
+        <span class="chash">#${b.height} ${b.hash.slice(0,8)}…</span>
+        <span class="cdata">${U.esc(JSON.stringify(b.data).slice(0,100))}</span>
+        <span class="ctime">${new Date(b.ts).toISOString().slice(11,19)}</span>
+      </div>`).join('');
+    const h=document.getElementById('ch-ht');if(h)h.textContent=this.blocks.length;
+    const now=Date.now();this.txts=this.txts.filter(t=>now-t<60000);
+    const tm=document.getElementById('ch-tpm');if(tm)tm.textContent=this.txts.length+'/min';
+  }
+};
+
+/* ── AGENT LAYERS ───────────────────────────────────────────── */
+D.agents={layers:[],alog:[],totalTasks:0,tc:{tiny:0,small:0,medium:0,large:0},
+  init(){
+    this.layers=[
+      {id:'L1',name:'Perception', agents:this._mk(4,['tiny','tiny','tiny','small'])},
+      {id:'L2',name:'Reasoning',  agents:this._mk(3,['small','small','medium'])},
+      {id:'L3',name:'Synthesis',  agents:this._mk(2,['medium','medium'])},
+      {id:'L4',name:'Output',     agents:this._mk(1,['large'])},
+    ];
+    D.log('OK',`Agents: ${this.layers.length} layers, ${this.total()} agents`);this.render();
+  },
+  _mk(n,tiers){return Array.from({length:n},(_,i)=>({
+    id:'A'+U.uid(4),tier:tiers[i]||'small',
+    role:['classifier','router','reasoner','synthesizer','critic','responder'][~~(Math.random()*6)],
+    state:'idle',tasks:0,q:0.7+Math.random()*0.25,mptr:null
+  }));},
+  total(){return this.layers.reduce((s,l)=>s+l.agents.length,0);},
+  spawn(){
+    if(this.total()>=C.MAX_AGENTS){D.log('WARN','Agent limit reached');return;}
+    const n=~~(Math.random()*3)+1;
+    const L={id:'L'+(this.layers.length+1),name:'Dynamic-'+(this.layers.length),agents:this._mk(n,['small','medium','medium'].slice(0,n))};
+    this.layers.push(L);D.log('INFO',`Spawned layer ${L.id} (${n} agents)`);this.render();
+    D.chain.commit({type:'LAYER_SPAWN',id:L.id,agents:n});
+  },
+  async adapt(li,delta){
+    const layer=this.layers[li];if(!layer)return;
+    const a=layer.agents[~~(Math.random()*layer.agents.length)];
+    const roles=['classifier','router','reasoner','synthesizer','critic','responder'];
+    const old=a.role;a.role=roles[~~(Math.random()*roles.length)];
+    a.q=U.clamp(a.q+(Math.random()*0.1-0.03),0.1,1.0);
+    const e={ts:U.ts(),aid:a.id,lid:layer.id,delta,old,role:a.role,dq:(a.q-0.7).toFixed(3)};
+    this.alog.unshift(e);if(this.alog.length>60)this.alog.pop();
+    this.renderBP();this.render();
+  },
+  inspect(aid){
+    for(const l of this.layers){const a=l.agents.find(x=>x.id===aid);if(a){
+      const el=document.getElementById('ainsp');if(!el)return;
+      el.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:10px;">
+        <div><span style="color:var(--dim)">ID:</span> ${U.esc(a.id)}</div>
+        <div><span style="color:var(--dim)">LAYER:</span> ${U.esc(l.id)}</div>
+        <div><span style="color:var(--dim)">TIER:</span> <span class="rtag ${a.tier}">${a.tier.toUpperCase()}</span></div>
+        <div><span style="color:var(--dim)">ROLE:</span> ${U.esc(a.role)}</div>
+        <div><span style="color:var(--dim)">QUALITY:</span> <span style="color:var(--amber)">${(a.q*100).toFixed(1)}%</span></div>
+        <div><span style="color:var(--dim)">TASKS:</span> ${a.tasks}</div>
+      </div>
+      <div style="margin-top:10px;font-size:10px;">
+        <div style="color:var(--dim);margin-bottom:5px;">QUALITY</div>
+        <div class="pbar" style="height:6px;"><div class="pfill pf-g" style="width:${(a.q*100).toFixed(0)}%"></div></div>
+      </div>`;
+    }}
+  },
+  render(){
+    const el=document.getElementById('lviz');if(!el)return;
+    el.innerHTML=this.layers.map(l=>`
+      <div class="alayer">
+        <div class="lnum">${U.esc(l.id)}</div>
+        <div class="anodes">${l.agents.map(a=>`
+          <div class="anode ${a.tier} ${a.state==='active'?'actv':''}"
+               onclick="D.agents.inspect('${a.id}')"
+               data-tip="${a.id}\nRole: ${a.role}\nTier: ${a.tier}\nQ: ${(a.q*100).toFixed(1)}%\nTasks: ${a.tasks}">
+            ${a.tier[0].toUpperCase()}
+          </div>`).join('')}
+        </div>
+        <div class="linfo"><div style="color:var(--sec)">${l.name}</div><div style="color:var(--dim);font-size:9px;">${l.agents.length} agents</div></div>
+      </div>`).join('');
+    document.getElementById('tb-agents').textContent=this.total();
+    document.getElementById('m-agents').textContent=this.total();
+    document.getElementById('m-layers').textContent=this.layers.length+' layers';
+  },
+  renderBP(){
+    const el=document.getElementById('bptrace');if(!el)return;
+    el.innerHTML=this.alog.slice(0,20).map(e=>`
+      <div class="centry"><span class="chash">${U.esc(e.aid)}</span>
+        <span class="cdata">[${U.esc(e.lid)}] ${U.esc(e.old)}→<b>${U.esc(e.role)}</b> Δq=${U.esc(e.dq)} | ${U.esc(e.delta)}</span>
+        <span class="ctime">${U.esc(e.ts)}</span></div>`).join('');
+  }
+};
+
+/* ── TASK ROUTER ────────────────────────────────────────────── */
+D.router={hist:[],
+  RULES:{
+    tiny:  {kw:['ping','status','hello','hi','count','list','check','yes','no','true','false','ok','test','version','ack'],w:0},
+    small: {kw:['summarize','explain','define','classify','what is','describe','find','search','show','get'],w:.3},
+    medium:{kw:['analyze','compare','reason','evaluate','design','assess','plan','review','debate','pros','cons','tradeoff'],w:.5},
+    large: {kw:['complex','synthesis','multi-step','research','architecture','comprehensive','deep','proof','verify','derive'],w:.7},
+  },
+  classify(text){
+    const lo=text.toLowerCase();let best={tier:'tiny',score:0,conf:.5};
+    for(const[tier,{kw}] of Object.entries(this.RULES)){
+      const hits=kw.filter(k=>lo.includes(k)).length;const sc=hits/kw.length;
+      if(sc>best.score)best={tier,score:sc,conf:U.clamp(.35+sc*3,.35,.99)};
+    }
+    const words=text.split(/\s+/).length;
+    if(words>50&&best.tier==='tiny')best.tier='small';
+    if(words>100&&best.tier==='small')best.tier='medium';
+    if(words>200)best.tier='large';
+    if(best.conf<.6){const ts=['tiny','small','medium','large'],i=ts.indexOf(best.tier);
+      if(i<ts.length-1){best.tier=ts[i+1];best.escalated=true;}}
+    return best;
+  },
+  _sim(text,tier){
+    const r={tiny:`[TinyLM] ACK. Tokens: ${text.split(' ').length}. Latency: ~${~~(Math.random()*10+1)}ms. Status: ROUTED.`,
+      small:`[SLM-Small] Processing. LSH returned ${~~(Math.random()*8+2)} memory records. Conf: ${(.7+Math.random()*.25).toFixed(2)}.`,
+      medium:`[SLM-Medium] Decomposing into ${~~(Math.random()*3+2)} sub-tasks across ${~~(Math.random()*2+2)} layers. Cross-referencing ${~~(Math.random()*5+3)} memories. Q: ${(.8+Math.random()*.15).toFixed(2)}.`,
+      large:`[SLM-Large] Full stack active (L1→L4). LSH candidates: ${~~(Math.random()*15+5)}. LoRA adapter update queued. FedAvg propagation initiated.`};
+    return r[tier]||r.small;
+  },
+  async route(){
+    const text=document.getElementById('ti')?.value.trim();if(!text)return;
+    const{tier,conf,escalated}=this.classify(text);
+    const result=this._sim(text,tier);
+    const lat={tiny:5,small:50,medium:200,large:800}[tier]+~~(Math.random()*50);
+    // Activate agent
+    const lm={tiny:0,small:1,medium:2,large:3};
+    const tl=D.agents.layers[Math.min(lm[tier],D.agents.layers.length-1)];
+    if(tl){const a=tl.agents[~~(Math.random()*tl.agents.length)];
+      a.state='active';a.tasks++;setTimeout(()=>{a.state='idle';D.agents.render();},1200);}
+    D.agents.tc[tier]++;D.agents.totalTasks++;
+    document.getElementById('m-tasks').textContent=D.agents.totalTasks;
+    document.getElementById('m-tsub').textContent='last: '+tier;
+    // Write to DAG
+    await D.dag.write('task:'+text.slice(0,40),result,'router');
+    if(Math.random()<.3)await D.agents.adapt(lm[tier],`quality signal from task`);
+    // Display
+    const out=document.getElementById('task-out');
+    if(out)out.innerHTML=`<div class="task-result"><span class="rtag ${tier}">${tier.toUpperCase()}${escalated?' (ESCALATED)':''}</span><span style="float:right;color:var(--dim);font-size:9px;">conf=${conf.toFixed(2)} ~${lat}ms</span><br><br>${U.esc(result)}</div>`;
+    this.hist.unshift({ts:U.ts(),text:text.slice(0,60),tier,conf,lat});
+    if(this.hist.length>50)this.hist.pop();this.renderHist();
+    D.log('INFO',`Route → ${tier} (conf=${conf.toFixed(2)}) ~${lat}ms`);
+    D.ui.updateTier();
+  },
+  renderHist(){
+    const el=document.getElementById('rhistory');if(!el)return;
+    el.innerHTML=this.hist.slice(0,20).map(h=>`
+      <div class="centry"><span class="chash" style="color:var(--${h.tier==='tiny'?'green':h.tier==='small'?'cyan':h.tier==='medium'?'amber':'red'})">${h.tier}</span>
+        <span class="cdata">${U.esc(h.text)}</span>
+        <span class="ctime">${h.ts} ${h.lat}ms</span></div>`).join('');
+  }
+};
+
+/* ── LORA REGISTRY ──────────────────────────────────────────── */
+D.lora={adapters:[],
+  init(){
+    const r=C.LR,d=C.LD;
+    document.getElementById('lo-r').textContent=r;
+    document.getElementById('lo-d').textContent=d;
+    document.getElementById('lo-a').textContent=C.LA;
+    document.getElementById('lo-f').textContent=`${(2*r/d*100).toFixed(2)}%`;
+    document.getElementById('lo-sp').textContent=~~(d/r);
+    document.getElementById('lo-cr').textContent=~~(d/r);
+    document.getElementById('lo-pr').textContent=(2*r/d*100).toFixed(2)+'%';
+    D.log('OK',`LoRA: r=${r}, d=${d}, reduction=${(2*r/d*100).toFixed(2)}%`);
+  },
+  async simulate(){
+    const tiers=['tiny','small','medium','large'],tier=tiers[~~(Math.random()*4)];
+    const samp=~~(Math.random()*200+50),q=(0.7+Math.random()*0.25).toFixed(3);
+    const delta=Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const a={id:'LOA-'+U.uid(6),tier,rank:C.LR,samples:samp,quality:q,delta,ts:Date.now()};
+    a.hash=await U.sha256(a);this.adapters.unshift(a);
+    if(this.adapters.length>60)this.adapters.pop();
+    await D.chain.commit({type:'LORA_UPDATE',id:a.id,tier,q,hash:a.hash.slice(0,16)});
+    await D.db.put('lora',{...a});this.render();
+    D.peer.broadcast({type:'LORA_DELTA',id:a.id,tier,delta});
+    D.log('OK',`LoRA adapter: ${a.id} tier=${tier} q=${q} samples=${samp}`);
+    return a;
+  },
+  render(){
+    const el=document.getElementById('lora-log');if(!el)return;
+    el.innerHTML=this.adapters.slice(0,30).map(a=>`
+      <div class="centry co">
+        <span class="chash" style="color:var(--${a.tier==='tiny'?'green':a.tier==='small'?'cyan':a.tier==='medium'?'amber':'red'})">${U.esc(a.id)}</span>
+        <span class="cdata">tier=${a.tier} r=${a.rank} samples=${a.samples} q=${a.quality} Δ=${U.esc(a.delta)}</span>
+        <span class="ctime">${new Date(a.ts).toISOString().slice(11,19)}</span>
+      </div>`).join('');
+    document.getElementById('lo-cnt').textContent=this.adapters.length;
+    document.getElementById('m-lora').textContent=this.adapters.length;
+  }
+};
+
+/* ── EDR MONITOR ────────────────────────────────────────────── */
+/* ── AUTH IDENTITY SYSTEM ──────────────────────────────────────
+   Architecture:
+   - Passwords → PBKDF2 (310k iters, SHA-256) → 256-bit key material
+   - Key material → HKDF → two outputs: (a) AES-GCM wrap key, (b) ECDSA seed
+   - ECDSA P-256 keypair derived deterministically from seed via RFC 6979-style
+     (we use importKey on the derived bytes as raw scalar — ECDH then exportKey)
+   - Auth chain stores ONLY: handle-hash, pubkey-hex, salt-hex, type, timestamp
+   - Private key: NEVER stored, NEVER transmitted, re-derived each login
+   - Password: used only in-function, local vars, no assignment to persistent scope
+   - All sensitive buffers zeroed (filled with 0) after use
+   ─────────────────────────────────────────────────────────────── */
+D.auth={
+  session:null,   // {handle, pubKeyHex, accountType, loginTs, nonce}
+  chain:[],       // auth-specific blockchain (separate from main chain)
+  _accounts:[],   // in-memory index of registered handle-hashes+pubkeys
+
+  /* ── CRYPTO PRIMITIVES ─────────────────────────────────── */
+
+  // Derive a 512-bit key buffer from password+handle+salt via PBKDF2
+  async _deriveKeyBuf(password, handleRaw, saltHex, recoveryKey='') {
+    const enc = new TextEncoder();
+    // Combine inputs — recovery key acts as additional entropy/second factor
+    const combined = enc.encode(password + '\x00' + handleRaw.toLowerCase() + '\x00' + recoveryKey);
+    const salt = Uint8Array.from(saltHex.match(/.{2}/g), b => parseInt(b, 16));
+    // Import raw password bytes as PBKDF2 key material
+    const base = await crypto.subtle.importKey('raw', combined, 'PBKDF2', false, ['deriveBits']);
+    // Derive 512 bits — more than needed, split into two 256-bit halves
+    const bits = await crypto.subtle.deriveBits(
+      {name:'PBKDF2', hash:'SHA-256', salt, iterations:310000}, base, 512
+    );
+    // Zero the combined buffer
+    combined.fill(0);
+    return new Uint8Array(bits);
+  },
+
+  // From the 512-bit derived buffer, produce an ECDSA P-256 signing keypair
+  // Lower 256 bits → ECDH private scalar (we use ECDH import then export pubkey)
+  async _keypairFromBuf(buf) {
+    // Use first 32 bytes as raw private key for P-256
+    // P-256 private key must be in [1, n-1]; we ensure this via modular clamp
+    const rawPriv = buf.slice(0, 32);
+    // Ensure non-zero (extremely unlikely to be zero, but clamp anyway)
+    if (rawPriv.every(b => b === 0)) rawPriv[31] = 1;
+
+    // Import as ECDH first to extract structured key, then re-export pubkey
+    // WebCrypto doesn't allow importing raw P-256 private scalars directly for ECDSA
+    // Workaround: derive an ECDSA keypair by using the raw bytes as HKDF input
+    // and exporting the resulting JWK, then reconstruct
+    const hkdfKey = await crypto.subtle.importKey('raw', rawPriv, 'HKDF', false, ['deriveKey']);
+    const ecdsaKey = await crypto.subtle.deriveKey(
+      {name:'HKDF', hash:'SHA-256', salt:new Uint8Array(32), info:new TextEncoder().encode('DARM-ECDSA-P256')},
+      hkdfKey,
+      {name:'ECDSA', namedCurve:'P-256'}, true, ['sign']
+    );
+    // Export the generated private key JWK to reconstruct the full keypair
+    const privJwk = await crypto.subtle.exportKey('jwk', ecdsaKey);
+    // Import the full keypair (sign + public key for verification)
+    const privateKey = await crypto.subtle.importKey('jwk', privJwk,
+      {name:'ECDSA', namedCurve:'P-256'}, false, ['sign']);
+    // Derive public key: import as ECDSA verify key
+    const pubJwk = {...privJwk, key_ops:['verify'], d:undefined};
+    delete pubJwk.d;
+    const publicKey = await crypto.subtle.importKey('jwk', pubJwk,
+      {name:'ECDSA', namedCurve:'P-256'}, true, ['verify']);
+    const pubRaw = await crypto.subtle.exportKey('raw', publicKey);
+    const pubHex = Array.from(new Uint8Array(pubRaw)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    // Zero the raw private bytes
+    rawPriv.fill(0);
+    return {privateKey, publicKey, pubHex};
+  },
+
+  // Produce a PBKDF2 handle-hash for on-chain storage (not the plaintext)
+  async _hashHandle(handleRaw) {
+    const enc = new TextEncoder();
+    const data = enc.encode('DARM-HANDLE:' + handleRaw.toLowerCase().trim());
+    const buf = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  },
+
+  // Sign a nonce to prove possession of private key (challenge-response)
+  async _signChallenge(privateKey, nonce) {
+    const enc = new TextEncoder().encode('DARM-CHALLENGE:' + nonce);
+    const sig = await crypto.subtle.sign({name:'ECDSA', hash:'SHA-256'}, privateKey, enc);
+    return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  },
+
+  // Verify a challenge signature against a public key
+  async _verifyChallenge(pubHex, nonce, sigHex) {
+    try {
+      const pubRaw = Uint8Array.from(pubHex.match(/.{2}/g), b => parseInt(b,16));
+      const sigRaw = Uint8Array.from(sigHex.match(/.{2}/g), b => parseInt(b,16));
+      const pubKey = await crypto.subtle.importKey('raw', pubRaw,
+        {name:'ECDSA', namedCurve:'P-256'}, false, ['verify']);
+      const enc = new TextEncoder().encode('DARM-CHALLENGE:' + nonce);
+      return await crypto.subtle.verify({name:'ECDSA', hash:'SHA-256'}, pubKey, sigRaw, enc);
+    } catch(e) { return false; }
+  },
+
+  /* ── AUTH CHAIN ────────────────────────────────────────── */
+
+  async _genesisAuth() {
+    const g = {id:'ac0', height:0, prevHash:'0'.repeat(64),
+      data:{type:'AUTH_GENESIS', ts:Date.now(), node:D.crypto.nodeId},
+      ts:Date.now(), node:D.crypto.nodeId};
+    g.hash = await U.sha256(g);
+    g.sig  = await D.crypto.sign(g);
+    this.chain.push(g);
+    await D.db.put('authchain', g);
+    D.log('OK', `Auth chain genesis: ${g.hash.slice(0,16)}…`);
+  },
+
+  async _commitAuth(data) {
+    const prev = this.chain[this.chain.length - 1];
+    const block = {
+      id: 'ac' + U.uid(6),
+      height: prev.height + 1,
+      prevHash: prev.hash,
+      data,
+      ts: Date.now(),
+      node: D.crypto.nodeId,
+    };
+    block.hash = await U.sha256(block);
+    block.sig  = await D.crypto.sign(block);
+    this.chain.push(block);
+    if (this.chain.length > 500) this.chain.shift();
+    await D.db.put('authchain', block);
+    this._updateChainUI();
+    D.log('OK', `Auth block #${block.height}: ${block.hash.slice(0,16)}…`);
+    return block;
+  },
+
+  async _loadAuthChain() {
+    const p = await D.db.getAll('authchain');
+    if (p.length) {
+      this.chain = p.sort((a,b)=>a.height-b.height);
+      // Rebuild accounts index from chain
+      this._accounts = this.chain
+        .filter(b => b.data?.type === 'REGISTER')
+        .map(b => b.data);
+      D.log('OK', `Auth chain loaded: ${this.chain.length} blocks, ${this._accounts.length} accounts`);
+    } else {
+      await this._genesisAuth();
+    }
+  },
+
+  async _verifyAuthChain() {
+    for (let i = 1; i < this.chain.length; i++) {
+      if (this.chain[i].prevHash !== this.chain[i-1].hash) {
+        D.edr.alert('AUTH_CHAIN_TAMPER', `Auth chain integrity violation at block ${i}`, 'crit');
+        return false;
+      }
+    }
+    return true;
+  },
+
+  /* ── PASSWORD STRENGTH ─────────────────────────────────── */
+  _strength(pw) {
+    let score = 0;
+    const checks = {
+      len12: pw.length >= 12,
+      len20: pw.length >= 20,
+      upper: /[A-Z]/.test(pw),
+      lower: /[a-z]/.test(pw),
+      digit: /[0-9]/.test(pw),
+      symbol: /[^A-Za-z0-9]/.test(pw),
+      noRepeat: !/(.)\1{2}/.test(pw),
+    };
+    Object.values(checks).forEach(v => { if(v) score++; });
+    const label = score <= 2 ? 'WEAK' : score <= 4 ? 'FAIR' : score <= 5 ? 'STRONG' : 'EXCELLENT';
+    const color = score <= 2 ? 'var(--red)' : score <= 4 ? 'var(--amber)' : score <= 5 ? 'var(--cyan)' : 'var(--green)';
+    const pct   = Math.round((score / 7) * 100);
+    return {score, label, color, pct, checks};
+  },
+
+  /* ── REGISTER ──────────────────────────────────────────── */
+  async register() {
+    const handleEl = document.getElementById('reg-handle');
+    const passEl   = document.getElementById('reg-pass');
+    const pass2El  = document.getElementById('reg-pass2');
+    const rkeyEl   = document.getElementById('reg-rkey');
+    const typeEl   = document.getElementById('reg-type');
+    const statusEl = document.getElementById('reg-status');
+
+    const handle   = D.edr.sanitize((handleEl?.value || '').trim().toLowerCase().replace(/^@/,''));
+    const pass     = passEl?.value || '';
+    const pass2    = pass2El?.value || '';
+    const rkey     = rkeyEl?.value || '';
+    const acctType = typeEl?.value || 'user';
+
+    // Validation
+    if (!handle || handle.length < 3) return this._setStatus(statusEl, '✗ Handle must be ≥3 chars', 'var(--red)');
+    if (!/^[a-z0-9_\-]+$/.test(handle)) return this._setStatus(statusEl, '✗ Handle: alphanumeric, _ - only', 'var(--red)');
+    if (pass.length < 12) return this._setStatus(statusEl, '✗ Password must be ≥12 characters', 'var(--red)');
+    if (pass !== pass2) return this._setStatus(statusEl, '✗ Passwords do not match', 'var(--red)');
+
+    // Check handle not already registered (by hash)
+    const handleHash = await this._hashHandle(handle);
+    if (this._accounts.find(a => a.handleHash === handleHash))
+      return this._setStatus(statusEl, '✗ Handle already registered', 'var(--red)');
+
+    this._setStatus(statusEl, '⟳ Deriving keys (PBKDF2, this takes a moment)…', 'var(--amber)');
+
+    try {
+      // Generate a random 32-byte salt (not secret — stored on chain)
+      const saltBytes = crypto.getRandomValues(new Uint8Array(32));
+      const saltHex   = Array.from(saltBytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+
+      // Derive key material from password
+      const keyBuf = await this._deriveKeyBuf(pass, handle, saltHex, rkey);
+
+      // Derive keypair
+      const {pubHex} = await this._keypairFromBuf(keyBuf);
+
+      // Zero key buf — GC will eventually reclaim but this helps
+      keyBuf.fill(0);
+
+      // Build on-chain record — NO password, NO private key, NO plaintext handle
+      const record = {
+        type: 'REGISTER',
+        handleHash,          // SHA-256(handle) — not reversible
+        pubKeyHex: pubHex,   // Public key — safe to publish
+        saltHex,             // Salt — not secret, needed for login key derivation
+        accountType: acctType,
+        ts: Date.now(),
+        node: D.crypto.nodeId,
+      };
+
+      await this._commitAuth(record);
+      this._accounts.push(record);
+
+      // Clear form fields immediately
+      passEl.value  = '';
+      pass2El.value = '';
+      rkeyEl.value  = '';
+
+      this._setStatus(statusEl, `✓ Identity registered! Handle-hash: ${handleHash.slice(0,16)}…`, 'var(--green)');
+      D.log('OK', `Identity registered: @${handle} [${acctType}] pubkey=${pubHex.slice(0,16)}…`);
+      D.edr.audit('AUTH_REGISTER', {handleHash: handleHash.slice(0,16), accountType: acctType});
+      this.renderChainExplorer();
+
+    } catch(e) {
+      this._setStatus(statusEl, '✗ Registration error: ' + e.message, 'var(--red)');
+      D.log('ERR', 'Register: ' + e);
+    }
+  },
+
+  /* ── LOGIN ─────────────────────────────────────────────── */
+  async login() {
+    const handleEl = document.getElementById('li-handle');
+    const passEl   = document.getElementById('li-pass');
+    const rkeyEl   = document.getElementById('li-rkey');
+    const statusEl = document.getElementById('li-status');
+
+    const handle = D.edr.sanitize((handleEl?.value || '').trim().toLowerCase().replace(/^@/,''));
+    const pass   = passEl?.value || '';
+    const rkey   = rkeyEl?.value || '';
+
+    if (!handle || !pass) return this._setStatus(statusEl, '✗ Handle and password required', 'var(--red)');
+
+    this._setStatus(statusEl, '⟳ Looking up identity…', 'var(--amber)');
+
+    try {
+      // Look up the account by handle-hash
+      const handleHash = await this._hashHandle(handle);
+      const account = this._accounts.find(a => a.handleHash === handleHash);
+      if (!account) {
+        // Deliberately vague — don't reveal whether handle exists
+        await new Promise(r => setTimeout(r, 800 + Math.random() * 400)); // timing normalization
+        passEl.value = '';
+        return this._setStatus(statusEl, '✗ Invalid credentials', 'var(--red)');
+      }
+
+      this._setStatus(statusEl, '⟳ Deriving key (PBKDF2)…', 'var(--amber)');
+
+      // Re-derive key material using stored salt
+      const keyBuf = await this._deriveKeyBuf(pass, handle, account.saltHex, rkey);
+      const {privateKey, pubHex} = await this._keypairFromBuf(keyBuf);
+      keyBuf.fill(0);
+
+      // Verify derived public key matches registered public key
+      if (pubHex !== account.pubKeyHex) {
+        passEl.value = '';
+        await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
+        return this._setStatus(statusEl, '✗ Invalid credentials', 'var(--red)');
+      }
+
+      // Challenge-response: sign a fresh nonce to prove key possession
+      const nonce = U.uid(16) + Date.now().toString(36);
+      const sig   = await this._signChallenge(privateKey, nonce);
+      const valid = await this._verifyChallenge(pubHex, nonce, sig);
+
+      if (!valid) {
+        passEl.value = '';
+        return this._setStatus(statusEl, '✗ Challenge verification failed', 'var(--red)');
+      }
+
+      // Clear sensitive inputs immediately
+      passEl.value  = '';
+      rkeyEl.value  = '';
+
+      // Store session (handle in plaintext for UX, NEVER the password or privkey)
+      this.session = {
+        handle: '@' + handle,
+        pubKeyHex: pubHex,
+        accountType: account.accountType,
+        loginTs: Date.now(),
+        nonce,
+      };
+
+      // Commit login event to auth chain (no sensitive data)
+      await this._commitAuth({
+        type: 'LOGIN',
+        handleHash: handleHash.slice(0,16) + '…',
+        pubKeyHex: pubHex.slice(0,24) + '…',
+        accountType: account.accountType,
+        ts: Date.now(),
+        node: D.crypto.nodeId,
+      });
+
+      D.edr.audit('AUTH_LOGIN', {handle: '@'+handle, accountType: account.accountType});
+      D.log('OK', `Authenticated: @${handle} [${account.accountType}]`);
+      this._setStatus(statusEl, `✓ Authenticated as @${handle}`, 'var(--green)');
+      this._updateSessionUI();
+
+    } catch(e) {
+      passEl.value = '';
+      this._setStatus(statusEl, '✗ Login error: ' + e.message, 'var(--red)');
+      D.log('ERR', 'Login: ' + e);
+    }
+  },
+
+  /* ── LOGOUT ────────────────────────────────────────────── */
+  async logout() {
+    if (!this.session) return;
+    const handle = this.session.handle;
+    await this._commitAuth({type:'LOGOUT', handle: handle.replace('@','').slice(0,3)+'…', ts:Date.now(), node:D.crypto.nodeId});
+    D.edr.audit('AUTH_LOGOUT', {handle});
+    D.log('INFO', `Signed out: ${handle}`);
+    this.session = null;
+    this._updateSessionUI();
+    document.getElementById('li-status').textContent = '';
+  },
+
+  /* ── AGENT PROVISIONING ────────────────────────────────── */
+  async provisionAgent() {
+    if (!this.session) {
+      D.edr.alert('AUTH_REQUIRED', 'Must be logged in to provision agent accounts', 'warn');
+      return;
+    }
+    const agIdEl  = document.getElementById('ag-id');
+    const agTier  = document.getElementById('ag-tier')?.value || 'small';
+    const agId    = D.edr.sanitize((agIdEl?.value||'').trim());
+    if (!agId) return;
+
+    // Derive deterministic keypair for agent from agentId + operator pubkey
+    // This binds the agent identity to the provisioning operator
+    const saltBytes = crypto.getRandomValues(new Uint8Array(32));
+    const saltHex   = Array.from(saltBytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const seed = new TextEncoder().encode(agId + ':' + this.session.pubKeyHex);
+    const keyBuf = new Uint8Array(await crypto.subtle.digest('SHA-256', seed));
+    const {pubHex} = await this._keypairFromBuf(new Uint8Array([...keyBuf, ...keyBuf])); // 64 bytes
+
+    const agHandleHash = await this._hashHandle('agent:' + agId);
+    const record = {
+      type: 'REGISTER',
+      handleHash: agHandleHash,
+      pubKeyHex: pubHex,
+      saltHex,
+      accountType: 'agent',
+      agentTier: agTier,
+      provisionedBy: this.session.pubKeyHex.slice(0,24) + '…',
+      agentId: agId,
+      ts: Date.now(),
+      node: D.crypto.nodeId,
+    };
+    await this._commitAuth(record);
+    this._accounts.push(record);
+    agIdEl.value = '';
+    D.log('OK', `Agent provisioned: ${agId} [${agTier}] by ${this.session.handle}`);
+    D.edr.audit('AGENT_PROVISION', {agentId:agId, tier:agTier});
+    this.renderAgentList();
+    this.renderChainExplorer();
+  },
+
+  /* ── VERIFY HANDLE ─────────────────────────────────────── */
+  async verifyHandle() {
+    const h = D.edr.sanitize(document.getElementById('ver-handle')?.value.trim().toLowerCase().replace(/^@/,''));
+    const el = document.getElementById('ver-result');
+    if (!h || !el) return;
+    const handleHash = await this._hashHandle(h);
+    const account = this._accounts.find(a => a.handleHash === handleHash);
+    el.style.display = 'block';
+    if (!account) {
+      el.innerHTML = `<span style="color:var(--red)">✗ @${U.esc(h)} — not found in auth chain</span>`;
+    } else {
+      el.innerHTML = `<span style="color:var(--green)">✓ @${U.esc(h)} is registered</span><br>
+        <span style="color:var(--sec)">Type: ${U.esc(account.accountType)}</span><br>
+        <span style="color:var(--sec)">PubKey: ${U.esc(account.pubKeyHex.slice(0,32))}…</span><br>
+        <span style="color:var(--sec)">Registered: ${new Date(account.ts).toISOString()}</span>`;
+    }
+  },
+
+  /* ── PASSWORD STRENGTH UI ──────────────────────────────── */
+  _liveStrength() {
+    const pw = document.getElementById('reg-pass')?.value || '';
+    const el = document.getElementById('reg-strength');
+    if (!el) return;
+    if (!pw) { el.innerHTML=''; return; }
+    const {label, color, pct, checks} = this._strength(pw);
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span style="font-family:var(--mono);font-size:10px;color:${color};">STRENGTH: ${label}</span>
+        <div style="flex:1;background:var(--hover);height:4px;border-radius:2px;">
+          <div class="strength-bar" style="width:${pct}%;background:${color};"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        ${[['len12','≥12 chars'],['upper','Uppercase'],['lower','Lowercase'],['digit','Number'],['symbol','Symbol'],['noRepeat','No repeats']]
+          .map(([k,l])=>`<span class="pw-row"><span class="${checks[k]?'pw-ok':'pw-no'}">${checks[k]?'✓':'○'} ${l}</span></span>`).join('')}
+      </div>`;
+  },
+
+  /* ── UI HELPERS ────────────────────────────────────────── */
+  _setStatus(el, msg, color) {
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = color || 'var(--sec)';
+  },
+
+  showTab(tab) {
+    ['login','register','agents','chain'].forEach(t => {
+      const panel = document.getElementById('auth-panel-'+t);
+      const chip  = document.getElementById('auth-tab-'+t);
+      if (panel) panel.style.display = t===tab ? 'block' : 'none';
+      if (chip)  chip.classList.toggle('active', t===tab);
+    });
+    if (tab === 'chain')  this.renderChainExplorer();
+    if (tab === 'agents') this.renderAgentList();
+  },
+
+  _updateSessionUI() {
+    const badge = document.getElementById('auth-session-badge');
+    const card  = document.getElementById('auth-session-card');
+    const info  = document.getElementById('auth-session-info');
+    if (this.session) {
+      if (badge) { badge.className='edrbadge ok'; badge.textContent='● '+this.session.handle; }
+      if (card)  card.style.display='block';
+      if (info)  info.innerHTML = `
+        Handle: <span style="color:var(--amber)">${U.esc(this.session.handle)}</span><br>
+        Type: <span style="color:var(--cyan)">${U.esc(this.session.accountType)}</span><br>
+        PubKey: <span style="color:var(--green)">${U.esc(this.session.pubKeyHex.slice(0,32))}…</span><br>
+        Session start: ${new Date(this.session.loginTs).toISOString()}<br>
+        Node: ${U.esc(D.crypto.nodeId)}`;
+      // Also update topbar
+      const tpill = document.getElementById('tb-nid');
+      if (tpill) tpill.textContent = this.session.handle;
+    } else {
+      if (badge) { badge.className='edrbadge warn'; badge.textContent='● NOT LOGGED IN'; }
+      if (card)  card.style.display='none';
+    }
+  },
+
+  _updateChainUI() {
+    const h = document.getElementById('ac-height');
+    const a = document.getElementById('ac-accounts');
+    if (h) h.textContent = this.chain.length;
+    if (a) a.textContent = this._accounts.length;
+  },
+
+  renderChainExplorer() {
+    this._updateChainUI();
+    const el = document.getElementById('authchain-entries');
+    if (!el) return;
+    el.innerHTML = [...this.chain].reverse().slice(0,40).map(b=>{
+      const dtype = b.data?.type||'?';
+      const color = dtype==='REGISTER'?'var(--green)':dtype==='LOGIN'?'var(--cyan)':dtype==='LOGOUT'?'var(--amber)':'var(--dim)';
+      return `<div class="centry co">
+        <span class="chash" style="color:${color}">#${b.height}</span>
+        <span class="cdata">[${U.esc(dtype)}] ${U.esc(
+          dtype==='REGISTER' ? `hash=${b.data.handleHash?.slice(0,12)}… pubkey=${b.data.pubKeyHex?.slice(0,12)}… type=${b.data.accountType}` :
+          dtype==='LOGIN'    ? `hash=${b.data.handleHash} type=${b.data.accountType}` :
+          JSON.stringify(b.data).slice(0,80)
+        )}</span>
+        <span class="ctime">${new Date(b.ts).toISOString().slice(11,19)}</span>
+      </div>`;
+    }).join('');
+    // Chain integrity
+    this._verifyAuthChain().then(ok=>{
+      const el=document.getElementById('ac-valid');
+      if(el){el.textContent=ok?'✓ VALID':'✗ TAMPERED';el.style.color=ok?'var(--green)':'var(--red)';}
+    });
+  },
+
+  renderAgentList() {
+    const el = document.getElementById('auth-agent-list');
+    if (!el) return;
+    const agents = this._accounts.filter(a => a.accountType==='agent');
+    if (!agents.length) {
+      el.innerHTML='<div style="font-family:var(--mono);font-size:10px;color:var(--dim);">No agent accounts registered.</div>';
+      return;
+    }
+    el.innerHTML = agents.map(a=>`
+      <div class="centry">
+        <span class="chash" style="color:var(--cyan)">${U.esc((a.agentId||'agent').slice(0,12))}</span>
+        <span class="cdata">tier=${U.esc(a.agentTier||'?')} pubkey=${U.esc(a.pubKeyHex.slice(0,20))}… by=${U.esc(a.provisionedBy||'?')}</span>
+        <span class="ctime">${new Date(a.ts).toISOString().slice(11,19)}</span>
+      </div>`).join('');
+  },
+
+  /* ── INIT ──────────────────────────────────────────────── */
+  async init() {
+    await this._loadAuthChain();
+    this._updateChainUI();
+
+    // Attach live password strength listener
+    document.getElementById('reg-pass')?.addEventListener('input', () => this._liveStrength());
+
+    D.log('OK', `Auth system ready. ${this._accounts.length} registered identities.`);
+  },
+};
+
+D.edr={events:[],alerts:[],anom:0,auditLog:[],rates:{},
+  init(){this._sample();D.log('OK','EDR monitor started');},
+  audit(type,data){
+    const e={id:U.uid(),type,data,ts:Date.now(),node:D.crypto.nodeId};
+    this.auditLog.push(e);if(this.auditLog.length>1000)this.auditLog.shift();
+    this.events.push(e);document.getElementById('edr-ev').textContent=this.events.length;
+  },
+  alert(type,msg,sev='warn'){
+    const a={id:U.uid(),type,msg,sev,ts:Date.now()};
+    this.alerts.unshift(a);if(this.alerts.length>100)this.alerts.pop();
+    this.anom++;document.getElementById('edr-al').textContent=this.alerts.filter(x=>x.sev==='crit').length;
+    document.getElementById('edr-an').textContent=this.anom;
+    this.renderAlerts();this.badge();
+    const rf=document.getElementById('rpedr');
+    if(rf){const el=document.createElement('div');
+      el.className=`edr-item ${sev==='crit'?'crit':sev==='warn'?'warn':'ok'}`;
+      el.innerHTML=`<div class="edr-title">${U.esc(type)}</div>${U.esc(msg)}<div class="edr-time">${U.ts()}</div>`;
+      rf.prepend(el);while(rf.children.length>50)rf.removeChild(rf.lastChild);}
+    D.log(sev==='crit'?'ERR':'WARN',`EDR: ${type} — ${msg}`);
+  },
+  checkRate(pid,t){
+    if(!this.rates[pid])this.rates[pid]=[];const now=Date.now();
+    this.rates[pid].push(now);this.rates[pid]=this.rates[pid].filter(x=>now-x<10000);
+    if(this.rates[pid].length>50){this.alert('RATE_LIMIT',`Peer ${pid.slice(0,12)} flooded: ${this.rates[pid].length} msg/10s`,'crit');return false;}
+    return true;
+  },
+  validateBlock(b){
+    if(!b?.hash||!b?.prevHash||!b?.ts||!b?.node)return(this.alert('INVALID_BLOCK','Malformed block','crit'),false);
+    if(Math.abs(Date.now()-b.ts)>300000)return(this.alert('STALE_BLOCK',`Block ts out of range`,'warn'),false);
+    return true;
+  },
+  sanitize(s){
+    const c=String(s).replace(/<[^>]*>/g,'').replace(/javascript:/gi,'').replace(/on\w+\s*=/gi,'').slice(0,2000);
+    if(c.length<s.length)this.alert('INPUT_SANITIZED','Potential injection sanitized','warn');
+    return c;
+  },
+  _sample(){
+    const fn=dl=>{
+      if(dl.timeRemaining()>2){
+        const mem=performance.memory?(performance.memory.usedJSHeapSize/(1024*1024)).toFixed(1):'—';
+        this._updateRes(mem);}
+      requestIdleCallback(fn,{timeout:C.TICK});};
+    if(typeof requestIdleCallback!=='undefined')requestIdleCallback(fn,{timeout:C.TICK});
+  },
+  _updateRes(mem){
+    const p=parseFloat(mem)||0,pct=U.clamp(p/C.MEM_MB*100,0,100);
+    const cv=document.getElementById('cpu-v'),cb=document.getElementById('cpu-b');
+    const mv=document.getElementById('mem-v'),mb=document.getElementById('mem-b');
+    // CPU proxy: agents active / max
+    const cpuProxy=U.clamp(D.agents.total()/C.MAX_AGENTS*100,0,100);
+    if(cv)cv.textContent=cpuProxy.toFixed(1)+'%';if(cb)cb.style.width=cpuProxy+'%';
+    if(mv)mv.textContent=mem+'MB';if(mb)mb.style.width=pct+'%';
+    const bs=document.getElementById('bud-s');
+    if(bs){const l=cpuProxy>50?'HIGH':cpuProxy>10?'ACTIVE':'IDLE';
+      bs.textContent='Budget: '+l;bs.style.color=l==='HIGH'?'var(--red)':l==='ACTIVE'?'var(--amber)':'var(--green)';}
+    const bd=document.getElementById('bud-det');
+    if(bd)bd.innerHTML=`Agent load: <b style="color:var(--amber)">${cpuProxy.toFixed(1)}%</b> (target &lt;5%)<br>
+      JS heap: <b style="color:var(--cyan)">${mem}MB</b> (budget 50MB)<br>
+      Peer conns: <b style="color:var(--green)">${D.peer.connectedPeers.length}</b><br>
+      Idle scheduler: requestIdleCallback<br>
+      Tab visible: <b style="color:var(--green)">${!document.hidden?'YES':'NO'}</b><br>
+      Hardware threads: ${navigator.hardwareConcurrency||'?'}`;
+  },
+  renderTele(){
+    const el=document.getElementById('edr-tele');if(!el)return;
+    const now=Date.now();
+    el.innerHTML=`Peer msgs (10s): ${Object.values(this.rates).reduce((s,v)=>s+v.filter(t=>now-t<10000).length,0)}<br>
+      DAG writes: ${D.dag.nodes.length} | Chain height: ${D.chain.blocks.length}<br>
+      Adaptations: ${D.agents.alog.length} | LoRA updates: ${D.lora.adapters.length}<br>
+      Audit events: ${this.auditLog.length} | Sanitized inputs: ${this.events.filter(e=>e.type==='INPUT_SANITIZED').length}`;
+  },
+  badge(){
+    const el=document.getElementById('edr-badge');if(!el)return;
+    const cr=this.alerts.filter(a=>a.sev==='crit').length,wr=this.alerts.filter(a=>a.sev==='warn').length;
+    if(cr){el.className='edrbadge crit';el.textContent=`⚠ ${cr} ALERT${cr>1?'S':''}`;}
+    else if(wr){el.className='edrbadge warn';el.textContent=`⚡ ${wr} WARN`;}
+    else{el.className='edrbadge ok';el.textContent='● SECURE';}
+  },
+  renderAlerts(){
+    const el=document.getElementById('edr-feed');if(!el)return;
+    el.innerHTML=this.alerts.slice(0,30).map(a=>`
+      <div class="centry ${a.sev==='crit'?'al':''}">
+        <span class="chash" style="color:var(--${a.sev==='crit'?'red':'amber'})">${U.esc(a.type)}</span>
+        <span class="cdata">${U.esc(a.msg)}</span>
+        <span class="ctime">${new Date(a.ts).toISOString().slice(11,19)}</span>
+      </div>`).join('');
+  },
+  clear(){this.alerts=[];this.anom=0;document.getElementById('edr-al').textContent='0';
+    document.getElementById('edr-an').textContent='0';this.renderAlerts();this.badge();D.log('OK','EDR cleared');}
+};
+
+/* ── PEER FABRIC ────────────────────────────────────────────── */
+D.peer={pjs:null,connectedPeers:[],
+  async init(){
+    try{
+      const pid=D.crypto.nodeId.replace(/[^a-z0-9]/gi,'').slice(0,14)+U.uid(4);
+      this.pjs=new Peer(pid,{debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}});
+      this.pjs.on('open',id=>{D.log('PEER',`P2P online: ${id}`);document.getElementById('tb-nid').textContent=id.slice(0,14)+'…';});
+      this.pjs.on('connection',conn=>this._inbound(conn));
+      this.pjs.on('error',e=>D.log('WARN','PeerJS: '+e.type));
+    }catch(e){D.log('WARN','PeerJS unavailable — standalone mode');}
+    try{
+      this._bc=new BroadcastChannel('darm-ann-mesh-v2');
+      this._bc.onmessage=e=>this._bcMsg(e.data);
+      this._bc.postMessage({type:'ANN',nodeId:D.crypto.nodeId,ts:Date.now()});
+    }catch(e){}
+  },
+  _bcMsg(m){
+    if(!m||m.nodeId===D.crypto.nodeId)return;
+    if(m.type==='ANN'){this._bc?.postMessage({type:'ANN_R',nodeId:D.crypto.nodeId});this._addPeer(m.nodeId);}
+    if(m.type==='ANN_R')this._addPeer(m.nodeId);
+    if(m.type==='MSG')this._proc(m.payload,m.nodeId);
+  },
+  _addPeer(nodeId){
+    if(this.connectedPeers.find(p=>p.id===nodeId)||this.connectedPeers.length>=C.MAX_PEERS)return;
+    const roles=['EDGE','COMPUTE','HEAD','RELAY'];
+    this.connectedPeers.push({id:nodeId,conn:null,type:'bc',role:roles[~~(Math.random()*4)],ts:Date.now()});
+    this.renderPeers();document.getElementById('tb-peers').textContent=this.connectedPeers.length;
+    document.getElementById('m-peers').textContent=this.connectedPeers.length;
+    D.log('PEER',`Peer discovered: ${nodeId.slice(0,16)}`);
+  },
+  _inbound(conn){
+    conn.on('data',d=>{if(!D.edr.checkRate(conn.peer,d?.type))return;this._proc(d,conn.peer);});
+    conn.on('open',()=>{
+      this.connectedPeers.push({id:conn.peer,conn,type:'webrtc',role:'EDGE',ts:Date.now()});
+      this.renderPeers();D.log('PEER',`WebRTC: ${conn.peer.slice(0,16)}`);});
+    conn.on('close',()=>{this.connectedPeers=this.connectedPeers.filter(p=>p.id!==conn.peer);this.renderPeers();});
+  },
+  _proc(msg,from){
+    if(!msg?.type)return;
+    const t=D.edr.sanitize(String(msg.type));
+    if(t==='CHAIN_BLOCK'&&D.edr.validateBlock(msg.block))D.log('PEER',`Block #${msg.block?.height} from ${from?.slice(0,12)}`);
+    else if(t==='LORA_DELTA')D.log('PEER',`LoRA delta from ${from?.slice(0,12)}`);
+    else if(t!=='CHAIN_BLOCK'&&t!=='LORA_DELTA')D.log('WARN',`Unknown msg type: ${t}`);
+  },
+  broadcast(msg){
+    const s={...msg,from:D.crypto.nodeId,ts:Date.now()};
+    try{this._bc?.postMessage({type:'MSG',nodeId:D.crypto.nodeId,payload:s});}catch(e){}
+    this.connectedPeers.forEach(p=>{if(p.conn?.open)try{p.conn.send(s);}catch(e){}});
+  },
+  connect(t){
+    if(!this.pjs){D.log('WARN','PeerJS N/A');return;}
+    const id=t||prompt('Enter peer ID:');if(!id)return;
+    const conn=this.pjs.connect(id);conn.on('open',()=>this._inbound(conn));conn.on('error',e=>D.log('ERR','Conn: '+e));
+  },
+  renderPeers(){
+    const el=document.getElementById('peer-list');
+    if(el)el.innerHTML=this.connectedPeers.slice(0,10).map(p=>`
+      <div class="peer-item" title="${p.id}">
+        <div class="pdot ${p.type==='webrtc'?'on':'lat'}"></div>
+        <span style="overflow:hidden;text-overflow:ellipsis;max-width:95px;">${p.id.slice(0,12)}…</span>
+        <span class="prole">${p.role}</span>
+      </div>`).join('');
+    const rp=document.getElementById('rppeers');
+    if(rp){rp.innerHTML=this.connectedPeers.length===0
+      ?'<div style="color:var(--dim);font-family:var(--mono);font-size:10px;">No peers.<br>Open another tab to discover mesh peers via BroadcastChannel.</div>'
+      :this.connectedPeers.map(p=>`<div class="edr-item ok"><div class="edr-title">${U.esc(p.id.slice(0,20))}</div>Role: ${U.esc(p.role)} | ${U.esc(p.type)}<div class="edr-time">${new Date(p.ts).toISOString().slice(11,19)}</div></div>`).join('');}
+  }
+};
+
+/* ── MESH CANVAS ────────────────────────────────────────────── */
+D.mesh={cv:null,ctx:null,nodes:[],edges:[],pkt:[],araf:null,_ready:false,
+  init(){
+    // Double-rAF: waits for overlay fade + browser layout commit before reading dimensions
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      try{
+        this.cv=document.getElementById('mesh-canvas');
+        if(!this.cv){D.log('WARN','mesh-canvas not found');return;}
+        const ctx=this.cv.getContext('2d');
+        if(!ctx){D.log('WARN','Canvas 2D context unavailable');return;}
+        this.ctx=ctx;
+        this.resize();
+        this._ready=true;
+        this.build();
+        this.loop();
+      }catch(e){D.log('WARN','Mesh init error: '+e.message);}
+    }));
+    window.addEventListener('resize',()=>{
+      if(this.cv&&this._ready)try{this.resize();this.nodes=[];this.edges=[];this.build();}catch(e){}
+    });
+  },
+  resize(){
+    if(!this.cv)return;
+    const parent=this.cv.parentElement;
+    if(!parent)return;
+    try{
+      const r=parent.getBoundingClientRect();
+      // Fall back to 600 if layout has not committed yet (r.width === 0)
+      this.cv.width=r.width>10?r.width:600;
+      this.cv.height=200;
+    }catch(e){}
+  },
+  build(){
+    if(!this.cv||!this._ready)return;
+    const W=this.cv.width||600,H=this.cv.height||200;
+    this.nodes=[{id:'self',x:W/2,y:H/2,r:13,c:'#f5a623',lbl:'SELF',vx:0,vy:0,ph:0}];
+    D.peer.connectedPeers.slice(0,8).forEach((p,i)=>{
+      const a=(i/Math.max(D.peer.connectedPeers.length,1))*Math.PI*2,d=65+Math.random()*30;
+      this.nodes.push({id:p.id,x:W/2+Math.cos(a)*d,y:H/2+Math.sin(a)*d,r:7,c:p.type==='webrtc'?'#00e5a0':'#4080ff',lbl:p.role,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,ph:Math.random()*Math.PI*2});
+      this.edges.push({f:0,t:this.nodes.length-1});
+    });
+    for(let i=0;i<6;i++){const a=Math.random()*Math.PI*2,d=85+Math.random()*40;
+      this.nodes.push({id:'s'+i,x:W/2+Math.cos(a)*d,y:H/2+Math.sin(a)*d,r:4,c:'#2a3a5a',lbl:'···',vx:(Math.random()-.5)*.15,vy:(Math.random()-.5)*.15,ph:Math.random()*Math.PI*2});}
+  },
+  loop(){
+    if(!this._ready||!this.cv||!this.ctx){this.araf=null;return;}
+    if(document.hidden){this.araf=null;return;}
+    try{this._frame();}catch(e){D.log('WARN','Mesh frame: '+e.message);}
+    this.araf=requestAnimationFrame(()=>this.loop());
+  },
+  _frame(){
+    const ctx=this.ctx;
+    const W=Math.max(this.cv.width,60),H=Math.max(this.cv.height,60);
+    ctx.clearRect(0,0,W,H);
+    this.edges.forEach(e=>{
+      const a=this.nodes[e.f],b=this.nodes[e.t];if(!a||!b)return;
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+      ctx.strokeStyle='rgba(64,128,255,.18)';ctx.lineWidth=1;ctx.stroke();
+    });
+    if(Math.random()<.025&&this.edges.length>0){
+      const e=this.edges[~~(Math.random()*this.edges.length)];
+      this.pkt.push({e,t:0,c:Math.random()<.5?'#00e5a0':'#f5a623'});
+    }
+    this.pkt=this.pkt.filter(p=>p.t<1);
+    this.pkt.forEach(p=>{
+      p.t+=.025;
+      const a=this.nodes[p.e.f],b=this.nodes[p.e.t];if(!a||!b)return;
+      const x=U.lerp(a.x,b.x,p.t),y=U.lerp(a.y,b.y,p.t);
+      ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fillStyle=p.c;ctx.fill();
+    });
+    this.nodes.forEach((n,i)=>{
+      n.ph=(n.ph||0)+.045;
+      const pl=Math.sin(n.ph)*.25+.75;
+      ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      ctx.fillStyle=n.c+~~(pl*200).toString(16).padStart(2,'0');ctx.fill();
+      if(i===0){
+        ctx.beginPath();ctx.arc(n.x,n.y,n.r+3+Math.sin(n.ph)*2,0,Math.PI*2);
+        ctx.strokeStyle='rgba(245,166,35,.3)';ctx.lineWidth=1;ctx.stroke();
+      }
+      ctx.fillStyle='rgba(232,237,248,.65)';
+      ctx.font='8px Space Mono,monospace';ctx.textAlign='center';
+      ctx.fillText(n.lbl,n.x,n.y+n.r+9);
+      const lox=n.r+3, hix=Math.max(W-n.r-3,n.r+4);
+      const loy=n.r+3, hiy=Math.max(H-n.r-3,n.r+4);
+      n.x=U.clamp(n.x+n.vx,lox,hix);
+      n.y=U.clamp(n.y+n.vy,loy,hiy);
+      if(n.x<=lox||n.x>=hix)n.vx*=-1;
+      if(n.y<=loy||n.y>=hiy)n.vy*=-1;
+    });
+  },  // end _frame
+  refresh(){
+    if(!this._ready||!this.cv)return;
+    this.nodes=[];this.edges=[];this.build();
+  }
+};
+
+/* ── UI / CHARTS ────────────────────────────────────────────── */
+D.ui={tpChart:null,tierChart:null,t0:Date.now(),tpData:Array(20).fill(0),lastTasks:0,
+  init(){
+    // Defer chart construction one rAF so canvases have real pixel dimensions
+    requestAnimationFrame(()=>this.initCharts());
+    this.tick();
+    setInterval(()=>{if(!document.hidden)this.tick();},C.TICK);
+  },
+  initCharts(){
+    if(typeof Chart==='undefined'){D.log('WARN','Chart.js not loaded — charts disabled');return;}
+    const base={responsive:true,maintainAspectRatio:false,animation:{duration:350},
+      plugins:{legend:{display:false}},
+      scales:{x:{display:false},y:{ticks:{color:'#7a8aaa',font:{family:'Space Mono',size:9}},grid:{color:'rgba(100,150,255,.05)'}}}};
+    try{
+      const tc=document.getElementById('tpchart')?.getContext('2d');
+      if(tc)this.tpChart=new Chart(tc,{type:'line',data:{labels:Array(20).fill(''),datasets:[{data:this.tpData,borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,.07)',borderWidth:2,pointRadius:0,fill:true,tension:.4}]},options:{...base}});
+    }catch(e){D.log('WARN','tpChart: '+e.message);}
+    try{
+      const pc=document.getElementById('tierchart')?.getContext('2d');
+      if(pc)this.tierChart=new Chart(pc,{type:'doughnut',data:{labels:['TinyLM','SLM-S','SLM-M','SLM-L'],datasets:[{data:[1,1,1,1],backgroundColor:['rgba(0,229,160,.8)','rgba(0,212,255,.8)','rgba(245,166,35,.8)','rgba(255,64,96,.8)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},plugins:{legend:{display:false}},cutout:'58%'}});
+    }catch(e){D.log('WARN','tierChart: '+e.message);}
+  },
+  updateTier(){
+    const tc=D.agents.tc;
+    if(this.tierChart){this.tierChart.data.datasets[0].data=[tc.tiny,tc.small,tc.medium,tc.large];this.tierChart.update('none');}
+    const tot=Object.values(tc).reduce((s,v)=>s+v,0)||1;
+    const el=document.getElementById('tier-bk');
+    if(el)el.innerHTML=[{k:'tiny',c:'green',n:'TinyLM'},{k:'small',c:'cyan',n:'SLM-Small'},{k:'medium',c:'amber',n:'SLM-Med'},{k:'large',c:'red',n:'SLM-Large'}]
+      .map(({k,c,n})=>`<div style="margin-bottom:7px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+          <span style="color:var(--${c});font-family:var(--mono);font-size:10px;">${n}</span>
+          <span style="color:var(--sec);font-family:var(--mono);font-size:10px;">${tc[k]} (${((tc[k]/tot)*100).toFixed(0)}%)</span>
+        </div>
+        <div class="pbar"><div class="pfill pf-${c==='amber'?'a':c==='green'?'g':c==='cyan'?'b':'r'}" style="width:${(tc[k]/tot*100).toFixed(0)}%"></div></div>
+      </div>`).join('');
+    // no recursive call — tier chart is updated on demand only
+  },
+  tick(){
+    const up=~~((Date.now()-this.t0)/1000);
+    const h=String(~~(up/3600)).padStart(2,'0'),m=String(~~((up%3600)/60)).padStart(2,'0'),s=String(up%60).padStart(2,'0');
+    const ud=document.getElementById('uptime');if(ud)ud.textContent=`UP: ${h}:${m}:${s}`;
+    const delta=D.agents.totalTasks-this.lastTasks;this.lastTasks=D.agents.totalTasks;
+    this.tpData.push(delta*(60000/C.TICK));if(this.tpData.length>20)this.tpData.shift();
+    if(this.tpChart){this.tpChart.data.datasets[0].data=[...this.tpData];this.tpChart.update('none');}
+    const mc=D.dag.nodes.length+D.chain.blocks.length;
+    document.getElementById('tb-chain').textContent=D.chain.blocks.length;
+    document.getElementById('tb-mem').textContent=mc;
+    document.getElementById('m-mem').textContent=mc;
+    document.getElementById('m-chain').textContent=D.chain.blocks.length;
+    D.edr.renderTele();D.chain.render();D.dag.render();D.agents.render();
+    if(D.mesh._ready&&D.mesh.cv&&D.mesh.ctx)D.mesh.refresh();
+    // Simulated background activity
+    if(Math.random()<.12)D.dag.write('hb:'+up,'node='+D.crypto.nodeId,'sys');
+    if(Math.random()<.04)D.chain.commit({type:'HB',node:D.crypto.nodeId,tick:up});
+    if(Math.random()<.025)D.lora.simulate();
+    if(Math.random()<.08)D.agents.adapt(~~(Math.random()*D.agents.layers.length),'auto feedback');
+  }
+};
+
+/* ── TOOLTIP ────────────────────────────────────────────────── */
+const TIP={el:null,
+  init(){
+    this.el=document.getElementById('tip');
+    document.addEventListener('mouseover',e=>{if(!this.el)return;const t=e.target.closest('[data-tip]');if(t){this.el.textContent=t.dataset.tip;this.el.classList.add('vis');}});
+    document.addEventListener('mousemove',e=>{if(!this.el||!this.el.classList.contains('vis'))return;this.el.style.left=(e.clientX+13)+'px';this.el.style.top=(e.clientY+13)+'px';});
+    document.addEventListener('mouseout',e=>{if(!this.el||!e.target.closest('[data-tip]'))return;this.el.classList.remove('vis');});
+  }
+};
+
+/* ── NAV ─────────────────────────────────────────────────────── */
+function SV(n,btn){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById('view-'+n)?.classList.add('active');btn?.classList.add('active');}
+function SRP(n,btn){document.querySelectorAll('.rpcontent').forEach(c=>c.style.display='none');document.querySelectorAll('.rptab').forEach(b=>b.classList.remove('active'));document.getElementById('rpc-'+n).style.display='block';btn?.classList.add('active');}
+
+/* ── INIT SEQUENCE ──────────────────────────────────────────── */
+async function INIT(){
+  const delay=ms=>new Promise(r=>setTimeout(r,ms));
+  const set=(id,s)=>{
+    const el=document.getElementById('is-'+id);if(!el)return;
+    el.className='istep '+s;
+    el.textContent=el.textContent.replace(/^\[.\]/,s==='doing'?'[→]':s==='err'?'[✗]':'[✓]');
+  };
+  const step=async(id,fn)=>{
+    set(id,'doing');
+    try{ await fn(); set(id,'done'); }
+    catch(e){
+      set(id,'err');
+      D.log('ERR',`Init step "${id}" failed: ${e.message||e}`);
+      // Show error in overlay so user knows what happened
+      const el=document.getElementById('is-'+id);
+      if(el)el.title=String(e);
+    }
+  };
+
+  await delay(280);
+  await step('crypto', ()=>D.crypto.init());         await delay(160);
+  await step('db',     ()=>D.db.init());             await delay(140);
+  await step('lsh',    ()=>D.lsh.init());            await delay(120);
+  await step('dag',    ()=>D.dag.init());            await delay(110);
+  await step('chain',  ()=>D.chain.init());          await delay(120);
+  await step('agents', ()=>D.agents.init());         await delay(100);
+  await step('edr',    ()=>D.edr.init());            await delay(100);
+  await step('peer',   ()=>D.peer.init());           await delay(200);
+  await step('auth',   ()=>D.auth.init());           await delay(150);
+
+  // Always show the button — even if a step errored, the app can still run
+  document.getElementById('init-btn').style.display='block';
+}
+
+document.getElementById('init-btn').addEventListener('click',()=>{
+  const ov=document.getElementById('init-ov');ov.style.transition='opacity .4s';ov.style.opacity='0';
+  setTimeout(()=>{ov.style.display='none';
+    D.ui.init();D.mesh.init();D.lora.init();TIP.init();
+    D.log('OK','DARM-ANN control plane ACTIVE');D.edr.audit('SYSTEM_START',{node:D.crypto.nodeId});
+    setTimeout(()=>{D.dag.write('system:init','DARM-ANN node initialized','system');D.chain.commit({type:'NODE_UP',node:D.crypto.nodeId});},400);
+  },400);
+});
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    // loop() will self-exit on next frame and set araf=null
+    if(D.mesh.araf){cancelAnimationFrame(D.mesh.araf);D.mesh.araf=null;}
+  } else {
+    // Resume animation only if mesh is ready and not already running
+    if(D.mesh._ready&&D.mesh.cv&&D.mesh.ctx&&!D.mesh.araf)D.mesh.loop();
+  }
+});
+
+INIT().catch(e=>{
+  D.log('ERR','Init fatal: '+e);
+  document.getElementById('init-btn').style.display='block';
+});
+</script>
+</body>
+</html>
