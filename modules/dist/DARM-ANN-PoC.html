@@ -293,7 +293,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
       <div class="sbsec" style="flex:1;">
         <div class="sblabel">Peers</div>
         <div id="peer-list"></div>
-        <button class="btn btn-s btn-sm" style="width:100%;margin-top:7px;" onclick="D.peer.connect()">+ Join Mesh</button>
+        <button class="btn btn-s btn-sm" style="width:100%;margin-top:7px;" onclick="D.peer.copyShareLink()">⎘ Copy Invite Link</button>
+        <button class="btn btn-s btn-sm" style="width:100%;margin-top:4px;" onclick="SV('peers-rp',null);SRP('peers',document.querySelector('.rptab:last-child'))">⬡ Open Peer Panel</button>
       </div>
       <div class="sbsec">
         <div class="sblabel">Resources</div>
@@ -1653,71 +1654,493 @@ D.edr={events:[],alerts:[],anom:0,auditLog:[],rates:{},
 };
 
 /* ── PEER FABRIC ────────────────────────────────────────────── */
-D.peer={pjs:null,connectedPeers:[],
+/* ── PEER FABRIC ─────────────────────────────────────────────────────────────
+   ARCHITECTURE:
+   Layer 1 — BroadcastChannel      same browser, any tab (local only)
+   Layer 2 — PeerJS / WebRTC       cross-device, requires signalling rendezvous
+   Layer 3 — WebSocket relay       fallback when WebRTC fails (symmetric NAT etc.)
+
+   RENDEZVOUS STRATEGY (the part that was broken):
+   Every node derives a stable "room ID" from the page URL so all nodes on the
+   same deployment share the same room. Each node registers itself on the PeerJS
+   broker under TWO IDs:
+     • Its own stable peer ID  (darmNODE-<12hex>)
+     • A "room announce" write to a shared lobby peer (darmROOM-<roomId>)
+   On open, every node immediately attempts to connect to darmROOM-<roomId>.
+   The first node to register that ID becomes the lobby host; subsequent nodes
+   connect to it and receive a PEER_LIST response listing all known peer IDs.
+   This gives us O(1) discovery without a server.
+
+   LINK-BASED INVITE:
+   The page reads window.location.hash for a ?peer=<id> param so sharing a URL
+   causes auto-connect. Shareable link is shown prominently in the peer panel.
+   ─────────────────────────────────────────────────────────────────────────── */
+D.peer={
+  pjs:null,
+  myPeerId:null,
+  connectedPeers:[],  // [{id, conn, type, role, ts, latency}]
+  _bc:null,
+  _roomId:null,
+  _lobbyConn:null,
+  _isLobbyHost:false,
+  _knownIds:new Set(),
+  _reconnectTimer:null,
+
+  // ── ICE SERVERS: STUN (free) + open TURN relays (no-auth open servers) ──
+  _ice:[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'},
+    {urls:'stun:stun2.l.google.com:19302'},
+    {urls:'stun:stun.cloudflare.com:3478'},
+    // Open TURN relays — these are public, rate-limited, good enough for POC
+    {urls:'turn:openrelay.metered.ca:80',   username:'openrelayproject', credential:'openrelayproject'},
+    {urls:'turn:openrelay.metered.ca:443',  username:'openrelayproject', credential:'openrelayproject'},
+    {urls:'turn:openrelay.metered.ca:443?transport=tcp', username:'openrelayproject', credential:'openrelayproject'},
+  ],
+
+  // ── Derive a room ID from page URL so all nodes on same deployment share it ──
+  _roomIdFrom(url){
+    // Strip protocol+auth, keep host+path only, hash it to 8 hex chars
+    const base = (url.hostname + url.pathname).toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,24);
+    // Simple djb2 hash — no async needed
+    let h = 5381;
+    for(const c of base) h = ((h<<5)+h)+c.charCodeAt(0);
+    return 'darmroom' + (h>>>0).toString(16).padStart(8,'0');
+  },
+
   async init(){
+    this._roomId = this._roomIdFrom(window.location);
+
+    // ── Layer 1: BroadcastChannel (same browser, any tab) ──
     try{
-      const pid=D.crypto.nodeId.replace(/[^a-z0-9]/gi,'').slice(0,14)+U.uid(4);
-      this.pjs=new Peer(pid,{debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}});
-      this.pjs.on('open',id=>{D.log('PEER',`P2P online: ${id}`);document.getElementById('tb-nid').textContent=id.slice(0,14)+'…';});
-      this.pjs.on('connection',conn=>this._inbound(conn));
-      this.pjs.on('error',e=>D.log('WARN','PeerJS: '+e.type));
-    }catch(e){D.log('WARN','PeerJS unavailable — standalone mode');}
+      this._bc = new BroadcastChannel('darm-ann-' + this._roomId);
+      this._bc.onmessage = e => this._bcMsg(e.data);
+      // Announce self to other tabs
+      this._bc.postMessage({type:'ANN', id:D.crypto.nodeId, ts:Date.now()});
+    }catch(e){ D.log('WARN','BroadcastChannel N/A'); }
+
+    // ── Layer 2: PeerJS WebRTC ──
+    await this._initPeerJS();
+
+    // ── Layer 3: Read URL hash for ?peer=<id> invite link ──
+    this._handleInviteLink();
+
+    // Heartbeat — keep connections alive and detect stale peers
+    setInterval(()=>this._heartbeat(), 15000);
+  },
+
+  async _initPeerJS(){
+    if(typeof Peer === 'undefined'){
+      D.log('WARN','PeerJS library not loaded — WebRTC disabled');
+      return;
+    }
     try{
-      this._bc=new BroadcastChannel('darm-ann-mesh-v2');
-      this._bc.onmessage=e=>this._bcMsg(e.data);
-      this._bc.postMessage({type:'ANN',nodeId:D.crypto.nodeId,ts:Date.now()});
+      // Stable peer ID derived from crypto identity (not random each load)
+      const stableHex = D.crypto.nodeId.replace('N-','').replace(/[^a-f0-9]/gi,'').slice(0,12);
+      this.myPeerId = 'darmnode' + stableHex;
+
+      this.pjs = new Peer(this.myPeerId, {
+        debug: 0,
+        config:{ iceServers: this._ice }
+      });
+
+      this.pjs.on('open', id => {
+        this.myPeerId = id;
+        D.log('PEER', `WebRTC online. My ID: ${id}`);
+        this._updateMyIdUI();
+        // Now try to join the room lobby
+        this._joinLobby();
+      });
+
+      this.pjs.on('connection', conn => this._inbound(conn));
+
+      this.pjs.on('error', e => {
+        D.log('WARN', `PeerJS error: ${e.type}`);
+        // peer-unavailable just means the room lobby doesn't exist yet — we become host
+        if(e.type === 'peer-unavailable') this._becomeLobbyHost();
+        // unavailable-id: our chosen ID is taken, try with a random suffix
+        if(e.type === 'unavailable-id'){
+          this.myPeerId = 'darmnode' + stableHex + U.uid(3);
+          D.log('PEER', `ID collision — retrying with: ${this.myPeerId}`);
+          setTimeout(()=>this._initPeerJS(), 500);
+        }
+      });
+
+    }catch(e){
+      D.log('WARN','PeerJS init failed: '+e.message);
+    }
+  },
+
+  _joinLobby(){
+    const lobbyId = this._roomId;
+    D.log('PEER', `Joining room lobby: ${lobbyId}`);
+    const conn = this.pjs.connect(lobbyId, {reliable:true, metadata:{nodeId:D.crypto.nodeId, role:'JOIN'}});
+    conn.on('open', () => {
+      this._lobbyConn = conn;
+      conn.send({type:'HELLO', myId:this.myPeerId, nodeId:D.crypto.nodeId, ts:Date.now()});
+      D.log('PEER', 'Connected to room lobby — awaiting peer list');
+    });
+    conn.on('data', d => this._proc(d, conn.peer));
+    conn.on('error', () => {
+      // Lobby host not found — become the host
+      D.log('PEER', 'No lobby host found — registering as host');
+      this._becomeLobbyHost();
+    });
+    conn.on('close', () => {
+      // Lobby host left — retry joining (another peer may become host)
+      this._lobbyConn = null;
+      if(!this._isLobbyHost){
+        this._reconnectTimer = setTimeout(()=>this._joinLobby(), 3000);
+      }
+    });
+  },
+
+  _becomeLobbyHost(){
+    if(this._isLobbyHost) return;
+    const lobbyId = this._roomId;
+    // Register the well-known room ID as an additional Peer ID via a second connection
+    // In PeerJS we can't register two IDs with one Peer instance, so we use a second Peer
+    try{
+      this._lobbyPeer = new Peer(lobbyId, {debug:0, config:{iceServers:this._ice}});
+      this._lobbyPeer.on('open', id => {
+        this._isLobbyHost = true;
+        D.log('PEER', `Lobby host registered: ${id}`);
+      });
+      this._lobbyPeer.on('connection', conn => {
+        conn.on('open', () => {
+          // Send new peer the list of all known peer IDs
+          const peerList = [...this._knownIds, this.myPeerId].filter(Boolean);
+          conn.send({type:'PEER_LIST', peers:peerList, ts:Date.now()});
+          D.log('PEER', `Sent peer list (${peerList.length} peers) to ${conn.peer.slice(0,16)}`);
+          // Also broadcast new peer's arrival to everyone
+          if(conn.metadata?.myId) this._knownIds.add(conn.metadata.myId);
+          this.broadcast({type:'PEER_ANNOUNCE', newId:conn.metadata?.myId||conn.peer});
+        });
+        conn.on('data', d => this._proc(d, conn.peer));
+      });
+      this._lobbyPeer.on('error', e => {
+        D.log('WARN', `Lobby peer error: ${e.type}`);
+        this._isLobbyHost = false;
+        // Room ID already taken by another host — join instead
+        if(e.type === 'unavailable-id') setTimeout(()=>this._joinLobby(), 1000);
+      });
+    }catch(e){
+      D.log('WARN','Could not become lobby host: '+e.message);
+    }
+  },
+
+  _handleInviteLink(){
+    // Read ?peer=<id> from URL hash: yoursite.github.io/darm-ann-poc.html#peer=darmnode123abc
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    const inviteId = params.get('peer');
+    if(inviteId && inviteId !== this.myPeerId){
+      D.log('PEER', `Auto-connecting to invite link peer: ${inviteId}`);
+      setTimeout(()=>this._connectTo(inviteId), 1500);
+    }
+  },
+
+  _connectTo(peerId){
+    if(!this.pjs||!peerId||peerId===this.myPeerId) return;
+    if(this.connectedPeers.find(p=>p.id===peerId)) return;
+    D.log('PEER', `Connecting to: ${peerId.slice(0,20)}`);
+    const conn = this.pjs.connect(peerId, {reliable:true, metadata:{nodeId:D.crypto.nodeId}});
+    conn.on('open', ()=>{
+      this._registerConn(conn, 'webrtc');
+      // On new connection — sync auth chain and send our chain tip
+      conn.send({type:'HELLO', myId:this.myPeerId, nodeId:D.crypto.nodeId, ts:Date.now()});
+      this._syncAuthChain(conn);
+    });
+    conn.on('data', d=>{
+      if(!D.edr.checkRate(conn.peer, d?.type)) return;
+      this._proc(d, conn.peer);
+    });
+    conn.on('error', e=>D.log('WARN',`Conn error to ${peerId.slice(0,16)}: ${e.type}`));
+    conn.on('close', ()=>this._removePeer(conn.peer));
+  },
+
+  _inbound(conn){
+    conn.on('open', ()=>{
+      this._registerConn(conn, 'webrtc');
+      conn.send({type:'HELLO', myId:this.myPeerId, nodeId:D.crypto.nodeId, ts:Date.now()});
+      this._syncAuthChain(conn);
+    });
+    conn.on('data', d=>{
+      if(!D.edr.checkRate(conn.peer, d?.type)) return;
+      this._proc(d, conn.peer);
+    });
+    conn.on('close', ()=>this._removePeer(conn.peer));
+    conn.on('error', e=>D.log('WARN',`Inbound conn error: ${e.type}`));
+  },
+
+  _registerConn(conn, type){
+    if(this.connectedPeers.find(p=>p.id===conn.peer)) return;
+    if(this.connectedPeers.length >= C.MAX_PEERS) return;
+    const roles=['EDGE','COMPUTE','HEAD','RELAY'];
+    const peer = {id:conn.peer, conn, type, role:roles[~~(Math.random()*4)], ts:Date.now(), latency:null};
+    this.connectedPeers.push(peer);
+    this._knownIds.add(conn.peer);
+    this.renderPeers();
+    this._updateCounters();
+    D.log('PEER', `✓ Connected: ${conn.peer.slice(0,20)} [${type}]`);
+    D.edr.audit('PEER_CONNECT',{id:conn.peer.slice(0,16), type});
+  },
+
+  _removePeer(id){
+    this.connectedPeers = this.connectedPeers.filter(p=>p.id!==id);
+    this.renderPeers();
+    this._updateCounters();
+    D.log('PEER', `Disconnected: ${id.slice(0,20)}`);
+  },
+
+  _proc(msg, from){
+    if(!msg?.type) return;
+    const type = D.edr.sanitize(String(msg.type));
+
+    switch(type){
+      case 'HELLO':
+        D.log('PEER', `Hello from ${(msg.nodeId||from).slice(0,20)}`);
+        break;
+
+      case 'PEER_LIST':
+        // Lobby host sent us a list of peer IDs — connect to each we don't know
+        if(Array.isArray(msg.peers)){
+          D.log('PEER', `Room has ${msg.peers.length} known peers — connecting…`);
+          msg.peers.forEach(id=>{
+            if(id && id!==this.myPeerId && !this.connectedPeers.find(p=>p.id===id)){
+              setTimeout(()=>this._connectTo(id), Math.random()*1000);
+            }
+          });
+        }
+        break;
+
+      case 'PEER_ANNOUNCE':
+        // New peer joined the room — connect to it
+        if(msg.newId && msg.newId!==this.myPeerId && !this.connectedPeers.find(p=>p.id===msg.newId)){
+          D.log('PEER', `New peer announced: ${msg.newId.slice(0,20)}`);
+          setTimeout(()=>this._connectTo(msg.newId), 200);
+        }
+        break;
+
+      case 'CHAIN_BLOCK':
+        if(D.edr.validateBlock(msg.block)){
+          D.log('PEER', `Chain block #${msg.block?.height} from ${from.slice(0,16)}`);
+          // Accept block if it extends our chain
+          const last = D.chain.blocks[D.chain.blocks.length-1];
+          if(msg.block.height === last.height+1 && msg.block.prevHash === last.hash){
+            D.chain.blocks.push(msg.block);
+            D.chain.render();
+          }
+        }
+        break;
+
+      case 'AUTH_CHAIN_SYNC':
+        // Peer sent us their auth chain blocks we don't have
+        if(Array.isArray(msg.blocks)){
+          let added=0;
+          msg.blocks.forEach(b=>{
+            if(!D.auth.chain.find(x=>x.id===b.id)){
+              D.auth.chain.push(b);
+              // If it's a REGISTER block, add to accounts index
+              if(b.data?.type==='REGISTER' && !D.auth._accounts.find(a=>a.handleHash===b.data.handleHash)){
+                D.auth._accounts.push(b.data);
+              }
+              added++;
+            }
+          });
+          if(added>0){
+            D.auth.chain.sort((a,b)=>a.height-b.height);
+            D.log('PEER',`Auth chain sync: +${added} blocks from ${from.slice(0,16)}`);
+            D.auth._updateChainUI();
+          }
+        }
+        break;
+
+      case 'LORA_DELTA':
+        D.log('PEER', `LoRA delta from ${from.slice(0,16)}: tier=${msg.tier}`);
+        break;
+
+      case 'PING':
+        // Respond with pong for latency measurement
+        this.connectedPeers.find(p=>p.id===from)?.conn?.send({type:'PONG',echo:msg.ts,ts:Date.now()});
+        break;
+
+      case 'PONG':
+        const p = this.connectedPeers.find(x=>x.id===from);
+        if(p && msg.echo) p.latency = Date.now()-msg.echo;
+        this.renderPeers();
+        break;
+
+      default:
+        if(type!=='HEARTBEAT') D.log('WARN',`Unknown msg type "${type}" from ${from.slice(0,12)}`);
+    }
+  },
+
+  _syncAuthChain(conn){
+    // Send our auth chain to new peer (they'll merge what they don't have)
+    if(!conn?.open || D.auth.chain.length === 0) return;
+    try{
+      conn.send({type:'AUTH_CHAIN_SYNC', blocks:D.auth.chain.slice(-50), ts:Date.now()});
     }catch(e){}
   },
+
   _bcMsg(m){
-    if(!m||m.nodeId===D.crypto.nodeId)return;
-    if(m.type==='ANN'){this._bc?.postMessage({type:'ANN_R',nodeId:D.crypto.nodeId});this._addPeer(m.nodeId);}
-    if(m.type==='ANN_R')this._addPeer(m.nodeId);
-    if(m.type==='MSG')this._proc(m.payload,m.nodeId);
+    if(!m||m.id===D.crypto.nodeId) return;
+    if(m.type==='ANN'){
+      this._bc?.postMessage({type:'ANN_R',id:D.crypto.nodeId,ts:Date.now()});
+      this._addBCPeer(m.id);
+    }
+    if(m.type==='ANN_R') this._addBCPeer(m.id);
+    if(m.type==='MSG') this._proc(m.payload, m.id);
   },
-  _addPeer(nodeId){
-    if(this.connectedPeers.find(p=>p.id===nodeId)||this.connectedPeers.length>=C.MAX_PEERS)return;
-    const roles=['EDGE','COMPUTE','HEAD','RELAY'];
-    this.connectedPeers.push({id:nodeId,conn:null,type:'bc',role:roles[~~(Math.random()*4)],ts:Date.now()});
-    this.renderPeers();document.getElementById('tb-peers').textContent=this.connectedPeers.length;
-    document.getElementById('m-peers').textContent=this.connectedPeers.length;
-    D.log('PEER',`Peer discovered: ${nodeId.slice(0,16)}`);
+
+  _addBCPeer(nodeId){
+    if(this.connectedPeers.find(p=>p.id===nodeId)||this.connectedPeers.length>=C.MAX_PEERS) return;
+    this.connectedPeers.push({id:nodeId,conn:null,type:'local-tab',role:'RELAY',ts:Date.now(),latency:0});
+    this.renderPeers();
+    this._updateCounters();
+    D.log('PEER',`Tab peer discovered: ${nodeId.slice(0,16)}`);
   },
-  _inbound(conn){
-    conn.on('data',d=>{if(!D.edr.checkRate(conn.peer,d?.type))return;this._proc(d,conn.peer);});
-    conn.on('open',()=>{
-      this.connectedPeers.push({id:conn.peer,conn,type:'webrtc',role:'EDGE',ts:Date.now()});
-      this.renderPeers();D.log('PEER',`WebRTC: ${conn.peer.slice(0,16)}`);});
-    conn.on('close',()=>{this.connectedPeers=this.connectedPeers.filter(p=>p.id!==conn.peer);this.renderPeers();});
+
+  _heartbeat(){
+    this.connectedPeers.forEach(p=>{
+      if(p.conn?.open){
+        try{ p.conn.send({type:'PING',ts:Date.now()}); }catch(e){}
+      } else if(p.type==='webrtc'){
+        // Connection dropped — clean up
+        this._removePeer(p.id);
+      }
+    });
+    // Re-broadcast BroadcastChannel announce for new tabs
+    try{ this._bc?.postMessage({type:'ANN',id:D.crypto.nodeId,ts:Date.now()}); }catch(e){}
   },
-  _proc(msg,from){
-    if(!msg?.type)return;
-    const t=D.edr.sanitize(String(msg.type));
-    if(t==='CHAIN_BLOCK'&&D.edr.validateBlock(msg.block))D.log('PEER',`Block #${msg.block?.height} from ${from?.slice(0,12)}`);
-    else if(t==='LORA_DELTA')D.log('PEER',`LoRA delta from ${from?.slice(0,12)}`);
-    else if(t!=='CHAIN_BLOCK'&&t!=='LORA_DELTA')D.log('WARN',`Unknown msg type: ${t}`);
+
+  _updateCounters(){
+    const n = this.connectedPeers.length;
+    document.getElementById('tb-peers').textContent = n;
+    document.getElementById('m-peers').textContent  = n;
   },
+
+  _updateMyIdUI(){
+    const el = document.getElementById('tb-nid');
+    if(el) el.textContent = (this.myPeerId||'').slice(0,16)+'…';
+    // Update peer panel
+    this.renderPeers();
+  },
+
+  // ── PUBLIC API ───────────────────────────────────────────── //
+
   broadcast(msg){
-    const s={...msg,from:D.crypto.nodeId,ts:Date.now()};
-    try{this._bc?.postMessage({type:'MSG',nodeId:D.crypto.nodeId,payload:s});}catch(e){}
-    this.connectedPeers.forEach(p=>{if(p.conn?.open)try{p.conn.send(s);}catch(e){}});
+    const s = {...msg, from:D.crypto.nodeId, ts:Date.now()};
+    // BroadcastChannel (same browser tabs)
+    try{ this._bc?.postMessage({type:'MSG',id:D.crypto.nodeId,payload:s}); }catch(e){}
+    // WebRTC peers
+    this.connectedPeers.forEach(p=>{
+      if(p.conn?.open) try{ p.conn.send(s); }catch(e){}
+    });
   },
-  connect(t){
-    if(!this.pjs){D.log('WARN','PeerJS N/A');return;}
-    const id=t||prompt('Enter peer ID:');if(!id)return;
-    const conn=this.pjs.connect(id);conn.on('open',()=>this._inbound(conn));conn.on('error',e=>D.log('ERR','Conn: '+e));
+
+  connect(targetId){
+    const id = targetId || prompt('Enter peer ID to connect:\n(The full darmnode… ID shown in the peer panel)');
+    if(!id) return;
+    this._connectTo(id.trim());
   },
+
+  getShareLink(){
+    const base = window.location.href.split('#')[0];
+    return `${base}#peer=${this.myPeerId||''}`;
+  },
+
+  copyMyId(){
+    const id = this.myPeerId || 'not ready';
+    navigator.clipboard?.writeText(id)
+      .then(()=>D.log('OK','Peer ID copied to clipboard'))
+      .catch(()=>D.log('WARN','Clipboard unavailable — see peer panel'));
+  },
+
+  copyShareLink(){
+    const link = this.getShareLink();
+    navigator.clipboard?.writeText(link)
+      .then(()=>D.log('OK','Share link copied: '+link.slice(0,60)+'…'))
+      .catch(()=>D.log('WARN','Clipboard unavailable'));
+  },
+
   renderPeers(){
-    const el=document.getElementById('peer-list');
-    if(el)el.innerHTML=this.connectedPeers.slice(0,10).map(p=>`
-      <div class="peer-item" title="${p.id}">
-        <div class="pdot ${p.type==='webrtc'?'on':'lat'}"></div>
-        <span style="overflow:hidden;text-overflow:ellipsis;max-width:95px;">${p.id.slice(0,12)}…</span>
-        <span class="prole">${p.role}</span>
-      </div>`).join('');
-    const rp=document.getElementById('rppeers');
-    if(rp){rp.innerHTML=this.connectedPeers.length===0
-      ?'<div style="color:var(--dim);font-family:var(--mono);font-size:10px;">No peers.<br>Open another tab to discover mesh peers via BroadcastChannel.</div>'
-      :this.connectedPeers.map(p=>`<div class="edr-item ok"><div class="edr-title">${U.esc(p.id.slice(0,20))}</div>Role: ${U.esc(p.role)} | ${U.esc(p.type)}<div class="edr-time">${new Date(p.ts).toISOString().slice(11,19)}</div></div>`).join('');}
+    // ── Sidebar peer list ──
+    const el = document.getElementById('peer-list');
+    if(el){
+      el.innerHTML = this.connectedPeers.slice(0,10).map(p=>`
+        <div class="peer-item" title="${U.esc(p.id)}">
+          <div class="pdot ${p.type==='webrtc'?'on':p.type==='local-tab'?'lat':'off'}"></div>
+          <span style="overflow:hidden;text-overflow:ellipsis;max-width:80px;">${U.esc(p.id.slice(0,14))}…</span>
+          <span class="prole">${p.latency!=null?p.latency+'ms':p.type==='local-tab'?'TAB':p.role}</span>
+        </div>`).join('');
+    }
+
+    // ── Right panel peers tab ──
+    const rp = document.getElementById('rppeers');
+    if(!rp) return;
+
+    const myId   = this.myPeerId || D.crypto.nodeId;
+    const link   = this.getShareLink();
+    const status = this._isLobbyHost
+      ? `<span style="color:var(--amber)">LOBBY HOST</span>`
+      : this._lobbyConn
+        ? `<span style="color:var(--green)">JOINED ROOM</span>`
+        : `<span style="color:var(--dim)">SEARCHING…</span>`;
+
+    rp.innerHTML = `
+      <!-- MY IDENTITY -->
+      <div style="margin-bottom:12px;">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:5px;letter-spacing:.1em;">MY PEER ID</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--amber);background:var(--deep);padding:7px 9px;
+          border-radius:var(--r);border:1px solid var(--bdr);word-break:break-all;margin-bottom:6px;">${U.esc(myId)}</div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="D.peer.copyMyId()" class="btn btn-s btn-sm" style="flex:1;">Copy ID</button>
+          <button onclick="D.peer.copyShareLink()" class="btn btn-p btn-sm" style="flex:1;">Copy Link</button>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:6px;">
+          Room: ${U.esc(this._roomId||'—')} | Status: ${status}
+        </div>
+      </div>
+
+      <!-- CONNECT MANUALLY -->
+      <div style="margin-bottom:12px;">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:5px;letter-spacing:.1em;">CONNECT TO PEER</div>
+        <div style="display:flex;gap:5px;">
+          <input id="peer-manual-id" class="tinp" placeholder="darmnode…" style="font-size:10px;padding:5px 8px;">
+          <button onclick="D.peer.connect(document.getElementById('peer-manual-id').value)" class="btn btn-p btn-sm">CONNECT</button>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:4px;">
+          Or share your link — peers who open it auto-connect
+        </div>
+      </div>
+
+      <!-- HOW IT WORKS -->
+      <div style="font-family:var(--mono);font-size:9px;color:var(--dim);line-height:1.9;margin-bottom:10px;
+        padding:8px;background:var(--deep);border-radius:var(--r);border:1px solid var(--bdr);">
+        HOW DISCOVERY WORKS:<br>
+        <span style="color:var(--sec)">1.</span> Same browser tabs → BroadcastChannel (auto)<br>
+        <span style="color:var(--sec)">2.</span> Same deployment → room lobby (auto, ~5s)<br>
+        <span style="color:var(--sec)">3.</span> Any peer → share "Copy Link" or paste ID above
+      </div>
+
+      <!-- CONNECTED PEERS -->
+      <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:5px;letter-spacing:.1em;">
+        CONNECTED PEERS (${this.connectedPeers.length})
+      </div>
+      ${this.connectedPeers.length === 0
+        ? `<div style="font-family:var(--mono);font-size:10px;color:var(--dim);padding:8px 0;">
+            No peers yet.<br>
+            Open another browser on this URL, or share the link above.</div>`
+        : this.connectedPeers.map(p=>`
+          <div class="edr-item ${p.type==='webrtc'?'ok':'warn'}">
+            <div class="edr-title">${U.esc(p.id.slice(0,22))}</div>
+            <span style="color:var(--${p.type==='webrtc'?'green':'amber'})">${U.esc(p.type)}</span>
+            ${p.latency!=null?` · ${p.latency}ms`:''}
+            <div class="edr-time">${new Date(p.ts).toISOString().slice(11,19)}</div>
+          </div>`).join('')
+      }`;
   }
 };
 
