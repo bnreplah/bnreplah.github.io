@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Template Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: rgba(255,255,255,0.07);
+    --border-active: rgba(99,202,183,0.4);
+    --accent: #63cab7;
+    --accent2: #f0a05a;
+    --accent3: #a78bfa;
+    --text: #e8eaf0;
+    --text-muted: #6b7280;
+    --text-dim: #9ca3af;
+    --danger: #f87171;
+    --success: #4ade80;
+    --card-h: 220px;
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(99,202,183,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(99,202,183,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ---- HEADER ---- */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,12,16,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 clamp(16px, 4vw, 48px);
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .header-actions { display: flex; align-items: center; gap: 12px; }
+  .btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(99,202,183,0.05); }
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0c10;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #7dd6c5; border-color: #7dd6c5; color: #0a0c10; }
+
+  /* ---- MAIN ---- */
+  main { position: relative; z-index: 1; padding: clamp(24px, 4vw, 48px) clamp(16px, 4vw, 48px); max-width: 1600px; margin: 0 auto; }
+
+  /* ---- SEARCH / FILTER BAR ---- */
+  .toolbar {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+  }
+  .search-wrap {
+    position: relative; flex: 1; min-width: 200px; max-width: 380px;
+  }
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px 10px 40px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--text-muted); }
+  .search-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--text-muted); font-size: 0.85rem;
+    pointer-events: none;
+  }
+  .filter-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .chip:hover, .chip.active { border-color: var(--accent); color: var(--accent); background: rgba(99,202,183,0.08); }
+  .stats-text { margin-left: auto; font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+
+  /* ---- CARDS GRID ---- */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  /* ---- CARD ---- */
+  .card-wrapper {
+    perspective: 1200px;
+  }
+  .card {
+    position: relative;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .card:hover {
+    border-color: var(--border-active);
+    box-shadow: 0 0 30px rgba(99,202,183,0.08), 0 8px 32px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
+  }
+
+  .card-face {
+    padding: 24px;
+    min-height: var(--card-h);
+    display: flex; flex-direction: column;
+  }
+
+  .card-header-row {
+    display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px;
+  }
+  .card-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+  .card-badge {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(99,202,183,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(99,202,183,0.2);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .card-badge.orange { background: rgba(240,160,90,0.12); color: var(--accent2); border-color: rgba(240,160,90,0.2); }
+  .card-badge.purple { background: rgba(167,139,250,0.12); color: var(--accent3); border-color: rgba(167,139,250,0.2); }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+  .card-desc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    flex: 1;
+  }
+  .card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .card-meta { font-size: 0.68rem; color: var(--text-muted); }
+  .card-arrow {
+    font-size: 0.8rem; color: var(--accent);
+    transition: transform 0.2s;
+  }
+  .card:hover .card-arrow { transform: translateX(3px); }
+
+  /* ---- ADD CARD ---- */
+  .add-card .card-face {
+    align-items: center; justify-content: center;
+    border: 1px dashed var(--border);
+    background: transparent;
+    min-height: var(--card-h);
+    gap: 10px;
+  }
+  .add-card:hover .card-face {
+    border-color: var(--accent);
+    background: rgba(99,202,183,0.03);
+  }
+  .add-card .plus-icon {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1.5px dashed var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; color: var(--text-muted);
+    transition: all 0.2s;
+  }
+  .add-card:hover .plus-icon {
+    border-color: var(--accent); color: var(--accent);
+    box-shadow: 0 0 20px rgba(99,202,183,0.15);
+  }
+  .add-card .add-label {
+    font-size: 0.8rem; color: var(--text-muted); font-family: 'Syne', sans-serif; font-weight: 600;
+  }
+  .add-card:hover .add-label { color: var(--accent); }
+
+  /* ---- MODAL / EXPANDED VIEW ---- */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    width: 100%; max-width: 860px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: scale(0.94) translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative;
+  }
+  .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+
+  .modal-header {
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px;
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+    border-radius: 20px 20px 0 0;
+  }
+  .modal-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; flex-shrink: 0;
+  }
+  .modal-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.4rem; }
+  .modal-subtitle { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; }
+  .modal-close {
+    margin-left: auto; background: transparent; border: 1px solid var(--border);
+    color: var(--text-muted); width: 34px; height: 34px;
+    border-radius: 8px; cursor: pointer; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .modal-close:hover { border-color: var(--danger); color: var(--danger); background: rgba(248,113,113,0.1); }
+
+  .modal-body { padding: 24px 28px; }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 24px;
+    background: var(--bg);
+    border-radius: 10px; padding: 4px;
+    border: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .tab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; padding: 7px 14px;
+    border-radius: 7px; border: none;
+    background: transparent; color: var(--text-muted);
+    cursor: pointer; transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab.active { background: var(--surface2); color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* Template panels */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Template item */
+  .template-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .template-item-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .template-item-header:hover { background: rgba(255,255,255,0.03); }
+  .template-name {
+    font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.9rem;
+    flex: 1;
+  }
+  .template-desc-short { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+  .template-toggle { color: var(--text-muted); font-size: 0.9rem; transition: transform 0.25s; }
+  .template-item.expanded .template-toggle { transform: rotate(180deg); }
+
+  .template-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1);
+    padding: 0 18px;
+  }
+  .template-item.expanded .template-body {
+    max-height: 900px;
+    padding: 0 18px 18px;
+  }
+
+  /* Code block */
+  .code-block {
+    position: relative;
+    background: #0d0f13;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 12px 0;
+  }
+  .code-block-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  .code-lang { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .copy-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; padding: 4px 10px;
+    border-radius: 5px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .copy-btn.copied { color: var(--success); border-color: var(--success); }
+
+  pre {
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 0.75rem;
+    line-height: 1.7;
+    color: #c9d1d9;
+    white-space: pre;
+  }
+
+  /* Syntax highlight classes */
+  .kw { color: #ff7b72; }
+  .str { color: #a5d6ff; }
+  .num { color: #f8c555; }
+  .cmt { color: #8b949e; font-style: italic; }
+  .fn { color: #d2a8ff; }
+  .val { color: #79c0ff; }
+  .prop { color: #63cab7; }
+
+  /* Parameters panel */
+  .params-section { margin-top: 16px; }
+  .params-title {
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem;
+    color: var(--text-dim); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .params-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .param-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .param-field label {
+    display: block; font-size: 0.68rem; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .param-field input, .param-field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .param-field input:focus, .param-field select:focus { border-color: var(--accent); }
+  .param-field select option { background: var(--surface); }
+
+  .generate-btn {
+    margin-top: 14px;
+    width: 100%;
+    background: linear-gradient(135deg, rgba(99,202,183,0.15), rgba(99,202,183,0.05));
+    border: 1px solid var(--border-active);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 11px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .generate-btn:hover { background: rgba(99,202,183,0.2); box-shadow: 0 0 20px rgba(99,202,183,0.15); }
+
+  .generated-output {
+    margin-top: 12px;
+  }
+
+  /* ---- ADD/EDIT FORM MODAL ---- */
+  .form-modal { max-width: 680px; }
+  .form-section { margin-bottom: 20px; }
+  .form-label {
+    display: block; font-size: 0.7rem; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+  }
+  .form-input, .form-textarea, .form-select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+  .form-select option { background: var(--surface); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+
+  .emoji-picker {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+  }
+  .emoji-opt {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; cursor: pointer; transition: all 0.15s;
+  }
+  .emoji-opt:hover, .emoji-opt.selected {
+    border-color: var(--accent); background: rgba(99,202,183,0.12);
+    transform: scale(1.1);
+  }
+
+  .color-picker-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .color-opt {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .color-opt:hover, .color-opt.selected {
+    border-color: white; transform: scale(1.2);
+    box-shadow: 0 0 10px rgba(255,255,255,0.3);
+  }
+
+  .templates-builder { margin-top: 16px; }
+  .template-builder-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .remove-tpl-btn {
+    position: absolute; top: 10px; right: 10px;
+    background: transparent; border: none;
+    color: var(--text-muted); cursor: pointer; font-size: 0.9rem;
+    transition: color 0.2s;
+  }
+  .remove-tpl-btn:hover { color: var(--danger); }
+
+  .add-tpl-btn {
+    width: 100%; padding: 9px;
+    background: transparent; border: 1px dashed var(--border);
+    border-radius: 9px; color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .add-tpl-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--border); }
+
+  /* ---- TOAST ---- */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 999;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 0.78rem;
+    color: var(--text);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    pointer-events: none;
+    display: flex; align-items: center; gap: 10px;
+    max-width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-icon { font-size: 1rem; }
+  .toast.success .toast-icon { color: var(--success); }
+  .toast.error .toast-icon { color: var(--danger); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Animations */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .card-wrapper { animation: fadeIn 0.4s ease both; }
+  .card-wrapper:nth-child(1) { animation-delay: 0.05s; }
+  .card-wrapper:nth-child(2) { animation-delay: 0.1s; }
+  .card-wrapper:nth-child(3) { animation-delay: 0.15s; }
+  .card-wrapper:nth-child(4) { animation-delay: 0.2s; }
+  .card-wrapper:nth-child(5) { animation-delay: 0.25s; }
+  .card-wrapper:nth-child(6) { animation-delay: 0.3s; }
+  .card-wrapper:nth-child(7) { animation-delay: 0.35s; }
+
+  @media (max-width: 600px) {
+    .cards-grid { grid-template-columns: 1fr; }
+    .modal { max-height: 95vh; border-radius: 16px; }
+    .modal-body { padding: 16px 18px; }
+    .modal-header { padding: 18px 18px 14px; }
+    .param-grid { grid-template-columns: 1fr; }
+  }
+
+  .section-heading {
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem;
+    color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 20px; display: flex; align-items: center; gap: 12px;
+  }
+  .section-heading::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .card-count-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+  }
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--text-muted);
+    grid-column: 1 / -1;
+  }
+  .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.8rem; }
+
+  .danger-btn {
+    background: rgba(248,113,113,0.1);
+    border-color: rgba(248,113,113,0.3);
+    color: var(--danger);
+  }
+  .danger-btn:hover { background: rgba(248,113,113,0.2); border-color: var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Pipeline Hub
+  </div>
+  <div class="header-actions">
+    <button class="btn" id="exportBtn">⬇ Export</button>
+    <button class="btn" id="importBtn">⬆ Import</button>
+    <button class="btn btn-primary" id="openAddModal">+ New Template</button>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="searchInput" placeholder="Search integrations..." autocomplete="off">
+    </div>
+    <div class="filter-chips" id="filterChips">
+      <button class="chip active" data-filter="all">All</button>
+    </div>
+    <span class="stats-text" id="statsText"></span>
+  </div>
+
+  <div class="section-heading">
+    Integration Templates
+    <span class="card-count-badge" id="cardCountBadge">0</span>
+  </div>
+
+  <div class="cards-grid" id="cardsGrid"></div>
+</main>
+
+<!-- VIEW MODAL -->
+<div class="modal-overlay" id="viewModal">
+  <div class="modal" id="viewModalInner">
+    <div class="modal-header">
+      <div class="modal-icon" id="vmIcon"></div>
+      <div>
+        <div class="modal-title" id="vmTitle"></div>
+        <div class="modal-subtitle" id="vmSubtitle"></div>
+      </div>
+      <button class="modal-close" id="vmClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tabs" id="vmTabs"></div>
+      <div id="vmPanels"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal form-modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="formModalTitle">New Integration Template</div>
+        <div class="modal-subtitle">Fill in the details to create a reusable pipeline template</div>
+      </div>
+      <button class="modal-close" id="addModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-section">
+          <label class="form-label">Integration Name *</label>
+          <input class="form-input" id="fName" placeholder="e.g. Salesforce CRM" autocomplete="off">
+        </div>
+        <div class="form-section">
+          <label class="form-label">Category *</label>
+          <input class="form-input" id="fCategory" placeholder="e.g. CRM, ETL, Messaging" autocomplete="off">
+        </div>
+      </div>
+      <div class="form-section">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="fDesc" placeholder="Describe what this integration does..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-section">
+          <label class="form-label">Icon</label>
+          <div class="emoji-picker" id="emojiPicker"></div>
+        </div>
+        <div class="form-section">
+          <label class="form-label">Color</label>
+          <div class="color-picker-row" id="colorPicker"></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Pipeline Templates</label>
+        <div class="templates-builder" id="templatesBuilder"></div>
+        <button class="add-tpl-btn" id="addTplRow">+ Add Template</button>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn danger-btn" id="deleteCardBtn" style="display:none; margin-right:auto;">🗑 Delete</button>
+        <button class="btn" id="cancelAdd">Cancel</button>
+        <button class="btn btn-primary" id="saveCard">Save Template</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT INPUT -->
+<input type="file" id="importInput" accept=".json" style="display:none">
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon">✓</span>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+// ===================== DATA =====================
+const EMOJIS = ['🔗','⚡','🌊','🔄','📡','💾','🛢','📊','🚀','🔌','☁️','🏗','🔧','📬','🧩','🗃','🔐','📥','📤','🌐','🤖','⚙️','🧲','📋'];
+const COLORS = [
+  {bg:'rgba(99,202,183,0.15)', border:'rgba(99,202,183,0.4)', text:'#63cab7'},
+  {bg:'rgba(240,160,90,0.15)', border:'rgba(240,160,90,0.4)', text:'#f0a05a'},
+  {bg:'rgba(167,139,250,0.15)', border:'rgba(167,139,250,0.4)', text:'#a78bfa'},
+  {bg:'rgba(248,113,113,0.15)', border:'rgba(248,113,113,0.4)', text:'#f87171'},
+  {bg:'rgba(74,222,128,0.15)', border:'rgba(74,222,128,0.4)', text:'#4ade80'},
+  {bg:'rgba(96,165,250,0.15)', border:'rgba(96,165,250,0.4)', text:'#60a5fa'},
+  {bg:'rgba(251,191,36,0.15)', border:'rgba(251,191,36,0.4)', text:'#fbbf24'},
+  {bg:'rgba(244,114,182,0.15)', border:'rgba(244,114,182,0.4)', text:'#f472b6'},
+];
+
+const DEFAULT_DATA = [
+  {
+    id:'1', name:'Salesforce', category:'CRM', desc:'Sync contacts, leads, and opportunities in real-time pipelines.',
+    icon:'🔗', colorIdx:0, templates:[
+      {
+        name:'Contact Sync Pipeline',
+        desc:'Bidirectional contact synchronization between Salesforce and your data warehouse.',
+        code:`# Salesforce Contact Sync Pipeline
+# Parameters: org_id, api_version, batch_size
+
+import requests
+
+SF_INSTANCE = "{{SF_INSTANCE}}"
+API_VERSION = "{{API_VERSION}}"  # e.g. v57.0
+BATCH_SIZE  = {{BATCH_SIZE}}     # e.g. 200
+
+def get_contacts(session, offset=0):
+    url = f"{SF_INSTANCE}/services/data/{API_VERSION}/query"
+    query = f"SELECT Id,Name,Email,Phone FROM Contact LIMIT {BATCH_SIZE} OFFSET {offset}"
+    resp = session.get(url, params={"q": query})
+    resp.raise_for_status()
+    return resp.json()
+
+def upsert_to_warehouse(records):
+    # Insert or update in your target warehouse
+    for rec in records:
+        print(f"Upserting contact: {rec['Id']} - {rec['Name']}")
+
+def run_pipeline(access_token):
+    headers = {"Authorization": f"Bearer {access_token}"}
+    session = requests.Session()
+    session.headers.update(headers)
+    offset, total = 0, 0
+    while True:
+        data = get_contacts(session, offset)
+        records = data.get("records", [])
+        if not records: break
+        upsert_to_warehouse(records)
+        total += len(records)
+        if data.get("done"): break
+        offset += BATCH_SIZE
+    print(f"Synced {total} contacts")`,
+        params:[
+          {key:'SF_INSTANCE', label:'Salesforce Instance URL', placeholder:'https://yourorg.salesforce.com'},
+          {key:'API_VERSION', label:'API Version', placeholder:'v57.0'},
+          {key:'BATCH_SIZE', label:'Batch Size', placeholder:'200'},
+        ]
+      },
+      {
+        name:'Opportunity Pipeline',
+        desc:'Pull won/lost opportunities and push to analytics dashboard.',
+        code:`# Salesforce Opportunity Pipeline
+# Parameters: stage_filter, date_from
+
+STAGE_FILTER = "{{STAGE_FILTER}}"  # e.g. Closed Won
+DATE_FROM    = "{{DATE_FROM}}"     # e.g. 2024-01-01
+
+SOQL = f"""
+SELECT Id, Name, Amount, StageName, CloseDate, AccountId
+FROM Opportunity
+WHERE StageName = '{STAGE_FILTER}'
+  AND CloseDate >= {DATE_FROM}
+ORDER BY CloseDate DESC
+"""
+
+def fetch_and_stream(session):
+    url = f"{SF_INSTANCE}/services/data/{API_VERSION}/query"
+    resp = session.get(url, params={"q": SOQL})
+    resp.raise_for_status()
+    data = resp.json()
+    return data.get("records", [])`,
+        params:[
+          {key:'STAGE_FILTER', label:'Stage Filter', placeholder:'Closed Won'},
+          {key:'DATE_FROM', label:'Date From', placeholder:'2024-01-01'},
+        ]
+      }
+    ]
+  },
+  {
+    id:'2', name:'Apache Kafka', category:'Streaming', desc:'Event streaming pipelines for high-throughput real-time data flows.',
+    icon:'⚡', colorIdx:1, templates:[
+      {
+        name:'Kafka Consumer Pipeline',
+        desc:'Consume events from a Kafka topic and write to a sink.',
+        code:`# Kafka Consumer Pipeline
+# Parameters: bootstrap_servers, topic, group_id, sink_type
+
+from kafka import KafkaConsumer
+import json
+
+BOOTSTRAP = "{{BOOTSTRAP_SERVERS}}"  # e.g. localhost:9092
+TOPIC      = "{{TOPIC}}"             # e.g. user-events
+GROUP_ID   = "{{GROUP_ID}}"          # e.g. my-consumer-group
+AUTO_OFFSET= "{{AUTO_OFFSET}}"       # earliest | latest
+
+consumer = KafkaConsumer(
+    TOPIC,
+    bootstrap_servers=BOOTSTRAP.split(","),
+    group_id=GROUP_ID,
+    auto_offset_reset=AUTO_OFFSET,
+    value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+    enable_auto_commit=True,
+)
+
+for message in consumer:
+    event = message.value
+    # TODO: route to sink (DB, API, file, etc.)
+    print(f"[{message.partition}:{message.offset}] {event}")`,
+        params:[
+          {key:'BOOTSTRAP_SERVERS', label:'Bootstrap Servers', placeholder:'localhost:9092'},
+          {key:'TOPIC', label:'Topic Name', placeholder:'user-events'},
+          {key:'GROUP_ID', label:'Consumer Group ID', placeholder:'my-consumer-group'},
+          {key:'AUTO_OFFSET', label:'Auto Offset Reset', placeholder:'earliest'},
+        ]
+      },
+      {
+        name:'Kafka Producer Template',
+        desc:'Produce structured events to Kafka from any data source.',
+        code:`# Kafka Producer Pipeline
+# Parameters: topic, batch_size
+
+from kafka import KafkaProducer
+import json, time
+
+TOPIC      = "{{TOPIC}}"
+BATCH_SIZE = int("{{BATCH_SIZE}}")  # e.g. 100
+
+producer = KafkaProducer(
+    bootstrap_servers=BOOTSTRAP.split(","),
+    value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+    acks="all",
+    retries=5,
+)
+
+def publish_batch(events):
+    futures = []
+    for event in events:
+        future = producer.send(TOPIC, value=event)
+        futures.append(future)
+    producer.flush()
+    for f in futures:
+        meta = f.get(timeout=10)
+        print(f"  → {meta.topic}[{meta.partition}]@{meta.offset}")`,
+        params:[
+          {key:'TOPIC', label:'Topic Name', placeholder:'my-topic'},
+          {key:'BATCH_SIZE', label:'Batch Size', placeholder:'100'},
+        ]
+      }
+    ]
+  },
+  {
+    id:'3', name:'AWS S3', category:'Storage', desc:'Ingest, transform, and export data between S3 buckets and pipelines.',
+    icon:'☁️', colorIdx:5, templates:[
+      {
+        name:'S3 to Warehouse ETL',
+        desc:'Read Parquet/CSV files from S3 and load into a data warehouse.',
+        code:`# AWS S3 → Warehouse ETL Pipeline
+# Parameters: bucket, prefix, file_format, target_table
+
+import boto3, pandas as pd
+from io import BytesIO
+
+BUCKET       = "{{S3_BUCKET}}"
+PREFIX       = "{{S3_PREFIX}}"     # e.g. data/2024/
+FILE_FORMAT  = "{{FILE_FORMAT}}"   # parquet | csv
+TARGET_TABLE = "{{TARGET_TABLE}}"  # e.g. raw.events
+
+s3 = boto3.client("s3")
+
+def list_files():
+    resp = s3.list_objects_v2(Bucket=BUCKET, Prefix=PREFIX)
+    return [o["Key"] for o in resp.get("Contents", [])]
+
+def read_file(key):
+    obj = s3.get_object(Bucket=BUCKET, Key=key)
+    buf = BytesIO(obj["Body"].read())
+    if FILE_FORMAT == "parquet":
+        return pd.read_parquet(buf)
+    return pd.read_csv(buf)
+
+def load_to_warehouse(df, table):
+    print(f"Loading {len(df)} rows → {table}")
+    # df.to_sql(table, engine, if_exists="append", index=False)
+
+for key in list_files():
+    df = read_file(key)
+    load_to_warehouse(df, TARGET_TABLE)
+    print(f"✓ {key}")`,
+        params:[
+          {key:'S3_BUCKET', label:'S3 Bucket Name', placeholder:'my-data-bucket'},
+          {key:'S3_PREFIX', label:'S3 Prefix / Path', placeholder:'data/2024/'},
+          {key:'FILE_FORMAT', label:'File Format', placeholder:'parquet'},
+          {key:'TARGET_TABLE', label:'Target Table', placeholder:'raw.events'},
+        ]
+      }
+    ]
+  },
+  {
+    id:'4', name:'PostgreSQL', category:'Database', desc:'Build ETL and CDC pipelines with PostgreSQL as source or target.',
+    icon:'🛢', colorIdx:3, templates:[
+      {
+        name:'CDC Change Stream',
+        desc:'Capture database changes via logical replication and stream downstream.',
+        code:`# PostgreSQL CDC Pipeline
+# Parameters: host, port, database, slot_name
+
+import psycopg2
+
+DB_HOST  = "{{DB_HOST}}"
+DB_PORT  = "{{DB_PORT}}"      # e.g. 5432
+DB_NAME  = "{{DB_NAME}}"
+SLOT     = "{{SLOT_NAME}}"    # replication slot name
+
+conn = psycopg2.connect(
+    host=DB_HOST, port=DB_PORT,
+    dbname=DB_NAME,
+    user="replicator",
+    connection_factory=psycopg2.extras.LogicalReplicationConnection
+)
+cur = conn.cursor()
+
+cur.start_replication(slot_name=SLOT, decode=True, status_interval=1)
+
+def consume(msg):
+    data = msg.payload
+    print(f"Change: {data}")
+    msg.cursor.send_feedback(flush_lsn=msg.data_start)
+
+cur.consume_stream(consume)`,
+        params:[
+          {key:'DB_HOST', label:'Database Host', placeholder:'localhost'},
+          {key:'DB_PORT', label:'Database Port', placeholder:'5432'},
+          {key:'DB_NAME', label:'Database Name', placeholder:'mydb'},
+          {key:'SLOT_NAME', label:'Replication Slot', placeholder:'my_slot'},
+        ]
+      }
+    ]
+  },
+  {
+    id:'5', name:'Slack', category:'Messaging', desc:'Send pipeline alerts, reports and notifications via Slack webhooks.',
+    icon:'📬', colorIdx:6, templates:[
+      {
+        name:'Pipeline Alert Notifier',
+        desc:'Send rich pipeline status messages to a Slack channel.',
+        code:`# Slack Pipeline Notifier
+# Parameters: webhook_url, channel, pipeline_name
+
+import requests, json
+from datetime import datetime
+
+WEBHOOK      = "{{WEBHOOK_URL}}"
+CHANNEL      = "{{CHANNEL}}"        # e.g. #data-alerts
+PIPELINE     = "{{PIPELINE_NAME}}"
+
+def send_alert(status, rows_processed, duration_s, errors=None):
+    color   = "#4ade80" if status == "success" else "#f87171"
+    emoji   = "✅" if status == "success" else "🚨"
+    ts      = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    payload = {
+        "channel": CHANNEL,
+        "attachments": [{
+            "color": color,
+            "blocks": [
+                {"type":"section","text":{"type":"mrkdwn",
+                 "text":f"{emoji} *{PIPELINE}* — {status.upper()}"}},
+                {"type":"section","fields":[
+                    {"type":"mrkdwn","text":f"*Rows:*\n{rows_processed:,}"},
+                    {"type":"mrkdwn","text":f"*Duration:*\n{duration_s:.1f}s"},
+                    {"type":"mrkdwn","text":f"*Timestamp:*\n{ts}"},
+                    {"type":"mrkdwn","text":f"*Errors:*\n{errors or 'None'}"},
+                ]}
+            ]
+        }]
+    }
+    r = requests.post(WEBHOOK, json=payload)
+    r.raise_for_status()`,
+        params:[
+          {key:'WEBHOOK_URL', label:'Slack Webhook URL', placeholder:'https://hooks.slack.com/...'},
+          {key:'CHANNEL', label:'Channel', placeholder:'#data-alerts'},
+          {key:'PIPELINE_NAME', label:'Pipeline Name', placeholder:'My ETL Pipeline'},
+        ]
+      }
+    ]
+  },
+  {
+    id:'6', name:'dbt', category:'Transform', desc:'Orchestrate dbt model runs and tests inside CI/CD pipelines.',
+    icon:'🔧', colorIdx:2, templates:[
+      {
+        name:'dbt Run + Test Pipeline',
+        desc:'Execute dbt models and tests with environment variable injection.',
+        code:`# dbt Pipeline Orchestrator
+# Parameters: project_dir, profile, target, model_selector
+
+import subprocess, sys
+
+PROJECT_DIR = "{{PROJECT_DIR}}"   # /path/to/dbt/project
+PROFILE     = "{{PROFILE}}"       # dbt profile name
+TARGET      = "{{TARGET}}"        # dev | staging | prod
+SELECTOR    = "{{MODEL_SELECTOR}}"# e.g. tag:daily or +my_model
+
+def run_dbt(command, *args):
+    cmd = [
+        "dbt", command,
+        "--project-dir", PROJECT_DIR,
+        "--profiles-dir", PROJECT_DIR,
+        "--profile", PROFILE,
+        "--target", TARGET,
+    ] + list(args)
+    print(f"▶ {' '.join(cmd)}")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    print(result.stdout)
+    if result.returncode != 0:
+        print(result.stderr, file=sys.stderr)
+        raise RuntimeError(f"dbt {command} failed")
+    return result
+
+run_dbt("deps")
+run_dbt("run", "--select", SELECTOR)
+run_dbt("test", "--select", SELECTOR)
+print("✓ dbt pipeline complete")`,
+        params:[
+          {key:'PROJECT_DIR', label:'Project Directory', placeholder:'/opt/dbt/my_project'},
+          {key:'PROFILE', label:'dbt Profile', placeholder:'my_profile'},
+          {key:'TARGET', label:'Target Environment', placeholder:'prod'},
+          {key:'MODEL_SELECTOR', label:'Model Selector', placeholder:'tag:daily'},
+        ]
+      }
+    ]
+  }
+];
+
+// ===================== STATE =====================
+let integrations = JSON.parse(localStorage.getItem('pipelineHub') || 'null') || DEEP_CLONE(DEFAULT_DATA);
+let activeFilter = 'all';
+let editingId = null;
+let selectedEmoji = '🔗';
+let selectedColorIdx = 0;
+
+function DEEP_CLONE(x) { return JSON.parse(JSON.stringify(x)); }
+function save() { localStorage.setItem('pipelineHub', JSON.stringify(integrations)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ===================== RENDER CARDS =====================
+function getCategories() {
+  return [...new Set(integrations.map(i => i.category))];
+}
+
+function renderFilterChips() {
+  const cats = getCategories();
+  const fc = document.getElementById('filterChips');
+  fc.innerHTML = `<button class="chip ${activeFilter==='all'?'active':''}" data-filter="all">All</button>`;
+  cats.forEach(c => {
+    fc.innerHTML += `<button class="chip ${activeFilter===c?'active':''}" data-filter="${escHtml(c)}">${escHtml(c)}</button>`;
+  });
+  fc.querySelectorAll('.chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeFilter = btn.dataset.filter;
+      renderAll();
+    });
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderAll() {
+  renderFilterChips();
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = integrations.filter(i => {
+    const matchCat = activeFilter === 'all' || i.category === activeFilter;
+    const matchQ = !q || i.name.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || i.category.toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+
+  document.getElementById('statsText').textContent = `${filtered.length} of ${integrations.length} integrations`;
+  document.getElementById('cardCountBadge').textContent = filtered.length;
+
+  const grid = document.getElementById('cardsGrid');
+  grid.innerHTML = '';
+
+  if (filtered.length === 0 && integrations.length > 0) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>No integrations match your search.</p></div>`;
+  }
+
+  filtered.forEach((intg, idx) => {
+    const col = COLORS[intg.colorIdx ?? 0];
+    const tplCount = (intg.templates||[]).length;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'card-wrapper';
+    wrapper.style.animationDelay = (idx * 0.05) + 's';
+    wrapper.innerHTML = `
+      <div class="card" data-id="${intg.id}">
+        <div class="card-face">
+          <div class="card-header-row">
+            <div class="card-icon" style="background:${col.bg}; border:1px solid ${col.border}">${intg.icon}</div>
+            <span class="card-badge" style="background:${col.bg}; color:${col.text}; border-color:${col.border}">${escHtml(intg.category)}</span>
+          </div>
+          <div class="card-title">${escHtml(intg.name)}</div>
+          <div class="card-desc">${escHtml(intg.desc)}</div>
+          <div class="card-footer">
+            <span class="card-meta">${tplCount} template${tplCount!==1?'s':''}</span>
+            <span class="card-arrow">→</span>
+          </div>
+        </div>
+      </div>`;
+    wrapper.querySelector('.card').addEventListener('click', () => openViewModal(intg.id));
+
+    // Right-click or long-press to edit
+    wrapper.querySelector('.card').addEventListener('contextmenu', e => {
+      e.preventDefault();
+      openEditModal(intg.id);
+    });
+
+    grid.appendChild(wrapper);
+  });
+
+  // Add card
+  const addWrapper = document.createElement('div');
+  addWrapper.className = 'card-wrapper add-card';
+  addWrapper.style.animationDelay = (filtered.length * 0.05) + 's';
+  addWrapper.innerHTML = `
+    <div class="card" id="addCardBtn">
+      <div class="card-face">
+        <div class="plus-icon">+</div>
+        <div class="add-label">Add Integration</div>
+        <div class="card-desc" style="text-align:center;margin-top:6px">Create a new pipeline template</div>
+      </div>
+    </div>`;
+  addWrapper.querySelector('.card').addEventListener('click', openAddModal);
+  grid.appendChild(addWrapper);
+}
+
+// ===================== VIEW MODAL =====================
+function openViewModal(id) {
+  const intg = integrations.find(i => i.id === id);
+  if (!intg) return;
+  const col = COLORS[intg.colorIdx ?? 0];
+
+  document.getElementById('vmIcon').textContent = intg.icon;
+  document.getElementById('vmIcon').style.background = col.bg;
+  document.getElementById('vmIcon').style.border = `1px solid ${col.border}`;
+  document.getElementById('vmTitle').textContent = intg.name;
+  document.getElementById('vmSubtitle').textContent = intg.desc;
+
+  const tabs = document.getElementById('vmTabs');
+  const panels = document.getElementById('vmPanels');
+  tabs.innerHTML = '';
+  panels.innerHTML = '';
+
+  (intg.templates||[]).forEach((tpl, idx) => {
+    const tabBtn = document.createElement('button');
+    tabBtn.className = 'tab' + (idx===0?' active':'');
+    tabBtn.textContent = tpl.name;
+    tabBtn.addEventListener('click', () => {
+      tabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      panels.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      tabBtn.classList.add('active');
+      panels.querySelector(`#panel-${idx}`).classList.add('active');
+    });
+    tabs.appendChild(tabBtn);
+
+    const panel = document.createElement('div');
+    panel.className = 'tab-panel' + (idx===0?' active':'');
+    panel.id = `panel-${idx}`;
+
+    const paramFields = (tpl.params||[]).map((p, pi) =>
+      `<div class="param-field">
+        <label>${escHtml(p.label)}</label>
+        <input type="text" id="param-${idx}-${pi}" data-key="${escHtml(p.key)}" placeholder="${escHtml(p.placeholder||'')}">
+      </div>`
+    ).join('');
+
+    const codeId = `code-${id}-${idx}`;
+    panel.innerHTML = `
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">${escHtml(tpl.desc)}</div>
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-lang">Python</span>
+          <button class="copy-btn" data-target="${codeId}">Copy</button>
+        </div>
+        <pre id="${codeId}">${escHtml(tpl.code)}</pre>
+      </div>
+      ${paramFields ? `
+      <div class="params-section">
+        <div class="params-title">Test Parameters</div>
+        <div class="param-grid">${paramFields}</div>
+        <button class="generate-btn" data-idx="${idx}">⚡ Generate Custom Variant</button>
+        <div class="generated-output" id="gen-${idx}"></div>
+      </div>` : ''}
+    `;
+    panels.appendChild(panel);
+  });
+
+  // If no templates
+  if (!intg.templates || intg.templates.length === 0) {
+    tabs.innerHTML = '';
+    panels.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>No templates yet. Edit this integration to add templates.</p></div>`;
+  }
+
+  // Edit button in modal
+  let editBtn = document.getElementById('vmEditBtn');
+  if (!editBtn) {
+    editBtn = document.createElement('button');
+    editBtn.id = 'vmEditBtn';
+    editBtn.className = 'btn';
+    editBtn.style.marginRight = '8px';
+    editBtn.textContent = '✎ Edit';
+    document.getElementById('vmClose').before(editBtn);
+  }
+  editBtn.onclick = () => { closeViewModal(); openEditModal(id); };
+
+  // Copy buttons
+  document.querySelectorAll('.copy-btn[data-target]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pre = document.getElementById(btn.dataset.target);
+      if (!pre) return;
+      navigator.clipboard.writeText(pre.textContent).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+  });
+
+  // Generate buttons
+  document.querySelectorAll('.generate-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      const tpl = intg.templates[idx];
+      if (!tpl) return;
+      let code = tpl.code;
+      (tpl.params||[]).forEach((p, pi) => {
+        const input = document.getElementById(`param-${idx}-${pi}`);
+        const val = input ? input.value.trim() : '';
+        if (val) code = code.replaceAll(`{{${p.key}}}`, val);
+      });
+      const genArea = document.getElementById(`gen-${idx}`);
+      const genId = `gen-code-${idx}`;
+      genArea.innerHTML = `
+        <div class="params-title" style="margin-top:16px">Generated Output</div>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-lang">Generated Python</span>
+            <button class="copy-btn" id="copy-gen-${idx}">Copy</button>
+          </div>
+          <pre id="${genId}">${escHtml(code)}</pre>
+        </div>`;
+      document.getElementById(`copy-gen-${idx}`).addEventListener('click', () => {
+        navigator.clipboard.writeText(code).then(() => {
+          document.getElementById(`copy-gen-${idx}`).textContent = 'Copied!';
+          setTimeout(() => { document.getElementById(`copy-gen-${idx}`).textContent = 'Copy'; }, 2000);
+        });
+      });
+      showToast('success', '✓', 'Variant generated!');
+    });
+  });
+
+  document.getElementById('viewModal').classList.add('open');
+}
+
+function closeViewModal() {
+  document.getElementById('viewModal').classList.remove('open');
+}
+document.getElementById('vmClose').addEventListener('click', closeViewModal);
+document.getElementById('viewModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('viewModal')) closeViewModal();
+});
+
+// ===================== ADD / EDIT MODAL =====================
+function buildEmojiPicker() {
+  const ep = document.getElementById('emojiPicker');
+  ep.innerHTML = EMOJIS.map(e =>
+    `<div class="emoji-opt${e===selectedEmoji?' selected':''}" data-emoji="${e}">${e}</div>`
+  ).join('');
+  ep.querySelectorAll('.emoji-opt').forEach(el => {
+    el.addEventListener('click', () => {
+      selectedEmoji = el.dataset.emoji;
+      ep.querySelectorAll('.emoji-opt').forEach(x => x.classList.remove('selected'));
+      el.classList.add('selected');
+    });
+  });
+}
+
+function buildColorPicker() {
+  const cp = document.getElementById('colorPicker');
+  cp.innerHTML = COLORS.map((c, i) =>
+    `<div class="color-opt${i===selectedColorIdx?' selected':''}" data-idx="${i}" style="background:${c.text};"></div>`
+  ).join('');
+  cp.querySelectorAll('.color-opt').forEach(el => {
+    el.addEventListener('click', () => {
+      selectedColorIdx = parseInt(el.dataset.idx);
+      cp.querySelectorAll('.color-opt').forEach(x => x.classList.remove('selected'));
+      el.classList.add('selected');
+    });
+  });
+}
+
+let tplRows = [];
+
+function addTplRow(tplData) {
+  const id = uid();
+  const tpl = tplData || {name:'', desc:'', code:'', params:[]};
+  tplRows.push({id, tpl});
+  renderTplRows();
+}
+
+function renderTplRows() {
+  const builder = document.getElementById('templatesBuilder');
+  builder.innerHTML = '';
+  tplRows.forEach((row, ri) => {
+    const div = document.createElement('div');
+    div.className = 'template-builder-item';
+    const paramsStr = (row.tpl.params||[]).map(p => `${p.label}:${p.key}:${p.placeholder||''}`).join('\n');
+    div.innerHTML = `
+      <button class="remove-tpl-btn" data-id="${row.id}">✕</button>
+      <div class="form-section">
+        <label class="form-label">Template Name</label>
+        <input class="form-input tbl-name" data-id="${row.id}" placeholder="e.g. Basic Sync Pipeline" value="${escHtml(row.tpl.name)}">
+      </div>
+      <div class="form-section">
+        <label class="form-label">Description</label>
+        <input class="form-input tbl-desc" data-id="${row.id}" placeholder="Short description" value="${escHtml(row.tpl.desc)}">
+      </div>
+      <div class="form-section">
+        <label class="form-label">Code Template (use {{PARAM_KEY}} for placeholders)</label>
+        <textarea class="form-textarea tbl-code" data-id="${row.id}" style="min-height:140px;font-size:0.72rem">${escHtml(row.tpl.code)}</textarea>
+      </div>
+      <div class="form-section">
+        <label class="form-label">Parameters (one per line: Label:KEY:placeholder)</label>
+        <textarea class="form-textarea tbl-params" data-id="${row.id}" style="min-height:80px" placeholder="Database Host:DB_HOST:localhost&#10;Port:DB_PORT:5432">${escHtml(paramsStr)}</textarea>
+      </div>
+    `;
+    builder.appendChild(div);
+    div.querySelector('.remove-tpl-btn').addEventListener('click', () => {
+      tplRows = tplRows.filter(r => r.id !== row.id);
+      renderTplRows();
+    });
+    div.querySelector('.tbl-name').addEventListener('input', e => { const r = tplRows.find(x=>x.id===row.id); if(r) r.tpl.name = e.target.value; });
+    div.querySelector('.tbl-desc').addEventListener('input', e => { const r = tplRows.find(x=>x.id===row.id); if(r) r.tpl.desc = e.target.value; });
+    div.querySelector('.tbl-code').addEventListener('input', e => { const r = tplRows.find(x=>x.id===row.id); if(r) r.tpl.code = e.target.value; });
+    div.querySelector('.tbl-params').addEventListener('input', e => {
+      const r = tplRows.find(x=>x.id===row.id);
+      if (!r) return;
+      r.tpl.params = e.target.value.split('\n').filter(l=>l.trim()).map(l => {
+        const parts = l.split(':');
+        return {label: parts[0]||'', key: parts[1]||'', placeholder: parts[2]||''};
+      });
+    });
+  });
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('formModalTitle').textContent = 'New Integration Template';
+  document.getElementById('fName').value = '';
+  document.getElementById('fCategory').value = '';
+  document.getElementById('fDesc').value = '';
+  selectedEmoji = '🔗';
+  selectedColorIdx = 0;
+  tplRows = [];
+  buildEmojiPicker();
+  buildColorPicker();
+  renderTplRows();
+  document.getElementById('deleteCardBtn').style.display = 'none';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const intg = integrations.find(i => i.id === id);
+  if (!intg) return;
+  editingId = id;
+  document.getElementById('formModalTitle').textContent = 'Edit Integration Template';
+  document.getElementById('fName').value = intg.name;
+  document.getElementById('fCategory').value = intg.category;
+  document.getElementById('fDesc').value = intg.desc;
+  selectedEmoji = intg.icon;
+  selectedColorIdx = intg.colorIdx ?? 0;
+  tplRows = (intg.templates||[]).map(t => ({id: uid(), tpl: DEEP_CLONE(t)}));
+  buildEmojiPicker();
+  buildColorPicker();
+  renderTplRows();
+  document.getElementById('deleteCardBtn').style.display = 'inline-flex';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
+
+document.getElementById('addModalClose').addEventListener('click', closeAddModal);
+document.getElementById('cancelAdd').addEventListener('click', closeAddModal);
+document.getElementById('addModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('addModal')) closeAddModal();
+});
+document.getElementById('openAddModal').addEventListener('click', openAddModal);
+document.getElementById('addTplRow').addEventListener('click', () => addTplRow());
+
+document.getElementById('saveCard').addEventListener('click', () => {
+  const name = document.getElementById('fName').value.trim();
+  const category = document.getElementById('fCategory').value.trim();
+  if (!name || !category) { showToast('error', '⚠', 'Name and category are required.'); return; }
+
+  const templates = tplRows.map(r => ({
+    name: r.tpl.name || 'Unnamed',
+    desc: r.tpl.desc || '',
+    code: r.tpl.code || '',
+    params: r.tpl.params || [],
+  }));
+
+  if (editingId) {
+    const idx = integrations.findIndex(i => i.id === editingId);
+    if (idx >= 0) {
+      integrations[idx] = {...integrations[idx], name, category, desc: document.getElementById('fDesc').value.trim(), icon: selectedEmoji, colorIdx: selectedColorIdx, templates};
+    }
+    showToast('success', '✓', 'Integration updated!');
+  } else {
+    integrations.push({id: uid(), name, category, desc: document.getElementById('fDesc').value.trim(), icon: selectedEmoji, colorIdx: selectedColorIdx, templates});
+    showToast('success', '✓', 'Integration created!');
+  }
+  save();
+  renderAll();
+  closeAddModal();
+});
+
+document.getElementById('deleteCardBtn').addEventListener('click', () => {
+  if (!editingId) return;
+  if (!confirm('Delete this integration? This cannot be undone.')) return;
+  integrations = integrations.filter(i => i.id !== editingId);
+  save();
+  renderAll();
+  closeAddModal();
+  showToast('success', '🗑', 'Integration deleted.');
+});
+
+// ===================== SEARCH =====================
+document.getElementById('searchInput').addEventListener('input', renderAll);
+
+// ===================== EXPORT / IMPORT =====================
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(integrations, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `pipeline-hub-export-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  showToast('success', '⬇', 'Templates exported!');
+});
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('importInput').click();
+});
+
+document.getElementById('importInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) throw new Error('Invalid format');
+      integrations = data;
+      save();
+      renderAll();
+      showToast('success', '⬆', `Imported ${data.length} integrations!`);
+    } catch(err) {
+      showToast('error', '⚠', 'Invalid JSON file.');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+// ===================== TOAST =====================
+let toastTimer;
+function showToast(type, icon, msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastMsg').textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ===================== KEYBOARD =====================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeViewModal();
+    closeAddModal();
+  }
+});
+
+// ===================== INIT =====================
+renderAll();
+</script>
+</body>
+</html>
