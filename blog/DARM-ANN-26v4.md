@@ -1279,6 +1279,12 @@ The architecture remains true to its founding principles: intelligence close to 
 |P29   |9.4    |Distributed GRPO cost: T_GRPO = O(G · L · max_l(A_l) · T_inference)                     |
 
 -----
+[DARM-ANNv3](DARM-ANN-26v3.md)
+[DARM-ANNv4](DARM-ANN-26v4.md)
+[DARM-ANNv5](DARM-ANN-26v5.md)
+[DARM-ANNv6](DARM-ANN-26v6.md)
+[DARM-ANNv6-1](DARM-ANN-26v6-1.md)
+
 
 *This white paper is released under Creative Commons Attribution 4.0 International (CC BY 4.0).*  
 *Citation: Cybopsec Research (2026). DARM-ANN: Distributed Agentic Recursive Memory Networks, v4.0. Working White Paper.*  
