@@ -1,3 +1,0 @@
-<h1>README Veracode Application Testing SDK</h1>
-<p>VATS is a part of a Veracode SDK that is built to help in your application security risk management, configuration, and set up using veracode products and adjacent. This folder contains SPA that are built to provide analysis of data and provide visualizations, as well as help with further troubleshooting various situations in your Application Security Testing </p>
-<p> If you see something say something. Always happy for improvements. I have scanned and tested the code that makes it to the main branch. Please open up a pull request or message me around any issues you may see. Thank you</p>
