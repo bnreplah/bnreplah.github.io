@@ -1,0 +1,1975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>DARM-ANN v7.7 · Live Simulation Suite</title>
+<style>
+:root{
+  --bg:#040C18;--panel:#091525;--border:#162030;--dim:#0C1E30;
+  --tiny:#00D4FF;--mid:#4C9FFF;--xl:#A87BD4;--ara:#C4A8F5;
+  --gw:#2DD4BF;--sec:#FFB830;--byz:#FF4B6E;--ok:#00FF99;
+  --diag:#F5E642;--ora:#FF7A30;--text:#C8DCEE;--mut:#3A5470;--bright:#F0F8FF;
+  --t1:#00D4FF;--t2:#00B4E0;--t3:#4C9FFF;--t4:#A87BD4;--t5:#C4A8F5;
+  font-family:'Courier New',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:var(--panel)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+@keyframes pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes ring{0%{transform:scale(1);opacity:.8}100%{transform:scale(2.2);opacity:0}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+@keyframes heartbeat{0%,100%{transform:scale(1)}20%{transform:scale(1.2)}40%{transform:scale(1)}}
+
+/* ── HEADER ── */
+#hdr{position:sticky;top:0;z-index:100;background:rgba(4,12,24,.97);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:7px 10px 0}
+#hdr-top{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.logo{font-size:12px;font-weight:700;color:var(--tiny);letter-spacing:1.5px}
+.ver-tag{font-size:8px;padding:2px 6px;border:1px solid var(--border);
+  border-radius:8px;color:var(--mut)}
+#health-bar{margin-left:auto;display:flex;align-items:center;gap:5px}
+.hb-item{font-size:8px;display:flex;align-items:center;gap:3px}
+.hb-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+#tabs{display:flex}
+.tab{flex:1;padding:6px 2px;font-size:9px;text-align:center;cursor:pointer;
+  border:none;border-bottom:2px solid transparent;background:none;
+  color:var(--mut);transition:all .2s;letter-spacing:.5px}
+.tab:hover{color:var(--tiny)}
+.tab.act{color:var(--tiny);border-bottom-color:var(--tiny)}
+.tab.sim-tab.act{color:var(--diag);border-bottom-color:var(--diag)}
+
+/* ── PANES ── */
+.pane{display:none;padding:10px;animation:rise .2s ease}
+.pane.act{display:block}
+
+/* ── CARDS / UTILS ── */
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:9px;margin-bottom:7px}
+.card-t{font-size:10px;font-weight:700;margin-bottom:5px}
+.card-s{font-size:8px;color:var(--mut);margin-bottom:4px}
+.tag{font-size:8px;padding:2px 5px;border-radius:6px;display:inline-block;margin:1px}
+.pill{display:inline-flex;align-items:center;gap:3px;font-size:8px;
+  padding:2px 7px;border-radius:8px;margin:2px}
+.dot{width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.slbl{font-size:7px;letter-spacing:2px;text-transform:uppercase;
+  display:flex;align-items:center;gap:6px;margin:7px 0 5px;color:var(--mut)}
+.slbl::before,.slbl::after{content:'';flex:1;height:1px;background:currentColor;opacity:.3}
+.mem-strip{display:flex;gap:2px;margin:5px 0}
+.mc{flex:1;border-radius:4px;padding:3px 1px;text-align:center;
+  border:1px solid var(--border);transition:all .3s;font-size:7px;cursor:default}
+.mc.on{border-color:currentColor}
+.pool-g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:7px}
+.pc{border-radius:7px;border:1px solid var(--border);padding:6px;
+  background:var(--dim);font-size:8px}
+
+/* ── SIMULATION PANE ── */
+#sim-wrap{display:flex;flex-direction:column;gap:7px}
+
+/* scenario buttons */
+#scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.sc-btn{background:var(--dim);border:1px solid var(--border);
+  border-radius:9px;padding:8px 7px;cursor:pointer;transition:all .18s;
+  text-align:left;font-family:inherit}
+.sc-btn:hover{border-color:#224}
+.sc-btn.active{border-width:2px}
+.sc-btn .sc-icon{font-size:16px;margin-bottom:3px;display:block}
+.sc-btn .sc-title{font-size:9px;font-weight:700;display:block;margin-bottom:2px}
+.sc-btn .sc-desc{font-size:7px;color:var(--mut);display:block;line-height:1.4}
+
+/* canvas area */
+#cvs-wrap{position:relative;border-radius:11px;overflow:hidden;
+  border:1px solid var(--border);background:#030810}
+#sim-cvs{display:block;width:100%}
+#node-tip{position:absolute;background:rgba(9,21,37,.95);
+  border:1px solid var(--border);border-radius:7px;padding:7px 9px;
+  font-size:8px;pointer-events:none;display:none;z-index:20;max-width:180px;line-height:1.5}
+
+/* status bar */
+#status-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.sb-card{background:var(--panel);border:1px solid var(--border);
+  border-radius:7px;padding:6px 7px}
+.sb-val{font-size:15px;font-weight:700;line-height:1}
+.sb-lbl{font-size:7px;color:var(--mut);margin-top:2px}
+.sb-sub{font-size:8px;margin-top:1px}
+
+/* controls */
+#ctrl-bar{background:var(--panel);border:1px solid var(--border);
+  border-radius:9px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.cr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cl{font-size:8px;color:var(--mut);min-width:38px}
+input[type=range]{flex:1;accent-color:var(--tiny);height:14px;background:none;
+  -webkit-appearance:none;appearance:none}
+input[type=range]::-webkit-slider-runnable-track{height:3px;background:var(--border);border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;
+  border-radius:50%;background:var(--tiny);margin-top:-4.5px;box-shadow:0 0 5px var(--tiny)}
+.sval{font-size:8px;color:var(--mut);min-width:22px}
+.btn{border:1px solid var(--border);background:var(--dim);color:var(--text);
+  border-radius:6px;padding:5px 9px;font-size:9px;cursor:pointer;
+  transition:all .15s;font-family:inherit;white-space:nowrap}
+.btn:hover{background:var(--border)}
+.btn.pri{border-color:var(--tiny);color:var(--tiny)}
+.btn.pri:hover{background:rgba(0,212,255,.12)}
+.btn.danger{border-color:var(--byz);color:var(--byz)}
+.btn.danger:hover{background:rgba(255,75,110,.12)}
+.btn.warn{border-color:var(--diag);color:var(--diag)}
+.btn.warn:hover{background:rgba(245,230,66,.08)}
+.btn.ok{border-color:var(--ok);color:var(--ok)}
+.btn.ok:hover{background:rgba(0,255,153,.08)}
+
+/* ── EVENT LOG ── */
+#elog{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+#elog-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:6px 9px;border-bottom:1px solid var(--border);position:sticky;top:0;
+  background:var(--panel);z-index:2}
+#elog-hdr-title{font-size:9px;font-weight:700;color:var(--mut)}
+.elog-filters{display:flex;gap:3px}
+.ef{font-size:7px;padding:2px 5px;border-radius:4px;cursor:pointer;
+  border:1px solid var(--border);color:var(--mut);background:none;font-family:inherit}
+.ef.on{color:var(--bright)}
+#log-body{max-height:220px;overflow-y:auto;font-size:8px}
+.le{border-bottom:1px solid rgba(255,255,255,.03);animation:slideIn .18s ease}
+.le-main{display:flex;align-items:flex-start;gap:5px;padding:4px 9px;cursor:pointer}
+.le-main:hover{background:rgba(255,255,255,.02)}
+.le-ts{color:var(--mut);flex-shrink:0;font-size:7px;padding-top:1px;min-width:68px}
+.le-comp{font-size:7px;padding:1px 5px;border-radius:4px;flex-shrink:0;
+  font-weight:700;letter-spacing:.3px;min-width:58px;text-align:center}
+.le-icon{flex-shrink:0;font-size:10px;margin-top:-1px}
+.le-msg{flex:1;line-height:1.45;color:var(--text)}
+.le-toggle{font-size:8px;color:var(--mut);flex-shrink:0;padding-top:1px;user-select:none}
+.le-payload{display:none;padding:4px 9px 6px 44px;
+  font-size:7px;color:var(--mut);background:rgba(0,0,0,.2);
+  border-top:1px dashed rgba(255,255,255,.04);white-space:pre-wrap;line-height:1.6}
+.le-payload.vis{display:block}
+
+/* ── MEMORY / CDCP / ARA / TRAINING PANES ── */
+.tier-btn{flex:1;border:2px solid var(--border);background:var(--dim);
+  border-radius:7px;padding:6px 3px;cursor:pointer;transition:all .2s;
+  font-family:inherit;color:var(--mut);font-size:8px;text-align:center}
+.phase-btn{padding:4px 7px;border-radius:5px;border:1px solid var(--border);
+  background:var(--dim);color:var(--mut);font-size:8px;cursor:pointer;
+  transition:all .18s;font-family:inherit}
+.phase-item{display:flex;gap:5px;padding:5px 7px;border-radius:5px;
+  border:1px solid transparent;font-size:8px;background:var(--dim);margin-bottom:4px}
+.agent-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.ag{border-radius:7px;border:1px solid var(--border);padding:7px;
+  cursor:pointer;transition:all .18s;background:var(--dim)}
+.ag:hover,.ag.on{border-color:currentColor}
+.eq{background:#00000060;border-radius:5px;padding:7px;
+  font-size:9px;text-align:center;margin-top:5px;letter-spacing:.4px}
+
+/* NODE INSPECTOR */
+#inspector{position:fixed;bottom:0;left:0;right:0;height:62vh;background:#091422;
+  border-top:2px solid #152030;border-radius:14px 14px 0 0;z-index:500;
+  transform:translateY(100%);transition:transform .32s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.7)}
+#inspector.open{transform:translateY(0)}
+#idrag{width:36px;height:3px;background:#152030;border-radius:2px;margin:8px auto 4px;flex-shrink:0;cursor:pointer}
+#ihdr{flex-shrink:0;padding:5px 12px 7px;border-bottom:1px solid #152030}
+#irow1{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+#inico{font-size:18px}#intnm{font-size:13px;font-weight:700}#intsb{font-size:8px;color:#3A5470}
+#intcl{margin-left:auto;font-size:8px;padding:3px 9px;border:1px solid #152030;background:#0B1B2C;color:#3A5470;border-radius:5px;cursor:pointer;font-family:inherit}
+#intcl:hover{color:#C5DCF0}
+#ibadges{display:flex;gap:3px;flex-wrap:wrap}
+.ibg{font-size:6px;padding:1px 5px;border-radius:4px;border:1px solid;display:inline-block}
+#itabs{flex-shrink:0;display:flex;border-bottom:1px solid #152030}
+.itab{flex:1;padding:5px 2px;font-size:7px;text-align:center;cursor:pointer;
+  border:none;border-bottom:2px solid transparent;background:none;color:#3A5470;
+  transition:all .15s;font-family:inherit}
+.itab:hover{color:#C5DCF0}.itab.iac{border-bottom-color:currentColor}
+#ibody{flex:1;overflow-y:auto;padding:8px 12px 18px}
+/* Memory viz */
+.msec{margin-bottom:10px}
+.mhd{display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.mdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.mtit{font-size:8px;font-weight:700}.msb{font-size:6px;color:#3A5470;margin-left:auto}
+.wmbars{display:flex;gap:2px;height:32px;align-items:flex-end;background:rgba(0,0,0,.3);border-radius:4px;padding:3px;margin-bottom:2px}
+.wmbar{flex:1;border-radius:2px 2px 0 0;transition:height .4s,background .4s}
+.ebe{display:flex;align-items:flex-start;gap:4px;padding:4px 6px;border-radius:4px;border:1px solid #152030;background:rgba(0,0,0,.2);margin-bottom:3px}
+.ebc{flex:1;font-size:7px;line-height:1.4}.ebsc{font-size:6px;text-align:right;flex-shrink:0}
+.ebrb{height:3px;border-radius:2px;margin-top:2px;transition:width .5s}
+#stmcvs{border-radius:4px;border:1px solid #152030;display:block;width:100%;max-width:180px;image-rendering:pixelated}
+.stmst{display:flex;gap:8px;margin-top:3px;font-size:6px;color:#3A5470}
+.ltme{margin-bottom:4px;padding:5px 7px;border-radius:5px;border:1px solid #152030;background:rgba(0,0,0,.2)}
+.ltmc{font-size:7px;line-height:1.4;margin-bottom:3px}
+.ltmdr{display:flex;align-items:center;gap:5px}
+.ltmdb{flex:1;height:3px;background:#0B1B2C;border-radius:2px;overflow:hidden}
+.ltmdf{height:100%;border-radius:2px;transition:width 2s}
+.ltmm{font-size:6px;color:#3A5470}
+.rrcg{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.rrc1{background:rgba(0,0,0,.25);border:1px solid #152030;border-radius:5px;padding:6px}
+#qrow{display:flex;gap:4px;margin-top:8px}
+#qinp{flex:1;background:#0B1B2C;border:1px solid #152030;color:#C5DCF0;border-radius:5px;padding:5px 8px;font-size:8px;font-family:inherit}
+#qinp:focus{outline:none;border-color:#00D4FF}
+#qbtn{border:1px solid #00D4FF;background:rgba(0,212,255,.1);color:#00D4FF;border-radius:5px;padding:5px 8px;font-size:8px;cursor:pointer;font-family:inherit}
+#qres{margin-top:5px;background:rgba(0,0,0,.25);border:1px solid #152030;border-radius:5px;padding:6px;font-size:7px;display:none;line-height:1.55}
+.arag{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:5px;border:1px solid #152030;background:rgba(0,0,0,.2);margin-bottom:4px}
+.araic{font-size:13px}.aratt{font-size:8px;font-weight:700}.arasb2{font-size:6px;color:#3A5470;margin-top:1px}
+.aradot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-left:auto}
+.cdcpr{display:flex;align-items:center;gap:4px;padding:3px 5px;border-radius:4px;border:1px solid #152030;margin-bottom:3px;font-size:7px}
+.nconn{display:flex;align-items:center;gap:5px;padding:3px 5px;border-radius:4px;border:1px solid #152030;margin-bottom:3px;font-size:7px}
+.ovg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:7px}
+.ovc{background:rgba(0,0,0,.25);border:1px solid #152030;border-radius:5px;padding:6px}
+.ovv{font-size:14px;font-weight:700;line-height:1}.ovl{font-size:6px;color:#3A5470;margin-top:1px}
+/* Global memory modal */
+#gmem{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(3,12,22,.96);z-index:600;display:none;flex-direction:column;overflow:hidden}
+#gmem.open{display:flex}
+#gmemh{flex-shrink:0;display:flex;align-items:center;padding:9px 12px;border-bottom:1px solid #152030}
+#gmemh h3{font-size:10px;color:#00D4FF}
+#gmcl{margin-left:auto;border:1px solid #152030;background:#0B1B2C;color:#3A5470;border-radius:5px;padding:3px 9px;font-size:8px;cursor:pointer;font-family:inherit}
+#gmgrid{flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.gmc{background:#0B1B2C;border:1px solid #152030;border-radius:8px;padding:8px}
+.gmct{font-size:8px;font-weight:700;margin-bottom:4px}
+.gmbars{display:flex;gap:1px;height:20px;align-items:flex-end;margin-bottom:3px}
+.gmbar{flex:1;border-radius:1px 1px 0 0;transition:height .5s}
+.gmlst{font-size:6px;line-height:1.3;display:flex;flex-direction:column;gap:1px;max-height:58px;overflow:hidden}
+.gmle{padding:2px 4px;border-left:2px solid;border-radius:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@keyframes irise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div id="hdr-top">
+    <span class="logo">DARM-ANN</span>
+    <span class="ver-tag">v7.7</span>
+    <span class="ver-tag">Cybopsec</span>
+    <div id="health-bar">
+      <div class="hb-item"><div class="hb-dot" style="background:var(--ok);animation:pulse 2s infinite" id="hb-nodes"></div><span id="hb-nodes-lbl" style="color:var(--ok)">7/7</span></div>
+      <div class="hb-item"><div class="hb-dot" style="background:var(--sec)"></div><span id="hb-cdcp" style="color:var(--sec)">CDCP</span></div>
+      <div class="hb-item"><div class="hb-dot" style="background:var(--tiny)"></div><span id="hb-net" style="color:var(--tiny)">MESH</span></div>
+    </div>
+  </div>
+  <div id="tabs">
+    <button class="tab act" onclick="showTab('system',this)">System</button>
+    <button class="tab" onclick="showTab('memory',this)">Memory</button>
+    <button class="tab" onclick="showTab('cdcp',this)">CDCP</button>
+    <button class="tab" onclick="showTab('ara',this)">ARA</button>
+    <button class="tab" onclick="showTab('training',this)">Training</button>
+    <button class="tab sim-tab" onclick="showTab('simulate',this)">⚡ Simulate</button>
+  </div>
+</div>
+
+<!-- ══ SYSTEM PANE ══ -->
+<div id="pane-system" class="pane act">
+  <div class="card" style="border-color:var(--gw);box-shadow:0 0 10px rgba(45,212,191,.15)">
+    <div class="card-t" style="color:var(--gw)">APPLICATION LAYER</div>
+    <div class="card-s">Any OpenAI / Anthropic SDK · Zero code changes</div>
+    <span class="tag" style="background:rgba(45,212,191,.1);color:var(--gw);border:1px solid rgba(45,212,191,.3)">POST /v1/chat/completions</span>
+    <span class="tag" style="background:rgba(45,212,191,.1);color:var(--gw);border:1px solid rgba(45,212,191,.3)">POST /v1/messages</span>
+    <span class="tag" style="background:rgba(45,212,191,.1);color:var(--gw);border:1px solid rgba(45,212,191,.3)">SSE Streaming</span>
+    <span class="tag" style="background:rgba(45,212,191,.1);color:var(--gw);border:1px solid rgba(45,212,191,.3)">Tool Calling</span>
+  </div>
+  <div class="card" style="border-color:var(--sec)">
+    <div class="card-t" style="color:var(--sec)">🛡 GATEWAY — sMCP-1 v1.0</div>
+    <span class="tag" style="background:rgba(255,184,48,.1);color:var(--sec);border:1px solid rgba(255,184,48,.3)">FastAPI</span>
+    <span class="tag" style="background:rgba(255,184,48,.1);color:var(--sec);border:1px solid rgba(255,184,48,.3)">SPIFFE SVIDs</span>
+    <span class="tag" style="background:rgba(255,184,48,.1);color:var(--sec);border:1px solid rgba(255,184,48,.3)">Ed25519</span>
+    <span class="tag" style="background:rgba(255,184,48,.1);color:var(--sec);border:1px solid rgba(255,184,48,.3)">mTLS 1.3</span>
+    <span class="tag" style="background:rgba(255,184,48,.1);color:var(--sec);border:1px solid rgba(255,184,48,.3)">HMAC Audit</span>
+    <span class="tag" style="background:rgba(255,184,48,.1);color:var(--sec);border:1px solid rgba(255,184,48,.3)">Parallax Scheduler</span>
+    <div style="font-size:7px;color:var(--mut);background:rgba(0,0,0,.3);padding:4px 6px;border-radius:5px;margin-top:5px">
+      STDIO allowlist: npx · uvx · python · node · docker · deno | gVisor sandboxes
+    </div>
+  </div>
+  <div class="slbl" style="color:var(--tiny)">TIER 1 — TinyLM Swarm (1.5B · ≤80 mJ/tok)</div>
+  <div class="pool-g">
+    <div class="pc" style="border-color:var(--tiny)">
+      <div style="color:var(--tiny);font-weight:700;margin-bottom:2px">Pool A · Loihi 2</div>
+      <div class="mem-strip"><div class="mc on" style="color:var(--t1);border-color:var(--t1)">WM</div><div class="mc on" style="color:var(--t2);border-color:var(--t2)">EB</div><div class="mc">—</div><div class="mc">—</div><div class="mc">—</div></div>
+      <div style="color:var(--ara);font-size:7px">◆ ARA · NeuEdge SNN</div>
+    </div>
+    <div class="pc" style="border-color:var(--tiny)">
+      <div style="color:var(--tiny);font-weight:700;margin-bottom:2px">Pool B · Akida 2</div>
+      <div class="mem-strip"><div class="mc on" style="color:var(--t1);border-color:var(--t1)">WM</div><div class="mc on" style="color:var(--t2);border-color:var(--t2)">EB</div><div class="mc">—</div><div class="mc">—</div><div class="mc">—</div></div>
+      <div style="color:var(--ara);font-size:7px">◆ ARA · NeuEdge SNN</div>
+    </div>
+    <div class="pc" style="border-color:var(--tiny)">
+      <div style="color:var(--tiny);font-weight:700;margin-bottom:2px">Pool C · Jetson</div>
+      <div class="mem-strip"><div class="mc on" style="color:var(--t1);border-color:var(--t1)">WM</div><div class="mc on" style="color:var(--t2);border-color:var(--t2)">EB</div><div class="mc">—</div><div class="mc">—</div><div class="mc">—</div></div>
+      <div style="color:var(--ara);font-size:7px">◆ ARA · NeuEdge SNN</div>
+    </div>
+  </div>
+  <div class="slbl" style="color:var(--mid)">TIER 2 — Mid-Scale (15B · CDCP Orchestrator)</div>
+  <div class="card" style="border-color:var(--mid)">
+    <div class="card-t" style="color:var(--mid)">darmann-mid · A100/H100</div>
+    <div class="mem-strip"><div class="mc on" style="color:var(--t1);border-color:var(--t1)">WM</div><div class="mc on" style="color:var(--t2);border-color:var(--t2)">EB</div><div class="mc on" style="color:var(--t3);border-color:var(--t3)">STM</div><div class="mc">LTM</div><div class="mc">RRC</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:5px;font-size:8px">
+      <div style="background:rgba(76,159,255,.08);border:1px solid rgba(76,159,255,.2);border-radius:5px;padding:5px"><div style="color:var(--mid);font-weight:700">MLGRU + Mamba-2 + MoE</div><div style="color:var(--mut)">8 experts · 131K ctx</div></div>
+      <div style="background:rgba(255,184,48,.08);border:1px solid rgba(255,184,48,.2);border-radius:5px;padding:5px"><div style="color:var(--sec);font-weight:700">CDCP Orchestrator</div><div style="color:var(--mut)">N=4–8 · credibility softmax</div></div>
+    </div>
+    <div style="font-size:7px;color:var(--ara);margin-top:4px">◆ ARA — Full 6-agent topology (gVisor)</div>
+  </div>
+  <div class="slbl" style="color:var(--xl)">TIER 3 — Consolidator (70B+ · Hala Point)</div>
+  <div class="card" style="border-color:var(--xl)">
+    <div class="card-t" style="color:var(--xl)">darmann-xl · H100/B200 · 524K ctx</div>
+    <div class="mem-strip"><div class="mc on" style="color:var(--t1);border-color:var(--t1)">WM</div><div class="mc on" style="color:var(--t2);border-color:var(--t2)">EB</div><div class="mc on" style="color:var(--t3);border-color:var(--t3)">STM</div><div class="mc on" style="color:var(--t4);border-color:var(--t4)">LTM</div><div class="mc on" style="color:var(--t5);border-color:var(--t5)">RRC</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:5px;font-size:8px">
+      <div style="background:rgba(255,184,48,.08);border:1px solid rgba(255,184,48,.2);border-radius:5px;padding:5px"><div style="color:var(--sec);font-weight:700">CDCP Gatekeeper</div><div style="color:var(--mut)">BFT write-admission · NLI</div></div>
+      <div style="background:rgba(196,168,245,.08);border:1px solid rgba(196,168,245,.2);border-radius:5px;padding:5px"><div style="color:var(--t5);font-weight:700">MAGMA RRC</div><div style="color:var(--mut)">Semantic·Temporal·Causal·Entity</div></div>
+    </div>
+    <div style="font-size:7px;color:var(--ara);margin-top:4px">◆ ARA — Full 6-agent · OpenScholar 45M papers</div>
+  </div>
+</div>
+
+<!-- ══ MEMORY PANE ══ -->
+<div id="pane-memory" class="pane">
+  <div class="slbl">Five-Tier Memory Hierarchy</div>
+  <div style="display:flex;gap:3px;margin-bottom:8px" id="tier-btns">
+    <button class="tier-btn" onclick="selTier(0)" style="border-color:var(--t1);color:var(--t1)">T1<br>WM</button>
+    <button class="tier-btn" onclick="selTier(1)">T2<br>EB</button>
+    <button class="tier-btn" onclick="selTier(2)">T3<br>STM</button>
+    <button class="tier-btn" onclick="selTier(3)">T4<br>LTM</button>
+    <button class="tier-btn" onclick="selTier(4)">T5<br>RRC</button>
+  </div>
+  <div id="tier-det"></div>
+  <div class="slbl" style="margin-top:8px">D-MEM Critic Router</div>
+  <div class="card" style="border-color:var(--diag)">
+    <div class="card-t" style="color:var(--diag)">Dopamine-RPE Write Admission · arXiv 2603.14597</div>
+    <div class="eq" style="color:var(--diag)">RPE = min(1.0, 𝟙[Utility≥τ]·[Utility×(Surprise+β)])</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:7px;font-size:8px">
+      <div style="background:rgba(58,84,112,.2);border:1px solid var(--mut);border-radius:6px;padding:6px;text-align:center"><div style="color:var(--mut);font-weight:700">RPE &lt; 0.3</div><div style="color:var(--bright);font-size:10px;margin:3px 0">SKIP</div><div style="color:var(--mut)">Shadow O(1)</div></div>
+      <div style="background:rgba(76,159,255,.08);border:1px solid var(--mid);border-radius:6px;padding:6px;text-align:center"><div style="color:var(--mid);font-weight:700">0.3–0.7</div><div style="color:var(--bright);font-size:10px;margin:3px 0">CONSTRUCT</div><div style="color:var(--mut)">New EB node O(1)</div></div>
+      <div style="background:rgba(245,230,66,.06);border:1px solid var(--diag);border-radius:6px;padding:6px;text-align:center"><div style="color:var(--diag);font-weight:700">RPE ≥ 0.7</div><div style="color:var(--bright);font-size:10px;margin:3px 0">EVOLVE</div><div style="color:var(--mut)">STM update O(N)</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CDCP PANE ══ -->
+<div id="pane-cdcp" class="pane">
+  <div class="slbl">CDCP v2.0 — Byzantine Fault Tolerant Consensus</div>
+  <div class="card" style="border-color:var(--sec)">
+    <div class="card-t" style="color:var(--sec)">Live Consensus Ring · N=7 · f=2 Byzantine · 3f+1 Assumption</div>
+    <canvas id="cdcp-cvs" width="280" height="200" style="display:block;margin:4px auto;border-radius:7px;background:rgba(0,0,0,.3)"></canvas>
+    <div style="font-size:7px;color:var(--mut);text-align:center;margin-top:3px">Redraws every 2s · red=Byzantine · green=honest</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <div style="display:flex;gap:6px;padding:6px 8px;border-radius:6px;border:1px solid rgba(76,159,255,.3);background:rgba(76,159,255,.04);font-size:9px"><span style="color:var(--mid);font-weight:700;min-width:16px">①</span><span>Each node generates candidate δᵢ + credibility cᵢ (Attention Trust Score)</span></div>
+    <div style="display:flex;gap:6px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,184,48,.3);background:rgba(255,184,48,.04);font-size:9px"><span style="color:var(--sec);font-weight:700;min-width:16px">②</span><span>Credibility-weighted softmax aggregation → consensus δ̄</span></div>
+    <div style="display:flex;gap:6px;padding:6px 8px;border-radius:6px;border:1px solid rgba(245,230,66,.3);background:rgba(245,230,66,.04);font-size:9px"><span style="color:var(--diag);font-weight:700;min-width:16px">③</span><span>NLI pre-consolidation gate: reject if CONTRADICTION with LTM</span></div>
+    <div style="display:flex;gap:6px;padding:6px 8px;border-radius:6px;border:1px solid rgba(196,168,245,.3);background:rgba(196,168,245,.04);font-size:9px"><span style="color:var(--ara);font-weight:700;min-width:16px">④</span><span>SycophancyScore gate — adversarial debate if score &gt; 0.6</span></div>
+    <div style="display:flex;gap:6px;padding:6px 8px;border-radius:6px;border:1px solid rgba(0,255,153,.3);background:rgba(0,255,153,.04);font-size:9px"><span style="color:var(--ok);font-weight:700;min-width:16px">⑤</span><span>ADMIT → HMAC audit log + LTM write | REJECT → flag</span></div>
+  </div>
+  <div class="card" style="border-color:var(--xl);margin-top:7px">
+    <div class="eq" style="color:var(--xl)">‖δ̄ − δ*‖ ≤ f/(N-f) · max‖δᵢ − δ*‖ ≤ ½ · max‖δᵢ − δ*‖</div>
+  </div>
+</div>
+
+<!-- ══ ARA PANE ══ -->
+<div id="pane-ara" class="pane">
+  <div class="slbl">Autonomous Researcher Agent — Per Node Pool</div>
+  <div class="card" style="border-color:var(--ara)">
+    <div class="card-t" style="color:var(--ara)">Full agentic autonomy · gVisor isolated · CDCP-gated writes</div>
+    <div style="display:flex;gap:3px;flex-wrap:wrap">
+      <span class="pill" style="background:rgba(255,184,48,.1);color:var(--sec);border:1px solid rgba(255,184,48,.3)"><span class="dot" style="background:var(--sec)"></span>gVisor</span>
+      <span class="pill" style="background:rgba(196,168,245,.1);color:var(--ara);border:1px solid rgba(196,168,245,.3)"><span class="dot" style="background:var(--ara)"></span>OpenScholar 45M</span>
+      <span class="pill" style="background:rgba(0,212,255,.1);color:var(--tiny);border:1px solid rgba(0,212,255,.3)"><span class="dot" style="background:var(--tiny)"></span>NeuEdge SNN</span>
+      <span class="pill" style="background:rgba(168,123,212,.1);color:var(--xl);border:1px solid rgba(168,123,212,.3)"><span class="dot" style="background:var(--xl)"></span>CDCP-gated</span>
+    </div>
+  </div>
+  <div class="agent-grid" id="ara-grid"></div>
+  <div id="ara-det" style="display:none;animation:rise .2s ease"></div>
+</div>
+
+<!-- ══ TRAINING PANE ══ -->
+<div id="pane-training" class="pane">
+  <div class="slbl">Training Pipeline</div>
+  <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:7px" id="ph-btns"></div>
+  <div id="ph-det"></div>
+</div>
+
+<!-- ══ SIMULATE PANE ══ -->
+<div id="pane-simulate" class="pane">
+  <div id="sim-wrap">
+
+    <!-- Scenario selector -->
+    <div class="slbl">Select Scenario</div>
+    <div id="scenario-grid">
+      <button class="sc-btn" id="sc-connect" onclick="setSc('connect',this)">
+        <span class="sc-icon">🔗</span>
+        <span class="sc-title" style="color:var(--gw)">Connection Setup</span>
+        <span class="sc-desc">New node joins swarm · SPIFFE auth · mTLS handshake · CDCP quorum update</span>
+      </button>
+      <button class="sc-btn" id="sc-internet" onclick="setSc('internet',this)">
+        <span class="sc-icon">🌐</span>
+        <span class="sc-title" style="color:var(--mid)">Internet Access</span>
+        <span class="sc-desc">External fetch via sMCP-1 · gVisor sandbox · NLI safety · memory routing</span>
+      </button>
+      <button class="sc-btn" id="sc-llm" onclick="setSc('llm',this)">
+        <span class="sc-icon">🤖</span>
+        <span class="sc-title" style="color:var(--tiny)">LLM Inference</span>
+        <span class="sc-desc">Full pipeline · tokenize · KV cache · speculative decode · memory update</span>
+      </button>
+      <button class="sc-btn" id="sc-ha" onclick="setSc('ha',this)">
+        <span class="sc-icon">🔄</span>
+        <span class="sc-title" style="color:var(--ok)">HA Swarm Repair</span>
+        <span class="sc-desc">Node failure · heartbeat detection · auto-reroute · hot standby · recovery</span>
+      </button>
+      <button class="sc-btn" id="sc-token" onclick="setSc('token',this)">
+        <span class="sc-icon">⚡</span>
+        <span class="sc-title" style="color:var(--diag)">Token Generation</span>
+        <span class="sc-desc">Speculative decode · TSLT compression · 3-tier pyramid verification</span>
+      </button>
+      <button class="sc-btn" id="sc-byzantine" onclick="setSc('byzantine',this)">
+        <span class="sc-icon">⚠️</span>
+        <span class="sc-title" style="color:var(--byz)">Byzantine Attack</span>
+        <span class="sc-desc">Rogue node detected · credibility softmax · NLI gate · HMAC audit</span>
+      </button>
+      <button class="sc-btn" id="sc-memory" onclick="setSc('memory',this)">
+        <span class="sc-icon">🧠</span>
+        <span class="sc-title" style="color:var(--ara)">Memory Write</span>
+        <span class="sc-desc">D-MEM RPE gating · CDCP consensus · LTM admission · Weibull decay</span>
+      </button>
+      <button class="sc-btn" id="sc-energy" onclick="setSc('energy',this)">
+        <span class="sc-icon">🔋</span>
+        <span class="sc-title" style="color:var(--ora)">Energy Comparison</span>
+        <span class="sc-desc">GPU frontier vs TinyLM Loihi 2 vs NSLLM · live mJ/token benchmarks</span>
+      </button>
+    </div>
+
+    <!-- Canvas -->
+    <div id="cvs-wrap">
+      <canvas id="sim-cvs"></canvas>
+      <div id="node-tip"></div>
+    </div>
+
+    <!-- Status Bar -->
+    <div id="status-bar">
+      <div class="sb-card">
+        <div class="sb-val" id="sv-tokens" style="color:var(--tiny)">0</div>
+        <div class="sb-lbl">Tokens</div>
+        <div class="sb-sub" id="sv-tps" style="color:var(--mut)">0 tok/s</div>
+      </div>
+      <div class="sb-card">
+        <div class="sb-val" id="sv-energy" style="color:var(--diag)">0.0</div>
+        <div class="sb-lbl">mJ/token</div>
+        <div class="sb-sub" id="sv-ratio" style="color:var(--ok)">—</div>
+      </div>
+      <div class="sb-card">
+        <div class="sb-val" id="sv-nodes" style="color:var(--ok)">7</div>
+        <div class="sb-lbl">Active Nodes</div>
+        <div class="sb-sub" id="sv-health" style="color:var(--ok)">HEALTHY</div>
+      </div>
+      <div class="sb-card">
+        <div class="sb-val" id="sv-cdcp" style="color:var(--xl)">0</div>
+        <div class="sb-lbl">CDCP Admissions</div>
+        <div class="sb-sub" id="sv-byz" style="color:var(--mut)">0 rejected</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div id="ctrl-bar">
+      <div class="cr">
+        <span class="cl">Speed</span>
+        <input type="range" id="spd" min="0.3" max="4" step="0.1" value="1" oninput="setSpeed(this)">
+        <span class="sval" id="spd-v">1×</span>
+        <button class="btn pri" id="btn-run" onclick="simToggle()">▶ Run</button>
+        <button class="btn" onclick="simReset()">⟳ Reset</button>
+      </div>
+      <div class="cr">
+        <button class="btn danger" onclick="quickFault()">⚠ Inject Fault</button>
+        <button class="btn warn" onclick="quickMem()">🧠 Force Mem Write</button>
+        <button class="btn ok" onclick="addExtraNode()">+ Add Node</button>
+        <button class="btn" onclick="simStep()" style="border-color:var(--ara);color:var(--ara)">Step ›</button>
+      </div>
+    </div>
+
+    <!-- Event Log -->
+    <div id="elog">
+      <div id="elog-hdr">
+        <span id="elog-hdr-title">EVENT LOG <span id="log-count" style="color:var(--mut)">0 entries</span></span>
+        <div class="elog-filters">
+          <button class="ef on" id="ef-all" onclick="setFilter('all')">ALL</button>
+          <button class="ef" id="ef-sec" onclick="setFilter('sec')" style="color:var(--sec)">SEC</button>
+          <button class="ef" id="ef-net" onclick="setFilter('net')" style="color:var(--tiny)">NET</button>
+          <button class="ef" id="ef-mem" onclick="setFilter('mem')" style="color:var(--ara)">MEM</button>
+          <button class="ef" id="ef-err" onclick="setFilter('err')" style="color:var(--byz)">ERR</button>
+          <button class="btn" onclick="clearLog()" style="padding:2px 6px;font-size:7px">✕ clear</button>
+        </div>
+      </div>
+      <div id="log-body"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════
+   COLORS & CONSTANTS
+══════════════════════════════ */
+const C={
+  bg:'#040C18',panel:'#091525',border:'#162030',dim:'#0C1E30',
+  tiny:'#00D4FF',mid:'#4C9FFF',xl:'#A87BD4',ara:'#C4A8F5',
+  gw:'#2DD4BF',sec:'#FFB830',byz:'#FF4B6E',ok:'#00FF99',
+  diag:'#F5E642',ora:'#FF7A30',text:'#C8DCEE',mut:'#3A5470',
+  t1:'#00D4FF',t2:'#00B4E0',t3:'#4C9FFF',t4:'#A87BD4',t5:'#C4A8F5',
+  internet:'#50FA7B',standby:'#8BE9FD',
+};
+
+/* ══════════════════════════════
+   TAB NAVIGATION
+══════════════════════════════ */
+function showTab(id,el){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('act'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('act'));
+  document.getElementById('pane-'+id).classList.add('act');
+  el.classList.add('act');
+  if(id==='cdcp') drawCDCP();
+  if(id==='simulate') initSim();
+}
+
+/* ══════════════════════════════
+   MEMORY VIEW
+══════════════════════════════ */
+const TIERS=[
+  {id:'T1',name:'Working Memory',abbr:'WM',color:'#00D4FF',bio:"Baddeley's Phonological Loop",
+   impl:"Mamba-2 SSM hidden state h_t ∈ ℝᴺ · O(N) recurrence · zero explicit write cost",
+   update:"Every token · auto-updated by substrate layer",capacity:"ctx window × state dim",
+   eq:"h_t = Āh_{t-1} + B̄x_t ,  y_t = Ch_t + Dx_t",nodes:"All tiers"},
+  {id:'T2',name:'Episodic Buffer',abbr:'EB',color:'#00B4E0',bio:"Baddeley Episodic Buffer",
+   impl:"Learned cross-attention KV store · 4,096 slots · in-process at clause boundaries",
+   update:"D-MEM: RPE ≥ θ_high = 0.7",capacity:"4,096 slots per node",
+   eq:"EB(q) = softmax(qK_EB^T/√d_k) · V_EB",nodes:"All tiers"},
+  {id:'T3',name:'Short-Term Memory',abbr:'STM',color:'#4C9FFF',bio:"Hippocampal Rapid Encoding",
+   impl:"Titans gradient memory W_STM — weight-level, updated in forward pass",
+   update:"Gradient descent on assoc. memory loss · surprise-gated η_t",capacity:"64K params (mid)",
+   eq:"W_STM^(t) = W_STM^(t-1) − η_t∇ℓ_mem + m_t",nodes:"Mid · XL"},
+  {id:'T4',name:'Long-Term Memory',abbr:'LTM',color:'#A87BD4',bio:"Neocortical Consolidation",
+   impl:"Slow-weight W_LTM · Weibull temporal decay · CDCP-gated only",
+   update:"CDCP consensus write-admission ONLY — never per-token",capacity:"Unbounded · Weibull-pruned",
+   eq:"w_i(t) = exp(−(Δτᵢ/η)^κ)",nodes:"XL only"},
+  {id:'T5',name:'MAGMA RRC',abbr:'RRC',color:'#C4A8F5',bio:"Semantic LTM / Reconstructive Recall",
+   impl:"4-graph: Semantic·Temporal·Causal·Entity · Zep bi-temporal KG · HARMONY ANN",
+   update:"CDCP-gated writes · ABAC read filtering · SPIFFE attributed",capacity:"Distributed · HARMONY + Zep",
+   eq:"C_t = {μ ∈ TopK(q_t) | ACL(μ,u) ∧ w(Δτ_μ) ≥ θ}",nodes:"XL only"}
+];
+let activeTier=0;
+function selTier(i){
+  activeTier=i;
+  document.querySelectorAll('.tier-btn').forEach((b,j)=>{
+    b.style.borderColor=i===j?TIERS[j].color:'var(--border)';
+    b.style.color=i===j?TIERS[j].color:'var(--mut)';
+  });
+  const t=TIERS[i];
+  document.getElementById('tier-det').innerHTML=`
+  <div style="border:2px solid ${t.color};border-radius:9px;padding:9px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div><div style="font-size:13px;font-weight:700;color:${t.color}">${t.id} — ${t.name}</div>
+           <div style="font-size:8px;color:var(--mut)">${t.bio}</div></div>
+      <span style="font-size:8px;padding:2px 7px;border-radius:7px;background:${t.color}18;color:${t.color};border:1px solid ${t.color}33">${t.nodes}</span>
+    </div>
+    ${[['Implementation',t.impl],['Update Rule',t.update],['Capacity',t.capacity]].map(([l,v])=>`
+    <div style="border-radius:5px;padding:6px;border:1px solid ${t.color}20;background:${t.color}08;margin-bottom:4px;font-size:8px">
+      <div style="color:${t.color};font-weight:700;margin-bottom:2px">${l}</div>
+      <div style="color:var(--text)">${v}</div>
+    </div>`).join('')}
+    <div class="eq" style="color:${t.color}">${t.eq}</div>
+  </div>`;
+}
+selTier(0);
+
+/* ══════════════════════════════
+   CDCP RING
+══════════════════════════════ */
+function drawCDCP(){
+  const cv=document.getElementById('cdcp-cvs'); if(!cv)return;
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height,cx=W/2,cy=H/2,R=76;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(0,0,W,H);
+  const N=7,nodes=Array.from({length:N},(_,i)=>({
+    byz:i>=5, c:(i>=5?Math.random()*.1+.02:Math.random()*.14+.13).toFixed(2),
+    x:cx+R*Math.cos(i/N*Math.PI*2-Math.PI/2),
+    y:cy+R*Math.sin(i/N*Math.PI*2-Math.PI/2)
+  }));
+  nodes.forEach(n=>{
+    ctx.beginPath();ctx.moveTo(n.x,n.y);ctx.lineTo(cx,cy);
+    ctx.strokeStyle=n.byz?'#FF4B6E33':'#00FF9933';ctx.lineWidth=n.byz?1:1.5;
+    ctx.setLineDash(n.byz?[4,4]:[]);ctx.stroke();ctx.setLineDash([]);
+  });
+  // center
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,24);
+  g.addColorStop(0,'rgba(255,184,48,.35)');g.addColorStop(1,'rgba(255,184,48,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,24,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,20,0,Math.PI*2);
+  ctx.strokeStyle='#FFB830';ctx.lineWidth=2;ctx.shadowBlur=8;ctx.shadowColor='#FFB830';ctx.stroke();ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(9,21,37,.9)';ctx.beginPath();ctx.arc(cx,cy,18,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#FFB830';ctx.font='bold 7px monospace';ctx.textAlign='center';
+  ctx.fillText('CDCP',cx,cy-2);ctx.fillStyle='#00FF99';ctx.fillText('GATE',cx,cy+8);
+  nodes.forEach((n,i)=>{
+    const col=n.byz?'#FF4B6E':'#00FF99';
+    ctx.shadowBlur=n.byz?0:6;ctx.shadowColor=col;
+    ctx.beginPath();ctx.arc(n.x,n.y,15,0,Math.PI*2);
+    ctx.strokeStyle=col;ctx.lineWidth=n.byz?1:1.5;ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(9,21,37,.9)';ctx.beginPath();ctx.arc(n.x,n.y,13,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=col;ctx.font='bold 7px monospace';ctx.textAlign='center';
+    ctx.fillText(n.byz?'BYZ':'N'+i,n.x,n.y-2);
+    ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='5.5px monospace';
+    ctx.fillText('c='+n.c,n.x,n.y+7);
+  });
+}
+setInterval(()=>{if(document.getElementById('pane-cdcp').classList.contains('act'))drawCDCP();},2200);
+
+/* ══════════════════════════════
+   ARA VIEW
+══════════════════════════════ */
+const AGENTS=[
+  {id:'sup',icon:'⎔',label:'Supervisor',color:'#C4A8F5',
+   role:'Async task scheduler · priority queue from LTM gaps + CDCP deficits + autonomous seeds',
+   inputs:['LTM gap analysis','CDCP swarm deficits','Autonomous hypothesis seeds'],
+   outputs:['Priority task queue','Compute budget allocation']},
+  {id:'gen',icon:'◈',label:'Generation',color:'#4C9FFF',
+   role:'Hypothesis ideation via OpenScholar (45M papers) · uses ARA STM to avoid dead ends',
+   inputs:['Research directions from Supervisor','ARA STM prior attempts'],
+   outputs:['Candidate hypotheses','Experimental designs']},
+  {id:'ref',icon:'◇',label:'Reflection',color:'#F5E642',
+   role:'Critique + NLI gate + drift monitor (KL>0.15) + sycophancy detection',
+   inputs:['Generation output','LTM content for NLI check'],
+   outputs:['Filtered hypotheses','Drift alerts']},
+  {id:'rnk',icon:'△',label:'Ranking',color:'#2DD4BF',
+   role:'Elo-tournament pairwise comparison · all proposals anonymized',
+   inputs:['Filtered hypotheses'],outputs:['Ranked Elo list']},
+  {id:'prx',icon:'○',label:'Proximity',color:'#FF7A30',
+   role:'Cluster for diversity · prevent memetic drift across node pools',
+   inputs:['Ranked hypotheses'],outputs:['Diverse set ≤3/cluster']},
+  {id:'evo',icon:'☆',label:'Evolution',color:'#FFB830',
+   role:'Variant generation + gVisor micro-experiments',
+   inputs:['Top-ranked hypotheses'],outputs:['Empirically validated findings']},
+  {id:'met',icon:'⬡',label:'Meta-Review',color:'#A87BD4',
+   role:'Synthesis → CDCP proposal → STM/LTM gate',
+   inputs:['All agent outputs'],outputs:['Memory delta → CDCP gate']},
+];
+let selAgent=null;
+function buildARA(){
+  document.getElementById('ara-grid').innerHTML=AGENTS.map(a=>`
+  <div class="ag" id="ag-${a.id}" onclick="selARA('${a.id}')" style="color:${a.color}">
+    <div style="font-size:17px;margin-bottom:2px">${a.icon}</div>
+    <div style="font-size:9px;font-weight:700;color:${a.color}">${a.label}</div>
+    <div style="font-size:7px;color:var(--mut);margin-top:2px;line-height:1.4">${a.role.split('·')[0]}</div>
+  </div>`).join('');
+}
+function selARA(id){
+  selAgent=selAgent===id?null:id;
+  document.querySelectorAll('.ag').forEach(c=>c.classList.remove('on'));
+  const det=document.getElementById('ara-det');
+  if(!selAgent){det.style.display='none';return;}
+  document.getElementById('ag-'+selAgent).classList.add('on');
+  const a=AGENTS.find(x=>x.id===selAgent);
+  det.style.display='block';
+  det.innerHTML=`<div style="border:2px solid ${a.color};border-radius:9px;padding:9px;margin-top:5px">
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
+      <span style="font-size:20px">${a.icon}</span>
+      <div><div style="font-size:12px;font-weight:700;color:${a.color}">${a.label} Agent</div>
+           <div style="font-size:8px;color:var(--mut)">${a.role}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:8px">
+      <div style="background:${a.color}10;border:1px solid ${a.color}25;border-radius:5px;padding:6px">
+        <div style="color:${a.color};font-weight:700;margin-bottom:3px">Inputs</div>
+        ${a.inputs.map(i=>`<div style="color:var(--mut);padding:1px 0">→ ${i}</div>`).join('')}
+      </div>
+      <div style="background:${a.color}10;border:1px solid ${a.color}25;border-radius:5px;padding:6px">
+        <div style="color:${a.color};font-weight:700;margin-bottom:3px">Outputs</div>
+        ${a.outputs.map(o=>`<div style="color:var(--mut);padding:1px 0">← ${o}</div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+buildARA();
+
+/* ══════════════════════════════
+   TRAINING VIEW
+══════════════════════════════ */
+const PHASES=[
+  {l:'P0',t:'Architecture-First',c:'#3A5470',items:['config.json · configuration_darmann.py · modeling_darmann.py','darmann_memory_spec.json · darmann_cdcp_spec.json · darmann_swarm_spec.json','Weight init: Mamba-2 per Dao & Gu 2024 · MLGRU ternary via STE','Titans STM near-zero · CDCP weights uniform (equal credibility)']},
+  {l:'P1',t:'DiLoCo Pre-Training',c:'#4C9FFF',items:['H=500 inner AdamW steps · Nesterov outer · 500× bandwidth reduction vs sync SGD','DiLoCo-BFT: Byzantine-flagged pseudo-gradients excluded from outer step','Matryoshka loss: L_xl + 0.3·L_mid + 0.1·L_tiny + 0.05·L_CDCP + 0.02·L_mem','Training corpus: C4 · The Pile · ROOTS + LoCoMo/LongMemEval synthetic tasks']},
+  {l:'P2',t:'SFT',c:'#2DD4BF',items:['Instruction following: Alpaca · ShareGPT · OpenHermes','Memory-augmented tasks: multi-session · long-horizon planning','ARA-generated training data from pre-training ARA subsystem']},
+  {l:'P3',t:'INTELLECT-2 GRPO',c:'#FFB830',items:['PRIME-RL · async distributed GRPO · outperforms QwQ-32B on math+coding','SHARDCAST-DM: SPIFFE-signed policy weight broadcast','TOPLOC original: rollout authenticity · TOPLOC-BFT: + NLI gate on memory proposals','r_total = r_task + λ_m·r_memory − λ_d·r_drift']},
+  {l:'P4',t:'Branch-Train-MiX',c:'#A87BD4',items:['Domain specialists: security · biomedical · code · law','TIES-Merging + DARE sparsification','θ_merged = θ_base + (1/K)∑ DARE(Δ^(k))']},
+  {l:'P5',t:'Neuromorphic',c:'#00D4FF',items:['Surrogate gradient SNN training (native — 15-25% better vs ANN→SNN)','BitNet ternary quantization via STE · NSLLM sigma-delta verification','Lava-DL microcode + double-RMSNorm fusion · KL-div validation < 0.01']},
+  {l:'P6¹',t:'On-Chip STM (2027)',c:'#F5E642',items:['Multi-core neuromorphic backprop (Nature Comms, Mar 2026)','190-330% Jetson Orin perf · on-chip STM gradient updates','Gate: F1 within 5% GPU-STM · ≤1mJ per update']},
+];
+let selPhase=0;
+function buildTraining(){
+  document.getElementById('ph-btns').innerHTML=PHASES.map((p,i)=>`
+  <button class="phase-btn ${i===0?'active':''}" id="pb-${i}" onclick="selPh(${i})"
+    style="${i===0?`border-color:${p.c};color:${p.c}`:''}">${p.l}</button>`).join('');
+  renderPh(0);
+}
+function selPh(i){
+  selPhase=i;
+  document.querySelectorAll('.phase-btn').forEach((b,j)=>{
+    b.style.borderColor=i===j?PHASES[j].c:'var(--border)';
+    b.style.color=i===j?PHASES[j].c:'var(--mut)';
+  });
+  renderPh(i);
+}
+function renderPh(i){
+  const p=PHASES[i];
+  document.getElementById('ph-det').innerHTML=`
+  <div style="border:2px solid ${p.c};border-radius:9px;padding:9px;animation:rise .2s ease">
+    <div style="font-size:12px;font-weight:700;color:${p.c};margin-bottom:7px">${p.l} — ${p.t}</div>
+    ${p.items.map(it=>`<div class="phase-item" style="border-color:${p.c}20;background:${p.c}06">
+      <span style="color:${p.c}">◆</span><span style="font-size:8px;color:var(--text)">${it}</span>
+    </div>`).join('')}
+  </div>`;
+}
+buildTraining();
+
+/* ══════════════════════════════
+   SIMULATION ENGINE
+══════════════════════════════ */
+let SIM=null,simInited=false,logFilter='all',logEntries=[];
+
+// ─ Particle ─
+class Particle{
+  constructor(sx,sy,ex,ey,col,lbl,spd,cb){
+    this.sx=sx;this.sy=sy;this.ex=ex;this.ey=ey;
+    this.col=col;this.lbl=lbl||'';this.spd=spd||.018;
+    this.t=0;this.cb=cb||null;this.done=false;this.trail=[];this.sz=4.5;
+  }
+  cp(){return{x:(this.sx+this.ex)/2+(this.ey-this.sy)*.22,y:(this.sy+this.ey)/2-(this.ex-this.sx)*.22};}
+  pos(){const c=this.cp(),t=this.t;return{x:(1-t)*(1-t)*this.sx+2*(1-t)*t*c.x+t*t*this.ex,y:(1-t)*(1-t)*this.sy+2*(1-t)*t*c.y+t*t*this.ey};}
+  update(spd){
+    this.t=Math.min(1,this.t+this.spd*spd);
+    const p=this.pos();this.trail.push({x:p.x,y:p.y});
+    if(this.trail.length>14)this.trail.shift();
+    if(this.t>=1&&!this.done){this.done=true;if(this.cb)this.cb();}
+  }
+  draw(ctx){
+    this.trail.forEach((pt,i)=>{
+      const a=i/this.trail.length*.45;
+      ctx.beginPath();ctx.arc(pt.x,pt.y,this.sz*.38,0,Math.PI*2);
+      ctx.fillStyle=this.col+Math.floor(a*255).toString(16).padStart(2,'0');ctx.fill();
+    });
+    const p=this.pos();
+    ctx.shadowBlur=10;ctx.shadowColor=this.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,this.sz,0,Math.PI*2);ctx.fillStyle=this.col;ctx.fill();
+    ctx.shadowBlur=0;
+    if(this.lbl){
+      const w=this.lbl.length*5+10;
+      ctx.fillStyle='rgba(4,12,24,.88)';
+      ctx.beginPath();ctx.roundRect(p.x+7,p.y-8,w,12,3);ctx.fill();
+      ctx.fillStyle=this.col;ctx.font='7px monospace';ctx.textAlign='left';
+      ctx.fillText(this.lbl,p.x+11,p.y+0.5);
+    }
+  }
+}
+
+// ─ Burst ─
+class Burst{
+  constructor(x,y,col,n=8){
+    this.x=x;this.y=y;this.col=col;this.t=0;
+    this.ps=Array.from({length:n},(_,i)=>({a:i/n*Math.PI*2,s:Math.random()*1.5+.5}));
+  }
+  update(){this.t+=.055;}
+  draw(ctx){
+    this.ps.forEach(p=>{
+      const r=p.s*this.t*14,a=Math.max(0,1-this.t/1.1);
+      ctx.beginPath();ctx.arc(this.x+Math.cos(p.a)*r,this.y+Math.sin(p.a)*r,2.2,0,Math.PI*2);
+      ctx.fillStyle=this.col+Math.floor(a*200).toString(16).padStart(2,'0');ctx.fill();
+    });
+  }
+  done(){return this.t>1.1;}
+}
+
+// ─ Ring effect ─
+class Ring{
+  constructor(x,y,col){this.x=x;this.y=y;this.col=col;this.t=0;}
+  update(){this.t+=.04;}
+  draw(ctx){
+    const r=this.t*35,a=Math.max(0,1-this.t);
+    ctx.beginPath();ctx.arc(this.x,this.y,r,0,Math.PI*2);
+    ctx.strokeStyle=this.col+Math.floor(a*160).toString(16).padStart(2,'0');
+    ctx.lineWidth=2;ctx.stroke();
+  }
+  done(){return this.t>1.4;}
+}
+
+// ─ Main Simulation Class ─
+class DARMANNSim{
+  constructor(cvs){
+    this.cvs=cvs;this.ctx=cvs.getContext('2d');
+    this.W=cvs.width;this.H=cvs.height;
+    this.running=false;this.speed=1;
+    this.particles=[];this.bursts=[];this.rings=[];
+    this.tick=0;this.mode='connect';
+    this.heartbeats=[];this.heartbeatTick=0;
+    this.raf=null;this.scenarioTimer=0;
+    this.failedNodes=new Set();this.recoveringNodes=new Set();
+    this.extraNodes=[];this.standbyNode=null;
+    this.haPhase=0;this.llmPhase=0;
+    this.stats={tokens:0,energy:0,cdcpOk:0,cdcpFail:0,byz:0,nodes:7};
+    this.startTime=Date.now();
+    this.buildNodes();
+  }
+
+  buildNodes(){
+    const W=this.W,H=this.H;
+    // Base layout
+    this.nodes={
+      client:  {x:W*.5,  y:20,  r:16, label:'CLIENT',   color:C.gw,  sub:'SDK'},
+      gw:      {x:W*.5,  y:64,  r:18, label:'GATEWAY',  color:C.sec, sub:'sMCP-1'},
+      internet:{x:W*.88, y:40,  r:14, label:'NET',      color:C.internet, sub:'internet', hidden:true},
+      tinyA:   {x:W*.16, y:140, r:16, label:'TINY-A',   color:C.tiny,sub:'Loihi 2'},
+      tinyB:   {x:W*.5,  y:140, r:16, label:'TINY-B',   color:C.tiny,sub:'Akida 2'},
+      tinyC:   {x:W*.84, y:140, r:16, label:'TINY-C',   color:C.tiny,sub:'Jetson'},
+      mid:     {x:W*.5,  y:210, r:20, label:'MID',      color:C.mid, sub:'15B · CDCP'},
+      xl:      {x:W*.5,  y:286, r:23, label:'XL',       color:C.xl,  sub:'70B · LTM'},
+    };
+    this.nodeState={};
+    Object.keys(this.nodes).forEach(k=>this.nodeState[k]={pulse:0,active:false,hb:0});
+  }
+
+  n(id){return this.nodes[id];}
+
+  fire(from,to,col,lbl,cb,delay=0){
+    const nf=this.n(from),nt=this.n(to);if(!nf||!nt)return;
+    const p=new Particle(nf.x,nf.y,nt.x,nt.y,col,lbl,.016*this.speed,()=>{
+      this.activate(to,450);
+      this.bursts.push(new Burst(nt.x,nt.y,col));
+      if(cb)cb();
+    });
+    if(delay)setTimeout(()=>this.particles.push(p),delay);
+    else this.particles.push(p);
+  }
+
+  activate(id,dur=500){
+    if(!this.nodeState[id])return;
+    this.nodeState[id].active=true;
+    this.nodeState[id].pulse=1;
+    setTimeout(()=>{if(this.nodeState[id])this.nodeState[id].active=false;},dur);
+  }
+
+  ring(id,col){
+    const nd=this.n(id);if(!nd)return;
+    this.rings.push(new Ring(nd.x,nd.y,col||nd.color));
+  }
+
+  drawConnections(){
+    const ctx=this.ctx;
+    const pairs=[['client','gw'],['gw','tinyA'],['gw','tinyB'],['gw','tinyC'],
+                 ['tinyA','mid'],['tinyB','mid'],['tinyC','mid'],['mid','xl']];
+    this.extraNodes.forEach(id=>{if(this.n(id))pairs.push(['gw',id]);});
+    if(this.standbyNode&&this.n(this.standbyNode))pairs.push(['gw',this.standbyNode]);
+
+    pairs.forEach(([a,b])=>{
+      const na=this.n(a),nb=this.n(b);if(!na||!nb)return;
+      const aFail=this.failedNodes.has(a)||this.failedNodes.has(b);
+      const aRec=this.recoveringNodes.has(a)||this.recoveringNodes.has(b);
+      ctx.beginPath();ctx.moveTo(na.x,na.y);ctx.lineTo(nb.x,nb.y);
+      ctx.strokeStyle=aFail?'rgba(255,75,110,.2)':aRec?'rgba(0,255,153,.15)':'rgba(22,32,48,.9)';
+      ctx.lineWidth=1;ctx.setLineDash(aFail?[4,5]:[3,4]);ctx.stroke();ctx.setLineDash([]);
+    });
+
+    // internet connection when visible
+    if(!this.n('internet').hidden){
+      const ng=this.n('gw'),ni=this.n('internet');
+      ctx.beginPath();ctx.moveTo(ng.x,ng.y);ctx.lineTo(ni.x,ni.y);
+      ctx.strokeStyle='rgba(80,250,123,.25)';ctx.lineWidth=1;
+      ctx.setLineDash([3,4]);ctx.stroke();ctx.setLineDash([]);
+    }
+  }
+
+  drawNode(id){
+    const nd=this.n(id);if(!nd||nd.hidden)return;
+    const ctx=this.ctx,st=this.nodeState[id]||{};
+    const failed=this.failedNodes.has(id);
+    const recovering=this.recoveringNodes.has(id);
+    const color=failed?C.byz:recovering?C.ok:nd.color;
+    const active=st.active||failed;
+
+    // Heartbeat pulse
+    if(st.hb>0){
+      ctx.beginPath();ctx.arc(nd.x,nd.y,nd.r+st.hb*8,0,Math.PI*2);
+      ctx.strokeStyle=nd.color+(Math.floor((1-st.hb)*80)).toString(16).padStart(2,'0');
+      ctx.lineWidth=1;ctx.stroke();
+      st.hb=Math.max(0,st.hb-.04);
+    }
+
+    if(active){ctx.shadowBlur=14;ctx.shadowColor=color;}
+    ctx.beginPath();ctx.arc(nd.x,nd.y,nd.r+2,0,Math.PI*2);
+    ctx.strokeStyle=color+(active?'66':'18');ctx.lineWidth=1;ctx.stroke();
+
+    ctx.beginPath();ctx.arc(nd.x,nd.y,nd.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(9,21,37,${active?.96:.88})`;ctx.fill();
+    ctx.strokeStyle=color;ctx.lineWidth=active?2:1;ctx.stroke();
+    ctx.shadowBlur=0;
+
+    // Label
+    ctx.fillStyle=active?color:color+'AA';
+    ctx.font=`bold ${Math.max(6,nd.r*.44)}px monospace`;ctx.textAlign='center';
+    ctx.fillText(nd.label,nd.x,nd.y+(nd.r<16?2:1));
+    if(nd.r>=16){
+      ctx.fillStyle='rgba(255,255,255,.3)';
+      ctx.font=`${nd.r*.28}px monospace`;
+      ctx.fillText(nd.sub,nd.x,nd.y+nd.r*.62);
+    }
+    if(failed){
+      ctx.fillStyle='#FF4B6EDD';ctx.font='bold 8px monospace';
+      ctx.fillText('✕ FAIL',nd.x,nd.y-nd.r-5);
+    }
+    if(recovering){
+      ctx.fillStyle='#00FF99DD';ctx.font='7px monospace';
+      ctx.fillText('↺ RCVR',nd.x,nd.y-nd.r-5);
+    }
+    if(id===this.standbyNode){
+      ctx.fillStyle=C.standby+'CC';ctx.font='7px monospace';
+      ctx.fillText('STBY',nd.x,nd.y-nd.r-5);
+    }
+  }
+
+  drawSwarmHealth(){
+    const ctx=this.ctx;
+    const total=Object.keys(this.nodes).filter(k=>!this.nodes[k].hidden).length+this.extraNodes.length;
+    const alive=total-this.failedNodes.size;
+    const txt=`NODES ${alive}/${total}`;
+    const col=this.failedNodes.size>0?C.byz:C.ok;
+    ctx.font='bold 7px monospace';ctx.textAlign='left';
+    ctx.fillStyle='rgba(9,21,37,.8)';ctx.fillRect(4,this.H-16,txt.length*5+8,13);
+    ctx.fillStyle=col;ctx.fillText(txt,8,this.H-7);
+  }
+
+  /* ─ SCENARIOS ─ */
+
+  // 1. CONNECTION ESTABLISHMENT
+  runConnect(){
+    if(this.tick!==1)return;
+    log('NET','GATEWAY','🔗','New node bootstrap request received','Incoming connection from unregistered TinyLM node\nIP: 192.168.7.41:9900\nPeer type: TinyLM · Loihi 2 substrate');
+    const id='tinyNew';
+    const W=this.W;
+    this.nodes[id]={x:W*.85,y:195,r:14,label:'NEW',color:'#888',sub:'pending'};
+    this.nodeState[id]={pulse:0,active:false,hb:0};
+    log('SEC','sMCP-1','🔐','Phase 1: SPIFFE CSR generation initiated','Node generating Ed25519 keypair...\nAlgorithm: Ed25519\nKey size: 256-bit\nSPIFFE URI: spiffe://darmann.cybopsec.com/tier/tiny/pool-new/node-0');
+
+    setTimeout(()=>{
+      this.fire(id,'gw',C.sec,'CSR',()=>{
+        log('SEC','SPIRE','🔐','CSR received · validating node bootstrap token','Token: eyJhbGciOiJFZDI1NTE5...\nBootstrap challenge: PASSED\nChain of trust: Cybopsec Root CA');
+        log('SEC','SPIRE','📜','Issuing SPIFFE SVID (Ed25519)','URI SAN: spiffe://darmann.cybopsec.com/tier/tiny/pool-new/node-0\nSerial: 0x3F8A12C9\nExpiry: 24h (auto-renew at 80%)');
+        setTimeout(()=>{
+          this.fire('gw',id,C.sec,'SVID',()=>{
+            log('SEC','NEW-NODE','✅','SVID received · initiating mTLS 1.3 handshake','ClientHello → ServerHello\nTLS_AES_256_GCM_SHA384\nPeer cert verified: SPIFFE chain ✓');
+            setTimeout(()=>{
+              this.fire(id,'gw',C.gw,'mTLS✓',()=>{
+                log('NET','GATEWAY','🔗','mTLS handshake complete · mutual authentication verified','Session established\nCipher: TLS_AES_256_GCM_SHA384\nSNI: darmann-gateway.cybopsec.com\nPFS: X25519 ECDHE');
+                this.nodes[id].color=C.tiny;this.nodes[id].label='TINY-D';this.nodes[id].sub='new·auth';
+                this.ring(id,C.ok);
+                log('NET','GATEWAY','📡','Updating DHT routing table · node announced to swarm','New route: TINY-D ↔ MID · MID ↔ TINY-D\nLayer assignment: blocks [0-15]\nMatryoshka slice: [0:512]');
+                setTimeout(()=>{
+                  ['tinyA','tinyB','tinyC'].forEach((n,i)=>{
+                    setTimeout(()=>{
+                      this.fire('gw',n,C.ok,'ACK',()=>{
+                        log('NET',n.toUpperCase(),'👋','New peer acknowledged','Peer: TINY-D · Heartbeat period: 3s\nLatency probe: 12ms');
+                      });
+                    },i*200);
+                  });
+                  setTimeout(()=>{
+                    this.fire(id,'mid',C.sec,'CDCP-JOIN',()=>{
+                      log('CDCP','MID','⚖️','CDCP quorum updated · N+1 node added','Previous N: 7 · New N: 8\nf_max updated: ⌊(8-1)/3⌋ = 2 Byzantine\nNew TINY-D credibility: 0.10 (bootstrap)\nQuorum: HEALTHY');
+                      this.stats.nodes=8;updateStats(this);
+                      setTimeout(()=>{
+                        this.fire('mid',id,C.xl,'QUORUM-OK',()=>{
+                          log('NET','TINY-D','✅','Node fully joined swarm · sending first heartbeat','Health status: HEALTHY\nActive tiers: WM + EB\nARA: initializing gVisor sandbox...\nEnergy baseline: measuring...');
+                          this.nodeState[id].hb=1;
+                        });
+                      },400);
+                    });
+                  },800);
+                },600);
+              });
+            },300);
+          });
+        },400);
+      });
+    },500);
+  }
+
+  // 2. INTERNET ACCESS
+  runInternet(){
+    if(this.tick!==1)return;
+    this.nodes['internet'].hidden=false;
+    const url='https://arxiv.org/abs/2601.03236';
+    log('ARA','ARA-TINY-A','🔬','Research request: fetch external paper',`URL: ${url}\nPurpose: MAGMA multi-graph memory evaluation data\nTriggered by: LTM gap analysis`);
+    log('SEC','sMCP-1','🔐','Domain validation against allowlist','Checking: arxiv.org → ALLOWED DOMAIN ✓\nMethod: exact domain match\nAllowlist: arxiv.org · doi.org · semanticscholar.org · pubmed.ncbi.nlm.nih.gov');
+
+    setTimeout(()=>{
+      this.fire('tinyA','gw',C.internet,'FETCH-REQ',()=>{
+        log('SEC','sMCP-1','📦','Spawning gVisor sandbox for external fetch','Container: runsc · no host FS · no inference pathway access\nNetwork: restricted egress · arxiv.org:443 only\nRAM cap: 512MB · CPU: 0.5 core');
+        log('NET','GATEWAY','🌐','DNS resolution: arxiv.org → 54.156.12.33','Resolver: system · TTL: 300s\nConnecting: TLS 1.3 to 54.156.12.33:443');
+        setTimeout(()=>{
+          this.fire('gw','internet',C.internet,'GET',()=>{
+            log('NET','INTERNET','📥','200 OK · Content-Type: text/html · 142KB','Title: MAGMA: Multi-Graph Agentic Memory Architecture\nAuthors: Jiang et al. · arXiv 2601.03236\nAbstract extracted: 312 tokens');
+            setTimeout(()=>{
+              this.fire('internet','gw',C.ok,'200 OK',()=>{
+                log('SEC','sMCP-1','🔍','Content safety check: NLI pass','Checking for: prompt injection · malicious instructions · policy violations\nNLI result: SAFE\ngVisor destroying sandbox...');
+                log('ARA','ARA-TINY-A','🧠','Content routed to ARA Generation pipeline','Extracted: 5 key findings\nBest LoCoMo judge score: 0.70\nRouting to memory proposal...');
+                setTimeout(()=>{
+                  this.fire('gw','tinyA',C.ara,'CONTENT',()=>{
+                    log('ARA','ARA-TINY-A','📚','Indexing into OpenScholar local index','Embedding: 1536-dim · L2 normalized\nIndex: HNSW · ef=200 · M=16\nDocument added to semantic graph');
+                    setTimeout(()=>{
+                      this.fire('tinyA','mid',C.xl,'MEM-PROP',()=>{
+                        log('CDCP','MID','⚖️','CDCP: evaluating memory proposal','D-MEM RPE score: 0.82 (FULL_EVOLVE)\nSurprise: 0.74 (novel content)\nNLI check: NOT_CONTRADICTION ✓\nAdmitting to LTM...');
+                        setTimeout(()=>{
+                          this.fire('mid','xl',C.t4,'LTM-WRITE',()=>{
+                            log('MEM','XL','✅','LTM updated · MAGMA paper indexed','Key: magma_2601.03236\nDecay: Weibull η=365d κ=1.2\nHMAC: sha256:8af2c...\nSandbox: destroyed ✓');
+                            this.stats.cdcpOk++;this.nodes['internet'].hidden=true;updateStats(this);
+                          });
+                        },400);
+                      });
+                    },300);
+                  });
+                },500);
+              });
+            },600);
+          });
+        },400);
+      });
+    },300);
+  }
+
+  // 3. FULL LLM INFERENCE
+  runLLM(){
+    if(this.tick!==1)return;
+    const prompt='Explain Byzantine fault tolerance in distributed AI memory systems';
+    log('NET','CLIENT','🤖','Inference request received',`Prompt: "${prompt}"\nModel: darmann-mid\nMax tokens: 256\nStream: true\nTools: enabled`);
+    log('NET','GATEWAY','⚡','Tokenizing prompt','Tokenizer: Llama-3 BPE · vocab: 32,000\nPrompt tokens: [1045 2054 2003 1996 2368 5950...]\nToken count: 11\nKV Cache: checking...');
+
+    setTimeout(()=>{
+      this.fire('client','gw',C.gw,'PROMPT',()=>{
+        const cacheHit=Math.random()>.5;
+        if(cacheHit){
+          log('MEM','MID','💾','KV Cache: PARTIAL HIT · 6/11 tokens cached','Cached prefix: "Explain Byzantine"\nCache hit ratio: 55%\nReusing 6 key-value pairs\nOnly 5 tokens need fresh computation');
+        } else {
+          log('MEM','MID','💾','KV Cache: MISS · full forward pass required','No cached context for this prompt\nAllocating KV cache: 11 × 32 × 128 = 45,056 floats\nPagedAttention blocks: 3 allocated');
+        }
+        log('NET','GATEWAY','📡','Dispatching to TinyLM pools (parallel draft)','Pools: TINY-A · TINY-B · TINY-C\nDraft tokens per pool: γ=5\nTSLT top-K: 200 logits per token (1.6KB vs 128KB full vocab)');
+
+        // draft phase
+        ['tinyA','tinyB','tinyC'].forEach((pool,pi)=>{
+          setTimeout(()=>{
+            this.fire('gw',pool,C.tiny,'DRAFT',()=>{
+              const tokens=['"Byzantine"','"fault"','"tolerance"','"in"','"distributed"'];
+              log('MEM',pool.toUpperCase(),'⚡',`Draft: ${tokens.join(' ')}`,`WM updated: Mamba-2 h_t → h_{t+5}\nEB consulted: 2 relevant entries retrieved\nSTM check: 0 relevant entries\nDraft latency: ${8+Math.floor(Math.random()*6)}ms\nEnergy: ${(5*78).toFixed(0)}mJ`);
+              setTimeout(()=>{
+                this.fire(pool,'mid',C.tiny,'DRAFT×5+TSLT',()=>{
+                  const acc=3+Math.floor(Math.random()*2);
+                  log('NET','MID','🎯',`Qualify: ${acc}/5 tokens accepted (τ=0.85)`,`Accepted: "${tokens.slice(0,acc).join(' ')}"\nRejected at token ${acc+1}: p_draft=${(.3+Math.random()*.3).toFixed(2)} < p_target threshold\nResample from mid distribution`);
+                  this.stats.tokens+=acc;this.stats.energy+=acc*79;
+                  if(pi===2){// after all three pools
+                    setTimeout(()=>{
+                      this.fire('mid','xl',C.mid,'VERIFY',()=>{
+                        log('MEM','XL','🔍','Consolidator: final verification pass','Verifying accepted prefix against LTM...\nLTM match: BFT definition confirmed ✓\nRRC query: MAGMA semantic graph → 2 relevant chunks retrieved\nOutput committed');
+                        log('MEM','MID','💾','Post-inference memory update','WM: updated with new context\nEB: 1 new entry (Surprise=0.61, RPE=0.74→CONSTRUCT)\nSTM gradient: ‖∇ℓ_mem‖=0.082 → weight update Δ=-0.003\nLTM: no write (RPE=0.61 < threshold)');
+                        setTimeout(()=>{
+                          this.fire('xl','mid',C.ok,'TOKENS',()=>{
+                            this.fire('mid','gw',C.gw,'STREAM',()=>{
+                              this.fire('gw','client',C.gw,'SSE ✓',null,0);
+                              log('NET','CLIENT','✅','Response streamed via SSE',`Tokens generated: ${this.stats.tokens}\nEnergy: ${(this.stats.energy/this.stats.tokens).toFixed(1)} mJ/token\nTotal latency: 42ms\nFormat: data:{...}\\n\\n × ${this.stats.tokens}`);
+                              updateStats(this);
+                            });
+                          });
+                        },300);
+                      });
+                    },400);
+                  }
+                });
+              },200+pi*80);
+            });
+          },pi*120);
+        });
+      });
+    },300);
+  }
+
+  // 4. HIGH AVAILABILITY & SWARM REPAIR
+  runHA(){
+    if(this.tick!==1)return;
+    this.haPhase=1;
+    log('NET','SWARM','💓','Phase 1: Normal operation · heartbeat monitoring active','Heartbeat period: 3s\nTimeout threshold: 9s (3× missed)\nAll nodes: HEALTHY\nCDCP quorum: N=7, f=2');
+
+    // heartbeats
+    let hbCount=0;
+    const hbInterval=setInterval(()=>{
+      hbCount++;
+      if(this.haPhase===1){
+        ['tinyA','tinyB','tinyC'].forEach(n=>{if(this.nodeState[n])this.nodeState[n].hb=1;});
+        if(this.nodeState['mid'])this.nodeState['mid'].hb=.7;
+        if(hbCount===3){
+          clearInterval(hbInterval);
+          this.haPhase=2;this.failedNodes.add('tinyB');
+          log('NET','TINY-B','❌','NODE FAILURE DETECTED · Loihi 2 substrate crash','Last heartbeat: 9.2s ago\nThreshold: 9s · TIMEOUT\nReason: Loihi 2 power cycle (simulated hardware fault)\nPID: 14292 · Exit code: SIGKILL');
+          log('NET','MID','⚠️','Heartbeat timeout: TINY-B · escalating to XL','Consecutive missed: 3\nAlert type: NODE_DOWN\nCDCP impact: N reduced to 6 · f_max still = 2 (SAFE MARGIN)');
+          this.fire('mid','xl',C.byz,'HB-FAIL',()=>{
+            log('CDCP','XL','⚖️','CDCP: quorum assessment','Previous N=7, f=2 → New N=6, f=2\nBFT condition: N > 3f+1 = 7 → 6 > 7 = FALSE\n⚠ DEGRADED: BFT guarantees suspended until N restored');
+            log('NET','GATEWAY','🔀','Phase 2: Traffic rerouting initiated','TINY-B layers [0-15] redistributed:\n→ TINY-A: blocks 0-7 (was 0-15)\n→ TINY-C: blocks 8-15 (was 0-15)\nParallax scheduler: updating routing table...');
+            this.haPhase=3;
+            ['tinyA','tinyC'].forEach((n,i)=>{
+              setTimeout(()=>{
+                this.fire('gw',n,C.ora,'REROUTE',()=>{
+                  log('NET',n.toUpperCase(),'🔀','Accepting redistributed layer blocks','Layer assignment expanded\nThroughput: +50% load accepted\nPerformance: monitoring...');
+                });
+              },i*200);
+            });
+
+            // Standby activation
+            setTimeout(()=>{
+              log('NET','GATEWAY','🌱','Phase 3: Activating hot standby node','Standby: STANDBY-D (pre-authenticated, layer weights loaded)\nLocation: same availability zone\nActivation time target: <2s');
+              const W=this.W;
+              this.standbyNode='standby';
+              this.nodes['standby']={x:W*.7,y:195,r:14,label:'STBY',color:C.standby,sub:'activating'};
+              this.nodeState['standby']={pulse:0,active:false,hb:0};
+              this.fire('gw','standby',C.standby,'ACTIVATE',()=>{
+                this.nodes['standby'].label='TINY-D';this.nodes['standby'].sub='replacing B';
+                this.nodes['standby'].color=C.tiny;
+                log('NET','STANDBY','✅','Hot standby activated · layer weights already loaded','Loihi 2 substrate: online\nLayer blocks [0-15]: loaded from snapshot (saved every 60s)\nSPIFFE SVID: pre-issued · still valid\nAuthentication: SKIP (pre-auth)');
+                this.haPhase=4;
+
+                // recovery
+                setTimeout(()=>{
+                  log('CDCP','MID','⚖️','Phase 4: CDCP quorum recovery','N restored to 7 (STANDBY-D replacing TINY-B)\nBFT condition: 7 > 3(2)+1 = 7 ✓\nStatus: CDCP BFT guarantees RESTORED');
+                  this.fire('standby','mid',C.ok,'REJOIN',()=>{
+                    log('CDCP','XL','✅','CDCP quorum re-established · system HEALTHY','N=7, f=2 · BFT guarantees active\nAll LTM writes resuming normal admission\nSycophancy monitor: recalibrating baseline');
+                    this.stats.nodes=7;updateStats(this);
+                    this.haPhase=5;
+
+                    // original node recovery
+                    setTimeout(()=>{
+                      log('NET','TINY-B','♻️','Phase 5: Original node TINY-B recovering','Hardware power cycle complete\nLoihi 2 substrate: booting...\nLayer weights: reloading from last checkpoint\nRe-joining swarm...');
+                      this.failedNodes.delete('tinyB');this.recoveringNodes.add('tinyB');
+                      setTimeout(()=>{
+                        this.fire('tinyB','gw',C.ok,'REJOIN',()=>{
+                          this.recoveringNodes.delete('tinyB');this.ring('tinyB',C.ok);
+                          this.standbyNode=null;
+                          log('NET','TINY-B','✅','TINY-B fully recovered · swarm now N=8','TINY-D (standby) remains as additional capacity\nCDCP: N=8, f_max=2 → enhanced fault tolerance\nAll nodes: HEALTHY · HA cycle complete');
+                          this.stats.nodes=8;updateStats(this);
+                          document.getElementById('sv-health').textContent='HEALTHY';
+                          document.getElementById('sv-health').style.color=C.ok;
+                          document.getElementById('hb-nodes-lbl').textContent='8/8';
+                        });
+                      },600);
+                    },3000);
+                  });
+                },1200);
+              });
+            },1500);
+          });
+        }
+      }
+    },1800);
+  }
+
+  // 5. TOKEN GENERATION
+  runToken(){
+    if(this.tick%110!==0)return;
+    const queries=['What is CDCP consensus?','How does Loihi 2 work?','Explain matryoshka nesting.','Summarize DARM-ANN v7.7.'];
+    const q=queries[Math.floor(Math.random()*queries.length)];
+    log('NET','CLIENT','⚡',`Token generation: "${q}"`,`Tokens: ${4+Math.floor(Math.random()*4)} input tokens\nMode: speculative decode · γ=5`);
+    this.fire('client','gw',C.gw,'REQ',()=>{
+      ['tinyA','tinyB','tinyC'].forEach((p,i)=>{
+        setTimeout(()=>{
+          this.fire('gw',p,C.tiny,'DRAFT',()=>{
+            const acc=3+Math.floor(Math.random()*2);
+            this.stats.tokens+=acc;this.stats.energy+=acc*79;
+            this.fire(p,'mid',C.tiny,'TSLT×5',()=>{
+              log('NET','MID','🎯',`Qualify: ${acc}/5 accepted (τ=0.85)`,`TSLT savings: ${((128-1.6)/128*100).toFixed(0)}% bandwidth reduction`);
+              if(i===2)setTimeout(()=>{
+                this.fire('mid','xl',C.mid,'VERIFY',()=>{
+                  this.fire('xl','mid',C.ok,'OK',()=>{
+                    this.fire('mid','gw',C.gw,'STREAM',()=>{
+                      this.fire('gw','client',C.gw,'SSE',null);
+                      log('NET','CLIENT','✅',`Response streamed · ${this.stats.tokens} total tokens`,`mJ/token: ${(this.stats.energy/this.stats.tokens).toFixed(1)}`);
+                      updateStats(this);
+                    });
+                  });
+                });
+              },300);
+            });
+          });
+        },i*100);
+      });
+    });
+  }
+
+  // 6. BYZANTINE ATTACK
+  runByzantine(){
+    if(this.tick%130!==0)return;
+    const victim=['tinyA','tinyB','tinyC'][Math.floor(Math.random()*3)];
+    log('ERR','SECURITY','⚠️',`Byzantine fault: ${victim} sending malicious CDCP proposal`,`Attack type: semantic poisoning\nPayload: false memory update (contradicts LTM facts)\nNode credibility: historically 0.15 → now suspicious`);
+    this.stats.byz++;
+    this.fire(victim,'mid',C.byz,'BYZ-PROP',()=>{
+      const c=(Math.random()*.06+.01).toFixed(2);
+      log('CDCP','MID','⚖️',`Credibility weight: c=${c} (Byzantine threshold)`,`Honest avg: 0.15 · Byzantine: ${c}\nCredibility softmax: Byzantine influence = ${(parseFloat(c)/.6*100).toFixed(1)}%\nThreshold: < 10% dominant → QUARANTINE`);
+      ['tinyA','tinyB','tinyC'].filter(n=>n!==victim).forEach((n,i)=>{
+        setTimeout(()=>{
+          this.fire(n,'mid',C.ok,'HONEST',()=>{
+            log('CDCP',n.toUpperCase(),'✅',`Honest proposal submitted · c=${(Math.random()*.14+.13).toFixed(2)}`,'Proposal: consistent with LTM\nNLI check: NOT_CONTRADICTION');
+          });
+        },(i+1)*150);
+      });
+      setTimeout(()=>{
+        log('CDCP','MID','🔍','NLI gate: checking Byzantine proposal against LTM','Checking: proposed_delta ∧ W_LTM ⊨ ⊥ ?');
+        setTimeout(()=>{
+          log('CDCP','MID','❌','CONTRADICTION DETECTED · Byzantine proposal rejected','NLI score: 0.93 (CONTRADICTION)\nAction: REJECT · audit flag\nHMAC: byzantine_blocked · seq:'+Math.floor(Math.random()*9000+1000));
+          log('SEC','HMAC-CHAIN','🔐','Audit entry: byzantine_attempt_blocked',`Node: ${victim}\nProposal hash: sha256:${Math.random().toString(36).substr(2,8)}...\nTimestamp: ${new Date().toISOString()}\nPrev hash chained ✓`);
+          this.fire('mid','xl',C.ok,'HONEST-δ',()=>{
+            log('CDCP','XL','✅','Honest consensus committed to LTM','Byzantine influence in final δ̄: ~2%\nBFT bound: ‖δ̄-δ*‖ ≤ ½ · max‖δᵢ-δ*‖ ✓');
+            this.stats.cdcpOk++;updateStats(this);
+          });
+        },400);
+      },700);
+    });
+  }
+
+  // 7. MEMORY WRITE
+  runMemory(){
+    if(this.tick%140!==0)return;
+    const inputs=['DARM-ANN achieves 78mJ/token on Loihi 2','MAGMA LoCoMo judge score: 0.71','CP-WBFT: 85.7% BFT at f=2','ARA research cycle: 3J total energy'];
+    const inp=inputs[Math.floor(Math.random()*inputs.length)];
+    const surprise=(Math.random()*.7+.2).toFixed(2);
+    const utility=(Math.random()*.7+.2).toFixed(2);
+    const rpe=Math.min(1,(parseFloat(utility)*(parseFloat(surprise)+.4))).toFixed(2);
+    const route=rpe>=.7?'FULL_EVOLVE':rpe>=.3?'CONSTRUCT':'SKIP';
+    log('MEM','D-MEM','🧠',`Input: "${inp}"`,`Surprise (Z-score cosine): ${surprise}\nUtility (LLM score): ${utility}\nRPE = min(1, ${utility}×(${surprise}+0.4)) = ${rpe}\nDecision: ${route}`);
+    this.fire('gw','mid',rpe>=.7?C.diag:rpe>=.3?C.mid:C.mut,'D-MEM',()=>{
+      if(route==='SKIP'){log('MEM','MID','⏭','SKIP: shadow buffer only · no memory write','Cost: O(1) · no tier update');return;}
+      if(route==='CONSTRUCT'){log('MEM','MID','📎','CONSTRUCT: new EB node inserted','KV pair: (query_embed, value_embed)\nSlot: 1847/4096\nCost: O(1)');return;}
+      log('CDCP','MID','⚖️','FULL_EVOLVE: initiating CDCP consensus round','All nodes submitting STM gradient proposals...');
+      ['tinyA','tinyB','tinyC'].forEach((n,i)=>{
+        setTimeout(()=>{
+          this.fire('mid',n,C.xl,'CDCP-REQ',()=>{
+            const cr=(Math.random()*.14+.13).toFixed(2);
+            log('CDCP',n.toUpperCase(),'📮',`Proposal submitted · c=${cr}`,`STM delta: ‖Δ‖=${(Math.random()*.1).toFixed(4)}\nGradient norm: ${(Math.random()*.05).toFixed(4)}`);
+            setTimeout(()=>this.fire(n,'mid',C.xl,'VOTE'),150);
+          });
+        },i*100);
+      });
+      setTimeout(()=>{
+        const ok=Math.random()>.15;
+        if(ok){
+          log('CDCP','MID','✅','NLI check PASSED · consensus delta admitted',`NLI: NOT_CONTRADICTION\nWeighted δ̄ computed · writing to STM...`);
+          this.fire('mid','xl',C.xl,'ADMIT',()=>{
+            log('MEM','XL','💾','STM weight update committed','‖W_STM^(t) - W_STM^(t-1)‖ = 0.003\nMomentum m_t updated\nHMAC: ltm_write_admitted chained ✓');
+            this.stats.cdcpOk++;updateStats(this);
+          });
+        } else {
+          log('CDCP','MID','❌','NLI: CONTRADICTION · update rejected','Proposed delta conflicts with existing LTM content\nFlagged for human review · HMAC logged');
+          this.stats.cdcpFail++;updateStats(this);
+        }
+      },900);
+    });
+  }
+
+  // 8. ENERGY COMPARISON
+  runEnergy(){
+    if(this.tick%55!==0)return;
+    const gpu=290+Math.random()*160,tiny=65+Math.random()*18,nsllm=80+Math.random()*15,edge=18+Math.random()*12;
+    log('BENCH','ENERGY','🔋','Energy efficiency snapshot',`GPU frontier (70B+): ${gpu.toFixed(0)} mJ/token\nTinyLM Loihi 2:       ${tiny.toFixed(1)} mJ/token  →  ${(gpu/tiny).toFixed(1)}× better\nNSLLM FPGA VCK190:   ${nsllm.toFixed(1)} mJ/token  →  19.8× vs A800\nNeuEdge SNN edge:    ${edge.toFixed(1)} mJ/token  →  ${(gpu/edge).toFixed(1)}× better`);
+    this.stats.tokens+=5;this.stats.energy+=5*tiny;
+    ['tinyA','tinyB','tinyC'].forEach((n,i)=>setTimeout(()=>this.activate(n,400),i*80));
+    updateStats(this);
+  }
+
+  drawEnergyChart(){
+    const ctx=this.ctx,W=this.W,H=this.H;
+    ctx.fillStyle='rgba(9,21,37,.7)';ctx.fillRect(6,6,W-12,H-12);
+    ctx.strokeStyle=C.border;ctx.lineWidth=1;ctx.strokeRect(6,6,W-12,H-12);
+    ctx.font='bold 7px monospace';ctx.textAlign='center';
+    ctx.fillStyle=C.mut;ctx.fillText('ENERGY EFFICIENCY  —  mJ / token (lower = better)',W/2,20);
+
+    const bars=[
+      {l:'GPU 70B+',v:350,c:C.byz},{l:'GPU 7B',v:120,c:C.ora},
+      {l:'TinyLM\nLoihi 2',v:79,c:C.tiny},{l:'NSLLM\nFPGA',v:87,c:C.mid},
+      {l:'NeuEdge\nSNN',v:25,c:C.ok},
+    ];
+    const bh=26,gap=8,lx=52,maxW=W-lx-16;
+    const mx=380;
+    bars.forEach((b,i)=>{
+      const y=32+i*(bh+gap);
+      const bw=(b.v/mx)*maxW;
+      const phase=this.tick*.018;
+      const fw=bw*(1-Math.sin(phase)*0.015);
+      ctx.fillStyle=C.dim;ctx.fillRect(lx,y,maxW,bh);
+      ctx.fillStyle=b.c+'99';ctx.fillRect(lx,y,fw,bh);
+      ctx.shadowBlur=6;ctx.shadowColor=b.c;
+      ctx.fillStyle=b.c;ctx.fillRect(lx+fw-2,y+1,2,bh-2);
+      ctx.shadowBlur=0;
+      ctx.font='bold 7px monospace';ctx.textAlign='right';ctx.fillStyle=b.c;
+      const lines=b.l.split('\n');
+      if(lines.length===1)ctx.fillText(b.l,lx-4,y+bh*.62);
+      else{ctx.fillText(lines[0],lx-4,y+bh*.4);ctx.fillText(lines[1],lx-4,y+bh*.75);}
+      ctx.font='bold 8px monospace';ctx.textAlign='left';ctx.fillStyle=b.c;
+      ctx.fillText(b.v+' mJ',lx+fw+5,y+bh*.62);
+      if(i>0){
+        const ratio=(350/b.v).toFixed(1);
+        ctx.fillStyle='rgba(0,255,153,.7)';ctx.font='6px monospace';
+        ctx.fillText(ratio+'× vs GPU',lx+fw+5,y+bh*.88);
+      }
+    });
+    ctx.font='bold 7px monospace';ctx.textAlign='center';ctx.fillStyle=C.ok;
+    ctx.fillText(`TinyLM (Loihi 2) is ~${(350/79).toFixed(1)}× more energy-efficient than GPU frontier inference`,W/2,H-8);
+  }
+
+  frame(){
+    const ctx=this.ctx;
+    ctx.fillStyle=C.bg;ctx.fillRect(0,0,this.W,this.H);
+    this.tick++;
+
+    if(this.mode==='energy'){
+      this.drawEnergyChart();
+    } else {
+      this.drawConnections();
+      Object.keys(this.nodes).forEach(id=>this.drawNode(id));
+      this.extraNodes.forEach(id=>this.drawNode(id));
+      this.drawSwarmHealth();
+    }
+
+    // particles / effects
+    this.particles=this.particles.filter(p=>!p.done);
+    this.particles.forEach(p=>{p.update(this.speed);p.draw(ctx);});
+    this.bursts=this.bursts.filter(b=>!b.done());
+    this.bursts.forEach(b=>{b.update();b.draw(ctx);});
+    this.rings=this.rings.filter(r=>!r.done());
+    this.rings.forEach(r=>{r.update();r.draw(ctx);});
+
+    // pulse decay
+    Object.values(this.nodeState).forEach(st=>{if(st.pulse>0)st.pulse=Math.max(0,st.pulse-.035);});
+
+    // running scenario logic
+    if(this.running){
+      if(this.mode==='connect')this.runConnect();
+      else if(this.mode==='internet')this.runInternet();
+      else if(this.mode==='llm')this.runLLM();
+      else if(this.mode==='ha')this.runHA();
+      else if(this.mode==='token')this.runToken();
+      else if(this.mode==='byzantine')this.runByzantine();
+      else if(this.mode==='memory')this.runMemory();
+      else if(this.mode==='energy')this.runEnergy();
+    }
+    this.raf=requestAnimationFrame(()=>this.frame());
+  }
+
+  start(){this.running=true;}
+  pause(){this.running=false;}
+  reset(){
+    this.running=false;this.particles=[];this.bursts=[];this.rings=[];
+    this.tick=0;this.haPhase=0;this.failedNodes.clear();this.recoveringNodes.clear();
+    this.extraNodes=[];this.standbyNode=null;
+    this.stats={tokens:0,energy:0,cdcpOk:0,cdcpFail:0,byz:0,nodes:7};
+    this.startTime=Date.now();
+    this.buildNodes();
+    clearLog();updateStats(this);
+    document.getElementById('sv-health').textContent='HEALTHY';
+    document.getElementById('sv-health').style.color=C.ok;
+    document.getElementById('hb-nodes-lbl').textContent='7/7';
+    log('SYS','SYSTEM','🔄','Simulation reset · DARM-ANN v7.7 ready','All nodes: HEALTHY\nCDCP: quorum N=7, f=2\nScenario: '+currentSc);
+  }
+  step(){this.tick=0;this.start();setTimeout(()=>this.pause(),200);}
+  destroy(){if(this.raf)cancelAnimationFrame(this.raf);}
+}
+
+/* ══════════════════════════════
+   LOG SYSTEM
+══════════════════════════════ */
+let logCount=0;
+const LOG_CATEGORIES={'NET':'net','SEC':'sec','MEM':'mem','CDCP':'mem','ARA':'mem','MEM':'mem',
+  'ERR':'err','BENCH':'net','SYS':'net','CDCP':'mem'};
+const LOG_COMP_COLORS={
+  CLIENT:C.gw,GATEWAY:C.sec,'sMCP-1':C.sec,SPIRE:C.sec,'TINY-A':C.tiny,'TINY-B':C.tiny,
+  'TINY-C':C.tiny,'TINY-D':C.tiny,'NEW-NODE':C.ok,MID:C.mid,XL:C.xl,CDCP:C.xl,
+  ARA:C.ara,'ARA-TINY-A':C.ara,INTERNET:C.internet,STANDBY:C.standby,
+  'D-MEM':C.diag,'HMAC-CHAIN':C.sec,ENERGY:C.ora,BENCH:C.ora,SWARM:C.ok,
+  'MID-SCALE':C.mid,SECURITY:C.byz,SYSTEM:C.mut,'TINY-B':C.tiny
+};
+
+function log(cat,comp,icon,msg,payload){
+  const t=new Date();
+  const ts=`${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}:${t.getSeconds().toString().padStart(2,'0')}.${t.getMilliseconds().toString().padStart(3,'0')}`;
+  const body=document.getElementById('log-body');
+  const col=LOG_COMP_COLORS[comp]||C.mut;
+  const cat2=LOG_CATEGORIES[cat]||'net';
+  const cls=cat2;
+  logCount++;
+  document.getElementById('log-count').textContent=logCount+' entries';
+
+  const div=document.createElement('div');
+  div.className='le';
+  div.dataset.cat=cat2;
+  div.innerHTML=`
+  <div class="le-main" onclick="togglePayload(this.parentElement)">
+    <span class="le-ts">${ts}</span>
+    <span class="le-comp" style="background:${col}15;color:${col};border:1px solid ${col}30">${comp}</span>
+    <span class="le-icon">${icon}</span>
+    <span class="le-msg">${msg}</span>
+    ${payload?'<span class="le-toggle">▶</span>':''}
+  </div>
+  ${payload?`<div class="le-payload">${payload}</div>`:''}`;
+
+  if(logFilter!=='all'&&cat2!==logFilter)div.style.display='none';
+  body.insertBefore(div,body.firstChild);
+  while(body.children.length>120)body.removeChild(body.lastChild);
+  logEntries.push({cat:cat2,el:div});
+}
+
+function togglePayload(le){
+  const p=le.querySelector('.le-payload');
+  const t=le.querySelector('.le-toggle');
+  if(!p)return;
+  const vis=p.classList.toggle('vis');
+  if(t)t.textContent=vis?'▼':'▶';
+}
+
+function clearLog(){
+  document.getElementById('log-body').innerHTML='';
+  logCount=0;logEntries=[];
+  document.getElementById('log-count').textContent='0 entries';
+}
+
+function setFilter(f){
+  logFilter=f;
+  document.querySelectorAll('.ef').forEach(b=>{
+    b.classList.toggle('on',b.id==='ef-'+f);
+  });
+  document.querySelectorAll('.le').forEach(le=>{
+    le.style.display=(f==='all'||le.dataset.cat===f)?'':'none';
+  });
+}
+
+/* ══════════════════════════════
+   STATS UPDATE
+══════════════════════════════ */
+function updateStats(sim){
+  const elapsed=Math.max(1,(Date.now()-sim.startTime)/1000);
+  document.getElementById('sv-tokens').textContent=sim.stats.tokens.toLocaleString();
+  document.getElementById('sv-tps').textContent=(sim.stats.tokens/elapsed).toFixed(1)+' tok/s';
+  const mj=sim.stats.tokens>0?(sim.stats.energy/sim.stats.tokens).toFixed(1):'0.0';
+  document.getElementById('sv-energy').textContent=mj;
+  const ratio=parseFloat(mj)>0?`${(300/parseFloat(mj)).toFixed(1)}× vs GPU frontier`:'-';
+  document.getElementById('sv-ratio').textContent=ratio;
+  document.getElementById('sv-nodes').textContent=sim.stats.nodes;
+  document.getElementById('sv-cdcp').textContent=sim.stats.cdcpOk;
+  document.getElementById('sv-byz').textContent=sim.stats.cdcpFail+' rejected';
+  document.getElementById('hb-nodes-lbl').textContent=sim.stats.nodes+'/'+Object.keys(sim.nodes).filter(k=>!sim.nodes[k]||!sim.nodes[k].hidden).length;
+}
+
+/* ══════════════════════════════
+   SCENARIO SELECTION
+══════════════════════════════ */
+let currentSc='connect';
+const SC_COLORS={connect:C.gw,internet:C.mid,llm:C.tiny,ha:C.ok,
+  token:C.diag,byzantine:C.byz,memory:C.ara,energy:C.ora};
+
+function setSc(sc,el){
+  currentSc=sc;
+  document.querySelectorAll('.sc-btn').forEach(b=>b.classList.remove('active'));
+  if(el){
+    el.classList.add('active');
+    el.style.borderColor=SC_COLORS[sc]||C.mut;
+    el.style.boxShadow=`0 0 10px ${SC_COLORS[sc]||C.mut}44`;
+  }
+  if(SIM){SIM.reset();SIM.mode=sc;}
+  log('SYS','SYSTEM','▶',`Scenario selected: ${el?.querySelector('.sc-title')?.textContent||sc}`,'Press ▶ Run to start the simulation');
+}
+
+function simToggle(){
+  if(!SIM)return;
+  if(SIM.running){SIM.pause();document.getElementById('btn-run').textContent='▶ Run';}
+  else{
+    if(SIM.tick===0)SIM.mode=currentSc;
+    SIM.start();document.getElementById('btn-run').textContent='⏸ Pause';
+  }
+}
+function simReset(){if(SIM){SIM.reset();document.getElementById('btn-run').textContent='▶ Run';}}
+function setSpeed(el){const v=parseFloat(el.value);document.getElementById('spd-v').textContent=v.toFixed(1)+'×';if(SIM)SIM.speed=v;}
+function quickFault(){
+  if(!SIM)return;
+  const prev=SIM.mode,sc=SIM.mode;
+  SIM.mode='byzantine';SIM.tick=0;SIM.running=true;
+  document.getElementById('btn-run').textContent='⏸ Pause';
+  setTimeout(()=>{SIM.mode=sc;},7000);
+  log('ERR','SECURITY','⚠️','Manual Byzantine fault injected','Override: switching to Byzantine attack scenario');
+}
+function quickMem(){
+  if(!SIM)return;
+  const sc=SIM.mode;SIM.mode='memory';SIM.tick=0;SIM.running=true;
+  document.getElementById('btn-run').textContent='⏸ Pause';
+  setTimeout(()=>{SIM.mode=sc;},5000);
+  log('MEM','D-MEM','🧠','Manual memory write triggered','D-MEM → CDCP → LTM admission sequence');
+}
+function addExtraNode(){
+  if(!SIM)return;
+  const W=SIM.W,id='extra'+SIM.extraNodes.length;
+  const x=W*.1+Math.random()*(W*.8),y=100+Math.random()*70;
+  SIM.nodes[id]={x,y,r:13,label:'EXT-'+SIM.extraNodes.length,color:C.ok,sub:'joining'};
+  SIM.nodeState[id]={pulse:0,active:false,hb:0};
+  SIM.extraNodes.push(id);
+  log('NET','GATEWAY','🌱',`New swarm node joining: ${id}`,'Running full connection establishment sequence...');
+  SIM.ring(id,C.ok);
+  setTimeout(()=>{
+    SIM.fire(id,'gw',C.ok,'AUTH',()=>{
+      SIM.nodes[id].sub='authenticated';
+      log('SEC','sMCP-1','✅',`${id} authenticated via SPIFFE Ed25519`,'SVID issued · mTLS established · DHT updated');
+    });
+  },300);
+}
+function simStep(){if(!SIM)SIM.step();}
+
+/* ══════════════════════════════
+   SIM INIT
+══════════════════════════════ */
+function initSim(){
+  if(simInited)return;simInited=true;
+  const cvs=document.getElementById('sim-cvs');
+  const wrap=document.getElementById('cvs-wrap');
+  const W=Math.min(wrap.clientWidth||360,640);
+  const H=Math.round(W*.82);
+  cvs.width=W;cvs.height=H;
+  SIM=new DARMANNSim(cvs);
+  SIM.frame();
+  // default selection
+  setSc('connect',document.getElementById('sc-connect'));
+  log('SYS','SYSTEM','🚀','DARM-ANN v7.7 Simulation Suite initialized','8 scenarios ready\nClick a scenario card then ▶ Run\nUse ⚠ Inject Fault / 🧠 Force Mem Write for live overrides\nClick log entries to expand payload details');
+
+  window.addEventListener('resize',()=>{
+    if(!SIM)return;
+    const W2=Math.min(wrap.clientWidth||360,640);const H2=Math.round(W2*.82);
+    cvs.width=W2;cvs.height=H2;SIM.W=W2;SIM.H=H2;SIM.buildNodes();
+  });
+  // canvas hover for node info
+  cvs.addEventListener('mousemove',e=>{
+    if(!SIM)return;
+    const rect=cvs.getBoundingClientRect();
+    const sx=cvs.width/rect.width,sy=cvs.height/rect.height;
+    const mx=(e.clientX-rect.left)*sx,my=(e.clientY-rect.top)*sy;
+    const tip=document.getElementById('node-tip');
+    let found=false;
+    Object.entries(SIM.nodes).forEach(([id,nd])=>{
+      if(nd.hidden)return;
+      const d=Math.hypot(mx-nd.x,my-nd.y);
+      if(d<nd.r+4){
+        const nodeInfo={
+          client:'API client · OpenAI/Anthropic SDK · SSE streaming',
+          gw:'Gateway · sMCP-1 · SPIFFE · Parallax scheduler',
+          tinyA:'TinyLM Pool A · Loihi 2 · 1.5B · WM+EB · Draft γ=5',
+          tinyB:'TinyLM Pool B · Akida 2 · 1.5B · WM+EB · Draft γ=5',
+          tinyC:'TinyLM Pool C · Jetson Orin · 1.5B · WM+EB · Draft γ=5',
+          mid:'darmann-mid · 15B · A100 · WM+EB+STM · CDCP Orchestrator',
+          xl:'darmann-xl · 70B · H100 · All 5 memory tiers · CDCP Gatekeeper',
+          internet:'External internet · gVisor sandbox · sMCP-1 domain allowlist',
+        };
+        const failed=SIM.failedNodes.has(id);
+        tip.innerHTML=`<span style="color:${failed?C.byz:nd.color};font-weight:700">${nd.label}${failed?' [FAILED]':''}</span><br>${nodeInfo[id]||nd.sub}`;
+        tip.style.display='block';
+        const tipX=Math.min(e.clientX-rect.left+12,rect.width-190);
+        const tipY=Math.max(e.clientY-rect.top-45,2);
+        tip.style.left=tipX+'px';tip.style.top=tipY+'px';
+        found=true;
+      }
+    });
+    if(!found)tip.style.display='none';
+  });
+  cvs.addEventListener('mouseleave',()=>{document.getElementById('node-tip').style.display='none';});
+}
+</script>
+
+<!-- NODE INSPECTOR -->
+<div id="inspector">
+  <div id="idrag" onclick="closeInsp()"></div>
+  <div id="ihdr">
+    <div id="irow1">
+      <span id="inico">◉</span>
+      <div><div id="intnm">Node</div><div id="intsb">—</div></div>
+      <button id="intcl" onclick="closeInsp()">✕ Close</button>
+    </div>
+    <div id="ibadges"></div>
+  </div>
+  <div id="itabs">
+    <button class="itab iac" onclick="setItab('ov',this)">Overview</button>
+    <button class="itab" onclick="setItab('mem',this)">Memory</button>
+    <button class="itab" onclick="setItab('ara',this)">ARA</button>
+    <button class="itab" onclick="setItab('cdcp',this)">CDCP</button>
+    <button class="itab" onclick="setItab('net',this)">Network</button>
+  </div>
+  <div id="ibody"></div>
+</div>
+
+<!-- GLOBAL MEMORY VIEW -->
+<div id="gmem">
+  <div id="gmemh">
+    <h3>🗺 Global Memory View — All Nodes</h3>
+    <button id="gmcl" onclick="closeGMem()">✕ Close</button>
+  </div>
+  <div id="gmgrid"></div>
+</div>
+
+<script>
+/* ═══ LTM KNOWLEDGE POOL ═══ */
+const LTMP=[
+{k:"bft",t:"Byzantine fault tolerance: N > 3f+1 required for consensus safety",dom:"consensus",c:"#A87BD4"},
+{k:"loihi",t:"Loihi 2: 70.8 mJ/token · 15 TOPS/W · 1.15B neurons (Hala Point)",dom:"neuromorphic",c:"#00D4FF"},
+{k:"magma",t:"MAGMA 4-graph: LoCoMo judge score 0.70 (SOTA Aug 2026)",dom:"memory",c:"#C4A8F5"},
+{k:"diloco",t:"DiLoCo H=500 inner steps yields 500x bandwidth reduction vs sync SGD",dom:"training",c:"#4C9FFF"},
+{k:"mamba2",t:"Mamba-2 SSM: selective scan enables O(N) inference vs O(N^2) attention",dom:"arch",c:"#00D4FF"},
+{k:"dmem",t:"D-MEM RPE routing reduces construction cost 80% vs A-MEM baseline",dom:"memory",c:"#F5E642"},
+{k:"mlgru",t:"MatMul-free MLGRU: ternary weights W in {-1,0,+1} maps to Loihi 2",dom:"arch",c:"#00D4FF"},
+{k:"cpwbft",t:"CP-WBFT achieves 85.7% Byzantine fault tolerance (AAAI 2026)",dom:"consensus",c:"#A87BD4"},
+{k:"titans",t:"Titans STM: in-weights gradient memory updated during inference",dom:"arch",c:"#4C9FFF"},
+{k:"nsllm",t:"NSLLM FPGA VCK190: 19.8x better energy efficiency vs A800 GPU",dom:"neuromorphic",c:"#00D4FF"},
+{k:"weibull",t:"LTM Weibull decay: w(dt)=exp(-(dt/eta)^kappa) · eta=365d · kappa=1.2",dom:"memory",c:"#A87BD4"},
+{k:"tslt",t:"TSLT: top-200 logits = 1.6KB vs 128KB full vocab (80x compression)",dom:"inference",c:"#00FF99"},
+{k:"pyramidsd",t:"PyramidSD: TinyLM draft to Mid qualify(t=0.85) to XL verify",dom:"inference",c:"#F5E642"},
+{k:"ssgm",t:"SSGM: 4-dimension failure taxonomy: Stability/Validity/Efficiency/Safety",dom:"governance",c:"#C4A8F5"},
+{k:"spiffe",t:"SPIFFE SVID: Ed25519 · URI spiffe://darmann.cybopsec.com/...",dom:"security",c:"#FFB830"},
+{k:"matry",t:"Matryoshka nesting: TinyLM[0:512] subset Mid[0:2048] subset XL[0:8192]",dom:"arch",c:"#4C9FFF"},
+{k:"intellect2",t:"INTELLECT-2: first globally distributed RL training of 32B model",dom:"training",c:"#FFB830"},
+{k:"cdcp_syco",t:"CDCP SycophancyScore > 0.6 triggers mandatory adversarial debate round",dom:"consensus",c:"#FFB830"},
+{k:"ara_drift",t:"ARA Reflection: KL-divergence drift threshold = 0.15 per epoch",dom:"ara",c:"#C4A8F5"},
+{k:"btm",t:"Branch-Train-MiX: TIES-Merging + DARE sparsification across specialists",dom:"training",c:"#A87BD4"},
+];
+
+const NMETA={
+  client:{icon:"💻",color:"#2DD4BF",name:"CLIENT",desc:"OpenAI/Anthropic SDK · SSE streaming",svid:"external",sub:"HTTP/SSE client"},
+  gw:{icon:"🛡",color:"#FFB830",name:"GATEWAY",desc:"sMCP-1 v1.0 · FastAPI · Parallax scheduler",svid:"spiffe://darmann.cybopsec.com/gateway/0",sub:"x86-64 FastAPI"},
+  tinyA:{icon:"⚡",color:"#00D4FF",name:"TINY-A",desc:"TinyLM Pool A · MatMul-free MLGRU · 1.5B",svid:"spiffe://darmann.cybopsec.com/tier/tiny/pool-a/node-0",sub:"Intel Loihi 2"},
+  tinyB:{icon:"⚡",color:"#00D4FF",name:"TINY-B",desc:"TinyLM Pool B · MatMul-free MLGRU · 1.5B",svid:"spiffe://darmann.cybopsec.com/tier/tiny/pool-b/node-0",sub:"BrainChip Akida 2"},
+  tinyC:{icon:"⚡",color:"#00D4FF",name:"TINY-C",desc:"TinyLM Pool C · MatMul-free MLGRU · 1.5B",svid:"spiffe://darmann.cybopsec.com/tier/tiny/pool-c/node-0",sub:"NVIDIA Jetson Orin"},
+  mid:{icon:"🔷",color:"#4C9FFF",name:"MID-SCALE",desc:"darmann-mid 15B · A100 · CDCP Orch · WM+EB+STM",svid:"spiffe://darmann.cybopsec.com/tier/mid/node-0",sub:"NVIDIA A100 SXM"},
+  xl:{icon:"💎",color:"#A87BD4",name:"CONSOLIDATOR",desc:"darmann-xl 70B · H100+Hala Point · All 5 tiers",svid:"spiffe://darmann.cybopsec.com/tier/xl/node-0",sub:"H100 NVL + Hala Point"},
+  internet:{icon:"🌐",color:"#50FA7B",name:"INTERNET",desc:"External · gVisor sandbox · sMCP-1 allowlist",svid:"external",sub:"Public internet"},
+};
+const ATIERS={client:[],gw:[],internet:[],
+  tinyA:["WM","EB"],tinyB:["WM","EB"],tinyC:["WM","EB"],
+  mid:["WM","EB","STM"],xl:["WM","EB","STM","LTM","RRC"]};
+const ARA_NS=["tinyA","tinyB","tinyC","mid","xl"];
+const TCL={WM:"#00D4FF",EB:"#00B4E0",STM:"#4C9FFF",LTM:"#A87BD4",RRC:"#C4A8F5"};
+
+/* ═══ MEMORY STATE ═══ */
+const MEM={};
+function initMem(id){
+  const T=ATIERS[id]||[];
+  MEM[id]={
+    wm:T.includes("WM")?{state:new Float32Array(16).map(()=>Math.random()*.45+.05),upd:Date.now()}:null,
+    eb:T.includes("EB")?[]:null,
+    stm:T.includes("STM")?{w:new Float32Array(64).map(()=>Math.random()*.25),gn:0,cnt:0,upd:Date.now()}:null,
+    ltm:T.includes("LTM")?[]:null,
+    rrc:T.includes("RRC")?{sem:12,tmp:8,cau:5,ent:9,qr:[]}:null,
+    cdcp:{rounds:[],cred:.15,lastAct:null},
+    ara:{agent:"supervisor",task:"Monitoring LTM for knowledge gaps",status:"IDLE",cycles:0,pipe:[]},
+    met:{tokIn:0,nrg:0,lat:Math.random()*8+5,up:Date.now()},
+  };
+}
+["client","gw","internet","tinyA","tinyB","tinyC","mid","xl"].forEach(initMem);
+
+function pushEB(id,content,surp,util){
+  const m=MEM[id];if(!m||m.eb===null)return;
+  m.eb.unshift({content,surp,util,rpe:Math.min(1,util*(surp+.4)),ts:Date.now()});
+  if(m.eb.length>12)m.eb.pop();
+  if(selNode===id)schedRender();
+}
+function pushLTM(fact){
+  const m=MEM.xl;if(!m||m.ltm===null)return;
+  if(m.ltm.find(x=>x.k===fact.k))return;
+  m.ltm.unshift({...fact,decay:1.0,adm:Date.now(),round:m.cdcp.rounds.length+1});
+  if(m.ltm.length>20)m.ltm.pop();
+  if(m.rrc){const gm={consensus:"sem",memory:"tmp",arch:"sem",training:"cau",neuromorphic:"ent",security:"ent",governance:"cau",inference:"tmp",ara:"cau"};m.rrc[gm[fact.dom]||"ent"]++;}
+  if(selNode==="xl")schedRender();
+}
+function updSTM(id,gn){
+  const m=MEM[id];if(!m||!m.stm)return;
+  m.stm.gn=gn;m.stm.cnt++;m.stm.upd=Date.now();
+  const h=Math.floor(Math.random()*56);
+  for(let i=0;i<8;i++)m.stm.w[h+i]=Math.min(1,m.stm.w[h+i]+Math.random()*.3);
+  m.stm.w=m.stm.w.map(v=>v*.95);
+  if(selNode===id)schedRender();
+}
+function pulseWM(id){
+  const m=MEM[id];if(!m||!m.wm)return;
+  m.wm.state=m.wm.state.map(v=>Math.max(.02,Math.min(1,v+(Math.random()-.38)*.28)));
+  m.wm.upd=Date.now();
+}
+function pushCDCP(id,verd,delta,cred){
+  const m=MEM[id];if(!m)return;
+  m.cdcp.rounds.unshift({verd,delta,cred:cred!=null?cred:m.cdcp.cred,ts:Date.now()});
+  if(m.cdcp.rounds.length>10)m.cdcp.rounds.pop();
+  if(cred!=null)m.cdcp.cred=cred;
+  m.cdcp.lastAct=Date.now();
+}
+setInterval(()=>{
+  const m=MEM.xl;if(!m||!m.ltm)return;
+  const now=Date.now();
+  m.ltm.forEach(e=>{const age=(now-e.adm)/1000/60;e.decay=Math.exp(-Math.pow(age/(365*24*60),1.2));});
+},5000);
+
+let rPending=false;
+function schedRender(){if(!rPending){rPending=true;setTimeout(()=>{rPending=false;renderInsp();},60);}}
+
+/* ═══ PACKET ARRIVE HOOK ═══ */
+function onPackArrive(toId,col,lbl){
+  pulseWM(toId);
+  lbl=lbl||"";
+  if(col==="#A87BD4"||lbl.includes("CDCP")||lbl.includes("LTM")||lbl.includes("ADMIT")){
+    if(toId==="xl"&&MEM.xl&&MEM.xl.ltm!==null){
+      const pick=LTMP[Math.floor(Math.random()*LTMP.length)];
+      pushLTM(pick);
+      pushCDCP("xl","ADMIT",+(Math.random()*.08).toFixed(4));
+      pushCDCP("mid","ADMIT",+(Math.random()*.08).toFixed(4));
+      ["tinyA","tinyB","tinyC"].forEach(n=>pushCDCP(n,"ADMIT",+(Math.random()*.08).toFixed(4)));
+    }
+    if(MEM[toId]&&MEM[toId].stm)updSTM(toId,+(Math.random()*.08).toFixed(4));
+  }
+  if(lbl.includes("DRAFT")||lbl.includes("TSLT")||lbl.includes("TOKEN")||lbl.includes("REQ")||lbl.includes("QUERY")){
+    const ctxArr=["BFT consensus in distributed AI memory","Speculative decoding via PyramidSD","Mamba-2 SSM selective state update","CDCP credibility-weighted softmax","Matryoshka TinyLM to XL weight nesting","Loihi 2 ternary MLGRU inference pass","MAGMA multi-graph RRC traversal"];
+    pushEB(toId,ctxArr[Math.floor(Math.random()*ctxArr.length)],+(Math.random()*.6+.2).toFixed(2),+(Math.random()*.5+.3).toFixed(2));
+    if(MEM[toId])MEM[toId].met.tokIn=(MEM[toId].met.tokIn||0)+1;
+  }
+  if(lbl.includes("ARA")||lbl.includes("PROP")||lbl.includes("CONTENT")||lbl.includes("FIND")){
+    if(MEM[toId]&&MEM[toId].ara){
+      const tasks=["Evaluating MAGMA RRC query results","Synthesizing neuromorphic benchmark data","Cross-referencing CDCP consensus history","Generating LTM memory proposal","Literature synthesis: arXiv 2601.03236","Monitoring for knowledge drift (KL>0.15)"];
+      MEM[toId].ara.status="ACTIVE";MEM[toId].ara.cycles++;
+      MEM[toId].ara.task=tasks[Math.floor(Math.random()*tasks.length)];
+      const ag=["supervisor","generation","reflection","ranking","evolution","meta"];
+      MEM[toId].ara.agent=ag[Math.floor(Math.random()*ag.length)];
+      const ts=new Date().toLocaleTimeString();
+      MEM[toId].ara.pipe.unshift("["+ts+"] "+MEM[toId].ara.task);
+      if(MEM[toId].ara.pipe.length>5)MEM[toId].ara.pipe.pop();
+      setTimeout(()=>{if(MEM[toId]&&MEM[toId].ara)MEM[toId].ara.status="IDLE";},3000);
+    }
+  }
+  if(selNode===toId)schedRender();
+}
+
+/* ═══ INSPECTOR STATE ═══ */
+let selNode=null,itab="ov",iTimer=null;
+
+function openInsp(nodeId){
+  const meta=NMETA[nodeId];if(!meta)return;
+  selNode=nodeId;
+  document.getElementById("inico").textContent=meta.icon;
+  document.getElementById("intnm").style.color=meta.color;
+  document.getElementById("intnm").textContent=meta.name;
+  document.getElementById("intsb").textContent=meta.desc;
+  const tiers=ATIERS[nodeId]||[];
+  const hasARA=ARA_NS.includes(nodeId);
+  document.getElementById("ibadges").innerHTML=
+    tiers.map(t=>`<span class="ibg" style="color:${TCL[t]};border-color:${TCL[t]}40;background:${TCL[t]}12">${t}</span>`).join("")+
+    (hasARA?`<span class="ibg" style="color:#C4A8F5;border-color:#C4A8F540;background:#C4A8F512">ARA</span>`:"")+
+    `<span class="ibg" style="color:#FFB830;border-color:#FFB83040;background:#FFB83012">mTLS</span>`;
+  document.getElementById("inspector").classList.add("open");
+  const si=document.getElementById("sel-indicator");if(si)si.textContent="◉ "+meta.name+" selected";
+  setItab("ov",document.querySelector(".itab"));
+  clearInterval(iTimer);
+  iTimer=setInterval(()=>{if(selNode&&document.getElementById("inspector").classList.contains("open"))renderInsp();},1500);
+}
+function closeInsp(){
+  document.getElementById("inspector").classList.remove("open");
+  selNode=null;clearInterval(iTimer);
+  const si=document.getElementById("sel-indicator");if(si)si.textContent="";
+}
+function setItab(tab,el){
+  itab=tab;
+  document.querySelectorAll(".itab").forEach(t=>{t.classList.remove("iac");t.style.borderBottomColor="transparent";t.style.color="";});
+  if(el){el.classList.add("iac");const m=NMETA[selNode];el.style.borderBottomColor=m?m.color:"#00D4FF";el.style.color=m?m.color:"#00D4FF";}
+  renderInsp();
+}
+
+function renderInsp(){
+  if(!selNode)return;
+  const m=MEM[selNode]||{},meta=NMETA[selNode]||{};
+  const body=document.getElementById("ibody");
+  const sc=body.scrollTop;
+  if(itab==="ov")body.innerHTML=rOV(selNode,m,meta);
+  else if(itab==="mem")body.innerHTML=rMEM(selNode,m);
+  else if(itab==="ara")body.innerHTML=rARA(selNode,m);
+  else if(itab==="cdcp")body.innerHTML=rCDCP(selNode,m);
+  else if(itab==="net")body.innerHTML=rNET(selNode,meta);
+  body.scrollTop=sc;
+  if(itab==="mem"){if(m.stm)drawSTM(m.stm.w);if(m.wm)animWM(selNode,m.wm.state);}
+}
+
+function rOV(id,m,meta){
+  const up=m.met?Math.floor((Date.now()-m.met.up)/1000):0;
+  const upS=up>3600?Math.floor(up/3600)+"h "+Math.floor((up%3600)/60)+"m":up>60?Math.floor(up/60)+"m "+up%60+"s":up+"s";
+  const tiers=ATIERS[id]||[];
+  return `<div class="ovg">
+    <div class="ovc"><div class="ovv" style="color:#00FF99;font-size:10px">✓ HEALTHY</div><div class="ovl">Status</div></div>
+    <div class="ovc"><div class="ovv" style="color:#00D4FF;font-size:11px">${upS}</div><div class="ovl">Uptime</div></div>
+    <div class="ovc"><div class="ovv" style="color:#F5E642;font-size:11px">${(m.met&&m.met.lat||0).toFixed(1)}ms</div><div class="ovl">Latency</div></div>
+    <div class="ovc"><div class="ovv" style="color:#4C9FFF;font-size:11px">${m.met&&m.met.tokIn||0}</div><div class="ovl">Tokens In</div></div>
+  </div>
+  <div style="background:rgba(0,0,0,.25);border:1px solid #152030;border-radius:6px;padding:7px;margin-bottom:7px;font-size:7px">
+    <div style="color:#3A5470;font-weight:700;margin-bottom:3px">SPIFFE SVID</div>
+    <div style="color:#FFB830;word-break:break-all;line-height:1.4">${meta.svid||"—"}</div>
+    <div style="color:#3A5470;margin-top:2px">Substrate: <span style="color:#C5DCF0">${meta.sub||"—"}</span></div>
+    <div style="color:#3A5470;margin-top:1px">Matryoshka: <span style="color:#C5DCF0">${id==="xl"?"Full [0:8192]":id==="mid"?"Slice [0:2048]":["tinyA","tinyB","tinyC"].includes(id)?"Slice [0:512]":"N/A"}</span></div>
+  </div>
+  <div style="margin-bottom:7px"><div style="font-size:7px;color:#3A5470;font-weight:700;margin-bottom:4px">ACTIVE MEMORY TIERS</div>
+  <div style="display:flex;gap:3px">
+    ${["WM","EB","STM","LTM","RRC"].map(t=>`<div style="flex:1;border-radius:4px;padding:4px 2px;text-align:center;font-size:6px;border:1px solid ${tiers.includes(t)?TCL[t]:"#152030"};background:${tiers.includes(t)?TCL[t]+"12":"rgba(0,0,0,.15)"};color:${tiers.includes(t)?TCL[t]:"#3A5470"}"><div style="width:5px;height:5px;border-radius:50%;background:${tiers.includes(t)?TCL[t]:"#3A5470"};margin:0 auto 2px;${tiers.includes(t)?"box-shadow:0 0 4px "+TCL[t]+";animation:pulse 2s infinite":""}"></div>${t}</div>`).join("")}
+  </div></div>
+  ${m.cdcp?`<div style="background:rgba(168,123,212,.06);border:1px solid rgba(168,123,212,.2);border-radius:5px;padding:6px;font-size:7px"><div style="color:#A87BD4;font-weight:700;margin-bottom:2px">CDCP</div><div style="display:flex;gap:8px"><span style="color:#3A5470">Credibility: <span style="color:#A87BD4">${m.cdcp.cred.toFixed(2)}</span></span><span style="color:#3A5470">Rounds: <span style="color:#C5DCF0">${m.cdcp.rounds.length}</span></span><span style="color:#3A5470">Admits: <span style="color:#00FF99">${m.cdcp.rounds.filter(r=>r.verd==="ADMIT").length}</span></span></div></div>`:""}
+  ${m.ara?`<div style="background:rgba(196,168,245,.06);border:1px solid rgba(196,168,245,.2);border-radius:5px;padding:6px;font-size:7px;margin-top:5px"><div style="color:#C4A8F5;font-weight:700;margin-bottom:2px">ARA · ${m.ara.cycles} research cycles</div><div style="color:#3A5470">Agent: <span style="color:#C4A8F5">${m.ara.agent}</span> · <span style="color:${m.ara.status==="ACTIVE"?"#00FF99":"#3A5470"}">${m.ara.status}</span></div><div style="color:#3A5470;margin-top:1px">${m.ara.task}</div></div>`:""}`;
+}
+
+function rMEM(id,m){
+  const tiers=ATIERS[id]||[];let h="";
+  if(m.wm){h+=`<div class="msec"><div class="mhd"><div class="mdot" style="background:#00D4FF;box-shadow:0 0 5px #00D4FF;animation:pulse 2s infinite"></div><span class="mtit" style="color:#00D4FF">T1 — Working Memory (Mamba-2 SSM)</span><span class="msb">16 dims</span></div><div class="wmbars" id="wmbars-${id}">${Array.from(m.wm.state).map((v,i)=>`<div class="wmbar" id="wmb-${id}-${i}" style="height:${Math.max(3,v*25)}px;background:${v>.7?"#00D4FF":v>.4?"#00B4E0":"#3A5470"}"></div>`).join("")}</div><div style="font-size:6px;color:#3A5470">h_t in R^16 · updated ${Math.round((Date.now()-m.wm.upd)/100)/10}s ago</div></div>`;}
+  if(m.eb!==null){h+=`<div class="msec"><div class="mhd"><div class="mdot" style="background:#00B4E0"></div><span class="mtit" style="color:#00B4E0">T2 — Episodic Buffer</span><span class="msb">${m.eb.length}/${id==="xl"?4096:512} slots</span></div>${m.eb.length===0?`<div style="font-size:7px;color:#3A5470;text-align:center;padding:8px">No entries yet — run a simulation</div>`:""}${m.eb.slice(0,6).map(e=>`<div class="ebe"><div class="ebc" style="color:#C5DCF0">${e.content}</div><div class="ebsc"><div style="color:#00B4E0">S=${e.surp.toFixed(2)}</div><div style="color:#00FF99">U=${e.util.toFixed(2)}</div><div class="ebrb" style="width:${e.rpe*100}%;max-width:40px;background:${e.rpe>.7?"#F5E642":e.rpe>.4?"#4C9FFF":"#3A5470"}"></div><div style="font-size:5px;color:#3A5470;margin-top:1px">${Math.round((Date.now()-e.ts)/1000)}s</div></div></div>`).join("")}</div>`;}
+  if(m.stm){h+=`<div class="msec"><div class="mhd"><div class="mdot" style="background:#4C9FFF"></div><span class="mtit" style="color:#4C9FFF">T3 — Short-Term Memory (Titans gradient)</span><span class="msb">${m.stm.cnt} updates</span></div><canvas id="stmcvs" width="120" height="120"></canvas><div class="stmst"><span>||grad||: <span style="color:#4C9FFF">${m.stm.gn.toFixed(4)}</span></span><span>Updates: ${m.stm.cnt}</span><span>Last: ${Math.round((Date.now()-m.stm.upd)/100)/10}s</span></div><div style="font-size:6px;color:#3A5470;margin-top:2px">8x8 heatmap of W_STM weight groups · bright = high activation</div></div>`;}
+  if(m.ltm!==null){h+=`<div class="msec"><div class="mhd"><div class="mdot" style="background:#A87BD4"></div><span class="mtit" style="color:#A87BD4">T4 — Long-Term Memory</span><span class="msb">${m.ltm.length} entries · Weibull decay</span></div>${m.ltm.length===0?`<div style="font-size:7px;color:#3A5470;text-align:center;padding:8px">No entries — CDCP consensus admission required</div>`:""}${m.ltm.map(e=>`<div class="ltme"><div class="ltmc" style="color:#C5DCF0">${e.t}</div><div class="ltmdr"><div class="ltmdb"><div class="ltmdf" style="width:${(e.decay*100).toFixed(0)}%;background:${e.decay>.7?"#00FF99":e.decay>.4?"#F5E642":e.decay>.2?"#FF7A30":"#FF4B6E"}"></div></div><div class="ltmm">${(e.decay*100).toFixed(0)}% · ${e.dom} · CDCP#${e.round}</div></div></div>`).join("")}</div>`;}
+  if(m.rrc){h+=`<div class="msec"><div class="mhd"><div class="mdot" style="background:#C4A8F5"></div><span class="mtit" style="color:#C4A8F5">T5 — MAGMA RRC (4-Graph)</span></div><div class="rrcg"><div class="rrc1"><div style="color:#00D4FF;font-size:8px;font-weight:700">Semantic</div><div style="color:#00D4FF;font-size:16px;font-weight:700">${m.rrc.sem}</div><div style="font-size:6px;color:#3A5470">entity relationships</div></div><div class="rrc1"><div style="color:#00B4E0;font-size:8px;font-weight:700">Temporal</div><div style="color:#00B4E0;font-size:16px;font-weight:700">${m.rrc.tmp}</div><div style="font-size:6px;color:#3A5470">time-ordered facts</div></div><div class="rrc1"><div style="color:#4C9FFF;font-size:8px;font-weight:700">Causal</div><div style="color:#4C9FFF;font-size:16px;font-weight:700">${m.rrc.cau}</div><div style="font-size:6px;color:#3A5470">cause-effect chains</div></div><div class="rrc1"><div style="color:#A87BD4;font-size:8px;font-weight:700">Entity</div><div style="color:#A87BD4;font-size:16px;font-weight:700">${m.rrc.ent}</div><div style="font-size:6px;color:#3A5470">SPIFFE attributed</div></div></div>${m.rrc.qr.length?`<div style="margin-top:4px;font-size:7px;color:#3A5470">Recent queries: ${m.rrc.qr.slice(0,3).join(" · ")}</div>`:""}</div>`;}
+  h+=`<div style="margin-top:6px"><div style="font-size:7px;color:#3A5470;font-weight:700;margin-bottom:4px">MEMORY QUERY INTERFACE</div><div id="qrow"><input id="qinp" type="text" placeholder='e.g. "Byzantine fault"' maxlength="80"><button id="qbtn" onclick="queryMem('${id}')">Search</button></div><div id="qres"></div></div>`;
+  return h;
+}
+
+const AGA2=[
+  {id:"supervisor",ico:"⎔",lbl:"Supervisor",c:"#C4A8F5",role:"Async scheduler · LTM gaps + CDCP deficits"},
+  {id:"generation",ico:"◈",lbl:"Generation",c:"#4C9FFF",role:"OpenScholar hypothesis ideation (45M papers)"},
+  {id:"reflection",ico:"◇",lbl:"Reflection",c:"#F5E642",role:"Critique + NLI gate + drift monitor (KL>0.15)"},
+  {id:"ranking",ico:"△",lbl:"Ranking",c:"#2DD4BF",role:"Elo-tournament pairwise (anonymized)"},
+  {id:"proximity",ico:"○",lbl:"Proximity",c:"#FF7A30",role:"Cluster for diversity · prevent memetic drift"},
+  {id:"evolution",ico:"☆",lbl:"Evolution",c:"#FFB830",role:"Variant gen + gVisor micro-experiments"},
+  {id:"meta",ico:"⬡",lbl:"Meta-Review",c:"#A87BD4",role:"Synthesize → CDCP proposal → LTM gate"},
+];
+function rARA(id,m){
+  if(!ARA_NS.includes(id))return`<div style="text-align:center;color:#3A5470;padding:20px;font-size:8px">No ARA on this node type</div>`;
+  const ara=m.ara||{};
+  return`<div style="background:rgba(196,168,245,.06);border:1px solid rgba(196,168,245,.2);border-radius:6px;padding:7px;margin-bottom:7px;font-size:7px"><div style="color:#C4A8F5;font-weight:700;margin-bottom:2px">ARA · gVisor Isolated · NeuEdge SNN</div><div style="display:flex;gap:8px"><span style="color:#3A5470">Cycles: <span style="color:#C4A8F5">${ara.cycles||0}</span></span><span style="color:#3A5470">Status: <span style="color:${ara.status==="ACTIVE"?"#00FF99":"#3A5470"}">${ara.status||"IDLE"}</span></span></div><div style="color:#3A5470;margin-top:1px">${ara.task||"Idle"}</div></div>
+  ${AGA2.map(a=>{const isA=a.id===ara.agent&&ara.status==="ACTIVE";return`<div class="arag" style="border-color:${isA?a.c:"#152030"};background:${isA?a.c+"0E":"rgba(0,0,0,.2)"}"><span class="araic">${a.ico}</span><div><div class="aratt" style="color:${isA?a.c:"#C5DCF0"}">${a.lbl}</div><div class="arasb2">${isA?`<span style="color:${a.c}">ACTIVE — ${ara.task||""}</span>`:a.role}</div></div><div class="aradot" style="background:${isA?a.c:"#152030"};${isA?"box-shadow:0 0 5px "+a.c+";animation:pulse 1s infinite":""}"></div></div>`;}).join("")}
+  ${ara.pipe&&ara.pipe.length?`<div style="margin-top:6px;font-size:7px;color:#3A5470"><div style="font-weight:700;margin-bottom:2px">PIPELINE LOG</div>${ara.pipe.map(p=>`<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:6px">${p}</div>`).join("")}</div>`:""}`;
+}
+
+function rCDCP(id,m){
+  const c=m.cdcp||{rounds:[],cred:.15};
+  return`<div style="background:rgba(168,123,212,.06);border:1px solid rgba(168,123,212,.2);border-radius:6px;padding:7px;margin-bottom:7px"><div style="font-size:8px;color:#A87BD4;font-weight:700;margin-bottom:4px">CDCP Participation</div><div style="display:flex;gap:7px;font-size:8px"><div><div style="font-size:16px;font-weight:700;color:#A87BD4">${c.cred.toFixed(2)}</div><div style="font-size:6px;color:#3A5470">Credibility</div></div><div><div style="font-size:16px;font-weight:700;color:#4C9FFF">${c.rounds.length}</div><div style="font-size:6px;color:#3A5470">Rounds</div></div><div><div style="font-size:16px;font-weight:700;color:#00FF99">${c.rounds.filter(r=>r.verd==="ADMIT").length}</div><div style="font-size:6px;color:#3A5470">Admits</div></div><div><div style="font-size:16px;font-weight:700;color:#FF4B6E">${c.rounds.filter(r=>r.verd==="REJECT").length}</div><div style="font-size:6px;color:#3A5470">Rejects</div></div></div>
+  <div style="margin-top:4px;height:4px;background:#152030;border-radius:2px;overflow:hidden"><div style="height:100%;background:${c.cred>.18?"#00FF99":c.cred>.10?"#F5E642":"#FF4B6E"};width:${Math.min(100,c.cred*500)}%;border-radius:2px;transition:width .5s"></div></div>
+  <div style="font-size:6px;color:#3A5470;margin-top:2px">${c.cred>.18?"TRUSTED node":c.cred>.10?"MODERATE trust":"LOW TRUST"+( c.cred<.08?" · Byzantine suspected":"")}</div></div>
+  <div style="font-size:7px;color:#3A5470;font-weight:700;margin-bottom:4px">RECENT ROUNDS</div>
+  ${c.rounds.length===0?`<div style="font-size:7px;color:#3A5470;text-align:center;padding:12px">No CDCP rounds yet — run Memory Write or Byzantine scenario</div>`:""}
+  ${c.rounds.map(r=>`<div class="cdcpr" style="border-color:${r.verd==="ADMIT"?"rgba(0,255,153,.2)":"rgba(255,75,110,.2)"};background:${r.verd==="ADMIT"?"rgba(0,255,153,.04)":"rgba(255,75,110,.04)"}"><span style="color:${r.verd==="ADMIT"?"#00FF99":"#FF4B6E"};font-weight:700;min-width:44px">${r.verd==="ADMIT"?"✓ ADMIT":"✗ REJECT"}</span><span style="color:#3A5470;flex:1">delta=${typeof r.delta==="number"?r.delta.toFixed(4):"—"}</span><span style="color:#C5DCF0">c=${r.cred.toFixed(2)}</span><span style="color:#3A5470;font-size:6px">${Math.round((Date.now()-r.ts)/1000)}s</span></div>`).join("")}
+  <div style="margin-top:7px;background:rgba(0,0,0,.2);border:1px solid #152030;border-radius:5px;padding:6px;font-size:7px"><div style="color:#A87BD4;font-weight:700;margin-bottom:2px">BFT Bound (N=7 · f=2 · 3f+1)</div><div style="color:#3A5470">||delta_bar - delta*|| <= f/(N-f) · max||delta_i - delta*|| <= 1/2 · max||delta_i - delta*||</div><div style="color:#3A5470;margin-top:2px">Node influence: <span style="color:${c.cred>.12?"#00FF99":"#FF4B6E"}">${(c.cred/.7*100).toFixed(1)}%</span></div></div>`;
+}
+
+const NCONNS={
+  tinyA:[{to:"GATEWAY",pr:"gRPC+mTLS",st:"OPEN",ms:4},{to:"MID-SCALE",pr:"gRPC+mTLS (activations)",st:"OPEN",ms:8}],
+  tinyB:[{to:"GATEWAY",pr:"gRPC+mTLS",st:"OPEN",ms:5},{to:"MID-SCALE",pr:"gRPC+mTLS (activations)",st:"OPEN",ms:9}],
+  tinyC:[{to:"GATEWAY",pr:"gRPC+mTLS",st:"OPEN",ms:6},{to:"MID-SCALE",pr:"gRPC+mTLS (activations)",st:"OPEN",ms:7}],
+  mid:[{to:"TINY-A",pr:"gRPC+mTLS",st:"OPEN",ms:8},{to:"TINY-B",pr:"gRPC+mTLS",st:"OPEN",ms:9},{to:"TINY-C",pr:"gRPC+mTLS",st:"OPEN",ms:7},{to:"CONSOLIDATOR",pr:"gRPC+mTLS (CDCP)",st:"OPEN",ms:3}],
+  xl:[{to:"MID-SCALE",pr:"gRPC+mTLS (CDCP gate)",st:"OPEN",ms:3},{to:"Hala Point",pr:"PCIe 5.0",st:"RESEARCH",ms:0.1}],
+  gw:[{to:"CLIENTS",pr:"HTTPS+TLS 1.3+SSE",st:"LISTEN",ms:0},{to:"TinyLM Pools",pr:"gRPC+mTLS",st:"OPEN",ms:6},{to:"MID-SCALE",pr:"gRPC+mTLS",st:"OPEN",ms:4}],
+};
+function rNET(id,meta){
+  const cs=NCONNS[id]||[];
+  return`<div style="background:rgba(0,0,0,.2);border:1px solid #152030;border-radius:6px;padding:7px;margin-bottom:7px;font-size:7px"><div style="color:#FFB830;font-weight:700;margin-bottom:3px">SECURITY POSTURE</div><div style="color:#3A5470">SVID: <span style="color:#FFB830;word-break:break-all">${(meta.svid||"—").substring(0,54)}${(meta.svid||"").length>54?"...":""}</span></div><div style="color:#3A5470;margin-top:2px">Cipher: <span style="color:#C5DCF0">TLS_AES_256_GCM_SHA384</span></div><div style="color:#3A5470">HB: <span style="color:#00FF99">3s interval · last 0.9s ago</span></div></div>
+  <div style="font-size:7px;color:#3A5470;font-weight:700;margin-bottom:4px">ACTIVE CONNECTIONS (${cs.length})</div>
+  ${cs.map(c=>`<div class="nconn" style="border-color:${c.st==="OPEN"?"rgba(0,255,153,.2)":c.st==="RESEARCH"?"rgba(245,230,66,.2)":"rgba(58,84,112,.2)"}"><div style="flex:1"><div style="color:#C5DCF0;font-size:8px">${c.to}</div><div style="color:#3A5470;font-size:6px">${c.pr}</div></div><span style="color:${c.st==="OPEN"?"#00FF99":c.st==="RESEARCH"?"#F5E642":"#3A5470"};font-size:6px">${c.st}</span>${c.ms>0?`<span style="color:#3A5470;font-size:6px;min-width:28px;text-align:right">${c.ms}ms</span>`:""}</div>`).join("")}
+  ${["tinyA","tinyB","tinyC","mid"].includes(id)?`<div style="margin-top:6px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:5px;padding:6px;font-size:7px"><div style="color:#00D4FF;font-weight:700;margin-bottom:2px">PIPELINE ROLE</div>${id.startsWith("tiny")?"Draft gamma=5 tokens · TSLT top-200 logits · 1.6KB/tok":id==="mid"?"Qualifier tau=0.85 · CDCP orchestrator · activation bridge":"Final verifier · CDCP gatekeeper · LTM host · RRC"}</div>`:""}`;
+}
+
+/* ═══ CANVAS VISUALIZATIONS ═══ */
+function drawSTM(weights){
+  const cv=document.getElementById("stmcvs");if(!cv)return;
+  const ctx=cv.getContext("2d"),W=cv.width,H=cv.height,C=8,cw=W/C,ch=H/C;
+  for(let i=0;i<64;i++){
+    const x=(i%C)*cw,y=Math.floor(i/C)*ch,v=Math.min(1,Math.max(0,weights[i]||0));
+    let r,g,b;
+    if(v<.33){r=0;g=Math.floor(v*3*80);b=Math.floor(v*3*160);}
+    else if(v<.66){const t=(v-.33)*3;r=Math.floor(t*80);g=80+Math.floor(t*100);b=160-Math.floor(t*60);}
+    else{const t=(v-.66)*3;r=80+Math.floor(t*170);g=180+Math.floor(t*50);b=100-Math.floor(t*60);}
+    ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(x+1,y+1,cw-2,ch-2);
+    ctx.fillStyle="rgba(0,0,0,.25)";ctx.fillRect(x,y,1,ch);ctx.fillRect(x,y,cw,1);
+  }
+}
+function animWM(nodeId,state){
+  Array.from(state).forEach((v,i)=>{
+    const b=document.getElementById("wmb-"+nodeId+"-"+i);
+    if(!b)return;
+    b.style.height=Math.max(3,v*25)+"px";
+    b.style.background=v>.7?"#00D4FF":v>.4?"#00B4E0":"#3A5470";
+  });
+}
+
+/* ═══ MEMORY QUERY ═══ */
+function queryMem(nodeId){
+  const inp=document.getElementById("qinp");const q=(inp&&inp.value||"").trim();if(!q)return;
+  const m=MEM[nodeId];const res=document.getElementById("qres");if(!res)return;
+  const ql=q.toLowerCase();let results=[];
+  if(m&&m.eb){m.eb.filter(e=>e.content.toLowerCase().includes(ql)).forEach(e=>results.push({tier:"EB",c:"#00B4E0",t:e.content,meta:"S="+e.surp.toFixed(2)+" U="+e.util.toFixed(2)+" RPE="+e.rpe.toFixed(2)}));}
+  if(m&&m.ltm){m.ltm.filter(e=>e.t.toLowerCase().includes(ql)||e.dom.toLowerCase().includes(ql)).forEach(e=>results.push({tier:"LTM",c:"#A87BD4",t:e.t,meta:"Decay: "+(e.decay*100).toFixed(0)+"% · "+e.dom+" · CDCP#"+e.round}));}
+  LTMP.filter(e=>e.t.toLowerCase().includes(ql)||e.dom.toLowerCase().includes(ql)).slice(0,2).forEach(e=>{if(!results.find(r=>r.t===e.t))results.push({tier:"KB",c:"#C4A8F5",t:e.t,meta:"Knowledge base · "+e.dom});});
+  if(m&&m.wm)results.unshift({tier:"WM",c:"#00D4FF",t:"Working memory state active (Mamba-2 SSM h_t in R^16)",meta:"16 dims · last "+(Math.round((Date.now()-m.wm.upd)/100)/10)+"s ago"});
+  if(m&&m.rrc){m.rrc.qr.unshift(q);if(m.rrc.qr.length>5)m.rrc.qr.pop();}
+  res.style.display="block";
+  res.innerHTML=results.length===0?`<span style="color:#3A5470">No matches for "${q}" in active memory tiers</span>`:`<div style="color:#00D4FF;font-weight:700;margin-bottom:4px">Query: "${q}" — ${results.length} result(s)</div>`+results.map(r=>`<div style="margin-bottom:3px;padding:3px 5px;border-left:2px solid ${r.c};background:${r.c}0A"><span style="color:${r.c};font-size:6px;font-weight:700;margin-right:4px">[${r.tier}]</span><span style="color:#C5DCF0">${r.t}</span><div style="color:#3A5470;font-size:6px;margin-top:1px">${r.meta}</div></div>`).join("");
+}
+
+/* ═══ GLOBAL MEMORY VIEW ═══ */
+function openGMem(){
+  const grid=document.getElementById("gmgrid");
+  const nodes=["tinyA","tinyB","tinyC","mid","xl"];
+  grid.innerHTML=nodes.map(id=>{
+    const m=MEM[id],meta=NMETA[id]||{},tiers=ATIERS[id]||[];
+    return`<div class="gmc" style="border-color:${(meta.color||"#152030")}30">
+      <div class="gmct" style="color:${meta.color}">${meta.icon||"◉"} ${meta.name||id}</div>
+      <div style="font-size:6px;color:#3A5470;margin-bottom:4px">${tiers.join(" · ")||"—"}</div>
+      ${m&&m.wm?`<div style="font-size:6px;color:#00D4FF;margin-bottom:2px">WM (16 dims)</div><div class="gmbars">${Array.from(m.wm.state).map(v=>`<div class="gmbar" style="height:${Math.max(2,v*16)}px;background:${v>.6?"#00D4FF":v>.3?"#00B4E0":"#3A5470"}"></div>`).join("")}</div>`:""}
+      ${m&&m.stm?`<div style="font-size:6px;color:#4C9FFF">STM: ${m.stm.cnt} updates</div>`:""}
+      ${m&&m.eb?`<div style="font-size:6px;color:#00B4E0;margin-top:1px">EB: ${m.eb.length} entries</div>`:""}
+      ${m&&m.ltm&&m.ltm.length>0?`<div style="font-size:6px;color:#A87BD4;margin:3px 0 2px">LTM (${m.ltm.length})</div><div class="gmlst">${m.ltm.slice(0,4).map(e=>`<div class="gmle" style="border-color:${e.decay>.6?"#00FF99":e.decay>.3?"#F5E642":"#FF4B6E"};color:#C5DCF0">${e.t}</div>`).join("")}</div>`:(tiers.includes("LTM")?`<div style="font-size:6px;color:#3A5470;margin-top:2px">LTM: awaiting CDCP</div>`:"")}
+      ${m&&m.rrc?`<div style="font-size:6px;color:#C4A8F5;margin-top:2px">RRC: ${m.rrc.sem+m.rrc.tmp+m.rrc.cau+m.rrc.ent} graph nodes</div>`:""}
+      <button onclick="openInsp('${id}');closeGMem()" style="margin-top:6px;width:100%;border:1px solid ${(meta.color||"#152030")}40;background:${(meta.color||"#152030")}10;color:${meta.color||"#3A5470"};border-radius:4px;padding:3px;font-size:6px;cursor:pointer;font-family:inherit">Inspect Node</button>
+    </div>`;
+  }).join("");
+  document.getElementById("gmem").classList.add("open");
+}
+function closeGMem(){document.getElementById("gmem").classList.remove("open");}
+setInterval(()=>{if(document.getElementById("gmem").classList.contains("open"))openGMem();},3000);
+
+/* ═══ HOOK CANVAS CLICK → INSPECTOR ═══ */
+function addInspHooks(){
+  const cvs=document.getElementById("sim-canvas");
+  if(!cvs||cvs._ih)return;cvs._ih=true;
+  cvs.addEventListener("click",function(e){
+    if(typeof SIM==="undefined"||!SIM)return;
+    const rect=cvs.getBoundingClientRect();
+    const sx=cvs.width/rect.width,sy=cvs.height/rect.height;
+    const mx=(e.clientX-rect.left)*sx,my=(e.clientY-rect.top)*sy;
+    let hit=null;
+    const all=Object.assign({},SIM.nodes);
+    (SIM.extraNodes||[]).forEach(id=>{if(SIM.nodes[id])all[id]=SIM.nodes[id];});
+    Object.entries(all).forEach(([id,nd])=>{if(!nd.hidden&&Math.hypot(mx-nd.x,my-nd.y)<(nd.r||16)+9)hit=id;});
+    if(hit){openInsp(hit);}
+    else if(document.getElementById("inspector").classList.contains("open")){closeInsp();}
+  });
+  // Patch SIM fire to call onPackArrive
+  if(SIM&&SIM.fire&&!SIM._p){
+    SIM._p=true;
+    const orig=SIM.fire.bind(SIM);
+    SIM.fire=function(from,to,col,lbl,cb,delay){
+      orig(from,to,col,lbl,function(){onPackArrive(to,col||"",lbl||"");if(cb)cb();},delay);
+    };
+  }
+}
+
+// Add "All Mem" button after controls load
+function addGMemBtn(){
+  const bar=document.querySelector(".ctrl-row")||document.getElementById("ctrl-bar");
+  if(!bar||document.getElementById("gmem-btn"))return;
+  const b=document.createElement("button");
+  b.id="gmem-btn";b.className="sim-btn";b.innerHTML="&#128506; All Mem";
+  b.style.borderColor="#C4A8F5";b.style.color="#C4A8F5";
+  b.onclick=openGMem;bar.appendChild(b);
+}
+
+// Run hooks on simulate tab init
+const _oi=typeof initSim==="function"?initSim:null;
+if(_oi){window.initSim=function(){_oi();setTimeout(addInspHooks,300);setTimeout(addGMemBtn,400);};}
+// Also try immediately and after a short delay
+setTimeout(()=>{addInspHooks();addGMemBtn();},1000);
+setTimeout(()=>{addInspHooks();addGMemBtn();},3000);
+</script>
+</body>
+</html>
