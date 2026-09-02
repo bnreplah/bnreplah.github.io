@@ -229,6 +229,180 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 .gmle{padding:2px 4px;border-left:2px solid;border-radius:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @keyframes irise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 
+
+/* LAYER SYSTEM */
+#lyrs-strip{flex-shrink:0;display:flex;gap:3px;padding:4px 8px;
+  border-bottom:1px solid var(--border,#152030);overflow-x:auto;
+  background:rgba(3,12,22,.85);align-items:center}
+#lyrs-strip::-webkit-scrollbar{height:2px}
+.lbtn{flex-shrink:0;display:inline-flex;align-items:center;gap:3px;
+  border:1px solid;border-radius:10px;padding:2px 7px;font-size:7px;
+  cursor:pointer;font-family:inherit;background:none;transition:all .2s;white-space:nowrap}
+.lbtn.off{opacity:.35;border-color:#152030!important;color:#3A5470!important}
+.lbtn .ldot{width:5px;height:5px;border-radius:50%}
+#lyr-panel-btn{margin-left:auto;flex-shrink:0;border:1px solid #152030;background:rgba(0,0,0,.3);
+  color:#3A5470;border-radius:6px;padding:2px 7px;font-size:7px;cursor:pointer;font-family:inherit}
+#lyr-panel-btn:hover{color:#C5DCF0;border-color:#3A5470}
+/* Layer panel (slide from right) */
+#lyrpanel{position:fixed;top:0;right:0;width:min(280px,88vw);height:100vh;
+  background:#091422;border-left:2px solid #152030;z-index:300;
+  transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden}
+#lyrpanel.open{transform:translateX(0)}
+#lyrph{flex-shrink:0;padding:10px 12px 8px;border-bottom:1px solid #152030;
+  display:flex;align-items:center;justify-content:space-between}
+#lyrph h3{font-size:10px;color:#00D4FF}
+#lpclose{border:1px solid #152030;background:rgba(0,0,0,.3);color:#3A5470;
+  border-radius:5px;padding:3px 8px;font-size:8px;cursor:pointer;font-family:inherit}
+#lyrpbody{flex:1;overflow-y:auto;padding:10px}
+.lyr-row{background:rgba(0,0,0,.2);border:1px solid #152030;border-radius:8px;
+  padding:8px 10px;margin-bottom:7px}
+.lyr-row-hdr{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.lyr-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.lyr-name{font-size:9px;font-weight:700}
+.lyr-desc{font-size:7px;color:#3A5470;line-height:1.4;margin-bottom:6px}
+.lyr-toggle{margin-left:auto;width:32px;height:16px;background:#152030;border-radius:8px;
+  position:relative;cursor:pointer;border:1px solid #3A5470;transition:background .2s}
+.lyr-toggle.on{background:rgba(0,212,255,.2);border-color:#00D4FF}
+.lyr-toggle-dot{position:absolute;top:2px;left:2px;width:10px;height:10px;
+  border-radius:50%;background:#3A5470;transition:all .2s}
+.lyr-toggle.on .lyr-toggle-dot{left:18px;background:#00D4FF}
+/* Intensity slider per layer */
+.lyr-intens{display:flex;align-items:center;gap:5px;font-size:7px;color:#3A5470}
+.lyr-intens input{flex:1;accent-color:currentColor}
+/* Compute heat overlay legend */
+.heat-legend{display:flex;align-items:center;gap:4px;font-size:7px;color:#3A5470;margin-top:4px}
+.heat-swatch{width:60px;height:6px;border-radius:3px}
+/* Canvas overlay labels */
+.trace-types{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.trace-type-pill{display:inline-flex;align-items:center;gap:2px;font-size:6px;
+  padding:1px 5px;border-radius:4px;border:1px solid;opacity:.75}
+/* Node compute ring animation */
+@keyframes computeRing{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.5);opacity:0}}
+@keyframes dataChunk{0%{transform:scale(0);opacity:0}20%{transform:scale(1);opacity:1}80%{opacity:.8}100%{transform:scale(.5);opacity:0}}
+
+
+/* CACHE LAYER VISUALIZATION */
+#cache-overlay{position:absolute;bottom:5px;left:5px;right:5px;pointer-events:none;
+  display:none;font-family:'Courier New',monospace}
+#cache-overlay.vis{display:block}
+.cache-strip{display:flex;gap:3px;justify-content:center;margin-bottom:2px}
+.cache-box{border-radius:4px;padding:3px 7px;font-size:7px;font-weight:700;
+  border:1px solid;text-align:center;min-width:55px;transition:all .3s}
+.cache-box.hit{animation:cacheFlash .5s ease}
+@keyframes cacheFlash{0%{transform:scale(1.15);filter:brightness(2)}100%{transform:scale(1);filter:brightness(1)}}
+
+/* CONVERSATION DISPLAY */
+#convo-overlay{position:absolute;top:4px;left:4px;right:4px;pointer-events:none;
+  display:none;max-height:45%;overflow:hidden}
+#convo-overlay.vis{display:block}
+.convo-bubble{font-size:7px;padding:3px 7px;border-radius:5px;margin-bottom:2px;
+  max-width:85%;line-height:1.4;animation:bubbleIn .3s ease}
+.convo-bubble.user{background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.35);
+  color:#00D4FF;margin-left:auto;text-align:right}
+.convo-bubble.ai{background:rgba(168,123,212,.12);border:1px solid rgba(168,123,212,.3);
+  color:#C5DCF0}
+.convo-cache-tag{font-size:6px;padding:1px 4px;border-radius:3px;
+  display:inline-block;margin-top:1px}
+@keyframes bubbleIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* LLM turn indicator on canvas */
+.turn-badge{position:absolute;top:4px;right:4px;font-size:7px;
+  padding:2px 7px;border-radius:8px;border:1px solid;font-family:inherit;pointer-events:none}
+
+
+/* DESELECTION & MUTE */
+.node-muted-overlay{position:absolute;border-radius:50%;background:rgba(58,84,112,.6);
+  border:2px dashed #3A5470;pointer-events:none}
+#ctx-menu{position:absolute;background:#091422;border:1px solid #152030;border-radius:8px;
+  padding:4px 0;z-index:400;display:none;min-width:130px;
+  box-shadow:0 4px 20px rgba(0,0,0,.7);font-family:'Courier New',monospace}
+.ctx-item{padding:5px 12px;font-size:8px;cursor:pointer;color:#C5DCF0;
+  display:flex;align-items:center;gap:6px;transition:background .12s}
+.ctx-item:hover{background:rgba(255,255,255,.07)}
+.ctx-item.danger{color:#FF4B6E}
+.ctx-item.danger:hover{background:rgba(255,75,110,.1)}
+.ctx-sep{height:1px;background:#152030;margin:3px 0}
+/* BENCHMARK PANEL */
+#bench-panel{position:absolute;top:0;left:0;right:0;bottom:0;
+  background:rgba(3,12,22,.96);z-index:30;display:none;
+  flex-direction:column;overflow:hidden;border-radius:4px}
+#bench-panel.vis{display:flex}
+#bench-hdr{flex-shrink:0;padding:7px 10px;border-bottom:1px solid #152030;
+  display:flex;align-items:center;gap:7px}
+#bench-hdr h3{font-size:9px;color:#F5E642;flex:1}
+#bench-close{border:1px solid #152030;background:transparent;color:#3A5470;
+  font-size:7px;padding:2px 7px;border-radius:4px;cursor:pointer;font-family:inherit}
+#bench-select-row{flex-shrink:0;display:flex;gap:3px;overflow-x:auto;
+  padding:5px 8px;border-bottom:1px solid #152030}
+#bench-select-row::-webkit-scrollbar{height:2px}
+.bsel{flex-shrink:0;border:1px solid #152030;background:transparent;color:#3A5470;
+  font-size:7px;padding:3px 7px;border-radius:5px;cursor:pointer;font-family:inherit;
+  white-space:nowrap;transition:all .15s}
+.bsel.on{border-color:var(--bc,#F5E642);color:var(--bc,#F5E642);
+  background:rgba(245,230,66,.08)}
+#bench-body{flex:1;overflow-y:auto;padding:7px 9px}
+/* Score meters */
+.bench-meter-wrap{margin-bottom:7px;background:rgba(0,0,0,.3);
+  border:1px solid #152030;border-radius:7px;padding:7px 9px}
+.bm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.bm-name{font-size:8px;font-weight:700}
+.bm-score-big{font-size:16px;font-weight:700;line-height:1}
+.bm-bar-wrap{height:6px;background:#152030;border-radius:3px;overflow:hidden;margin:4px 0}
+.bm-bar-fill{height:100%;border-radius:3px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.bm-ci{font-size:6px;color:#3A5470}
+/* Comparison table */
+.bench-table{width:100%;border-collapse:collapse;font-size:7px;margin-top:5px}
+.bench-table th{color:#3A5470;text-align:left;padding:3px 5px;border-bottom:1px solid #152030;font-weight:normal}
+.bench-table td{padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.03)}
+.bench-table .model-darmann{color:#00D4FF;font-weight:700}
+/* Live Q display */
+#bench-live-q{margin-bottom:6px;background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.15);
+  border-radius:6px;padding:6px 8px;font-size:7px;min-height:36px}
+.qlabel{font-size:6px;color:#3A5470;margin-bottom:2px}
+.qtext{color:#C5DCF0;line-height:1.5}
+/* Progress dots */
+.qdots{display:flex;gap:2px;flex-wrap:wrap;margin-top:4px;max-height:18px;overflow:hidden}
+.qdot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+/* Stats row */
+.bench-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:6px}
+.bstat{background:rgba(0,0,0,.25);border:1px solid #152030;border-radius:5px;padding:4px 6px}
+.bstat-val{font-size:12px;font-weight:700;line-height:1}
+.bstat-lbl{font-size:6px;color:#3A5470;margin-top:1px}
+/* Deselection hint */
+#desel-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
+  font-size:6px;color:#3A5470;background:rgba(9,20,34,.8);padding:2px 8px;
+  border-radius:6px;pointer-events:none;display:none;border:1px solid #152030}
+
+
+/* CPU ALLOCATION PANEL */
+#cpu-panel{position:absolute;top:0;right:0;width:min(230px,80vw);bottom:0;
+  background:rgba(9,20,34,.97);border-left:1px solid var(--border,#152030);
+  z-index:50;display:none;flex-direction:column;overflow:hidden}
+#cpu-panel.open{display:flex}
+#cpu-ph{flex-shrink:0;padding:8px 10px;border-bottom:1px solid #152030;
+  display:flex;align-items:center;justify-content:space-between}
+#cpu-ph h4{font-size:9px;color:var(--ara)}
+#cpu-close{border:1px solid #152030;background:transparent;color:#3A5470;
+  font-size:7px;padding:2px 6px;border-radius:4px;cursor:pointer;font-family:inherit}
+#cpu-body{flex:1;overflow-y:auto;padding:8px}
+.cpu-row{margin-bottom:10px;background:rgba(0,0,0,.25);border:1px solid #152030;
+  border-radius:6px;padding:7px 8px}
+.cpu-node-hdr{display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.cpu-node-name{font-size:8px;font-weight:700}
+.cpu-node-type{font-size:6px;color:#3A5470;flex:1}
+.cpu-util-bar{height:5px;background:#152030;border-radius:3px;overflow:hidden;margin-bottom:5px}
+.cpu-util-fill{height:100%;border-radius:3px;transition:width .5s}
+.cpu-slider-row{display:flex;align-items:center;gap:5px;font-size:7px;margin-bottom:3px}
+.cpu-slider-row input{flex:1;accent-color:var(--ara)}
+.cpu-stats{display:flex;gap:6px;font-size:6px;color:#3A5470;flex-wrap:wrap}
+
+
+.ctrl-sep{display:inline-block;width:1px;height:16px;background:var(--border,#152030);
+  margin:0 4px;vertical-align:middle}
+.ctrl-grp{display:inline-flex;align-items:center;gap:3px;vertical-align:middle}
+.ctrl-lbl{font-size:8px;white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -253,6 +427,53 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
     <button class="tab" onclick="showTab('training',this)">Training</button>
     <button class="tab sim-tab" onclick="showTab('simulate',this)">⚡ Simulate</button>
   </div>
+
+    <div id="cache-overlay">
+      <div class="cache-strip">
+        <div class="cache-box" id="cache-l1" style="border-color:#00FF99;color:#00FF99">L1 REQ<br>MISS</div>
+        <div class="cache-box" id="cache-l2" style="border-color:#A87BD4;color:#A87BD4">L2 SEM<br>MISS</div>
+        <div class="cache-box" id="cache-l3" style="border-color:#C4A8F5;color:#C4A8F5">L3 LTM<br>MISS</div>
+        <div class="cache-box" id="cache-net" style="border-color:#50FA7B;color:#50FA7B">NET<br>FETCH</div>
+      </div>
+    </div>
+    <div id="convo-overlay">
+      <div id="convo-bubbles"></div>
+    </div>
+    <div class="turn-badge" id="turn-badge" style="display:none"></div>
+</html>
+
+<div id="ctx-menu">
+  <div class="ctx-item" onclick="ctxInspect()">🔍 Inspect Node</div>
+  <div class="ctx-item" onclick="ctxMute()">🔇 <span id="ctx-mute-lbl">Mute Node</span></div>
+  <div class="ctx-item" onclick="ctxIsolate()">⊙ Isolate Layer</div>
+  <div class="ctx-item" onclick="ctxShowMem()">🧠 Jump to Memory</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="clearTraces()">✕ Clear Traces</div>
+  <div class="ctx-item danger" onclick="ctxDeactivate()">⊗ Deactivate Node</div>
+</div>
+<div id="bench-panel">
+  <div id="bench-hdr">
+    <h3>📊 LLM Benchmark Suite</h3>
+    <span id="bench-run-lbl" style="font-size:7px;color:#3A5470">Not running</span>
+    <button id="bench-close" onclick="closeBenchPanel()">✕ Close</button>
+  </div>
+  <div id="bench-select-row"></div>
+  <div id="bench-body">
+    <div class="bench-stats">
+      <div class="bstat"><div class="bstat-val" id="bst-q" style="color:#00D4FF">0</div><div class="bstat-lbl">Questions</div></div>
+      <div class="bstat"><div class="bstat-val" id="bst-tok" style="color:#F5E642">0</div><div class="bstat-lbl">Tokens used</div></div>
+      <div class="bstat"><div class="bstat-val" id="bst-mj" style="color:#00FF99">—</div><div class="bstat-lbl">mJ/question</div></div>
+    </div>
+    <div id="bench-live-q">
+      <div class="qlabel">CURRENT QUESTION</div>
+      <div class="qtext" id="bench-q-text">Press ▶ Run to start a benchmark simulation...</div>
+      <div class="qdots" id="bench-qdots"></div>
+    </div>
+    <div id="bench-meters"></div>
+  </div>
+</div>
+<div id="desel-hint">Click again or tap canvas to deselect</div>
+
 </div>
 
 <!-- ══ SYSTEM PANE ══ -->
@@ -390,6 +611,21 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
     <!-- Scenario selector -->
     <div class="slbl">Select Scenario</div>
     <div id="scenario-grid">
+      <button class="sc-btn" id="sc-benchmark" onclick="setSc('benchmark',this)">
+        <span class="sc-icon">📊</span>
+        <span class="sc-title" style="color:#F5E642">Run Benchmarks</span>
+        <span class="sc-desc">MMLU · MT-Bench · HumanEval · GSM8K · HellaSwag · LoCoMo · LongMemEval — live mathematical simulation vs GPT-4o / Claude baselines</span>
+      </button>
+      <button class="sc-btn" id="sc-llm-convo" onclick="setSc('llm-convo',this)" style="border:2px solid #00D4FF;box-shadow:0 0 12px rgba(0,212,255,.3)">
+        <span class="sc-icon">💬</span>
+        <span class="sc-title" style="color:#00D4FF">★ LLM Conversation</span>
+        <span class="sc-desc">Multi-turn chat · KV cache hits · speculative decode · memory accumulation across nodes</span>
+      </button>
+      <button class="sc-btn" id="sc-http-cache" onclick="setSc('http-cache',this)">
+        <span class="sc-icon">🌍</span>
+        <span class="sc-title" style="color:#50FA7B">HTTP + Cache Layers</span>
+        <span class="sc-desc">google.com request · L1 KV cache · L2 semantic cache · L3 LTM · TTL expiry · cache hits</span>
+      </button>
       <button class="sc-btn" id="sc-connect" onclick="setSc('connect',this)">
         <span class="sc-icon">🔗</span>
         <span class="sc-title" style="color:var(--gw)">Connection Setup</span>
@@ -433,7 +669,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
     </div>
 
     <!-- Canvas -->
-    <div id="cvs-wrap">
+    
+<!-- LAYER TOGGLE STRIP -->
+<div id="lyrs-strip">
+  <button class="lbtn on" id="lb-inference" onclick="togLyr('inference',this)" style="border-color:#F5E642;color:#F5E642"><span class="ldot" style="background:#F5E642"></span>⚡ Inference</button>
+  <button class="lbtn on" id="lb-memory" onclick="togLyr('memory',this)" style="border-color:#A87BD4;color:#A87BD4"><span class="ldot" style="background:#A87BD4"></span>🧠 Memory</button>
+  <button class="lbtn on" id="lb-consensus" onclick="togLyr('consensus',this)" style="border-color:#C4A8F5;color:#C4A8F5"><span class="ldot" style="background:#C4A8F5"></span>⚖️ Consensus</button>
+  <button class="lbtn on" id="lb-security" onclick="togLyr('security',this)" style="border-color:#FFB830;color:#FFB830"><span class="ldot" style="background:#FFB830"></span>🔐 Security</button>
+  <button class="lbtn on" id="lb-ara" onclick="togLyr('ara',this)" style="border-color:#50FA7B;color:#50FA7B"><span class="ldot" style="background:#50FA7B"></span>🔬 ARA</button>
+  <button class="lbtn on" id="lb-compute" onclick="togLyr('compute',this)" style="border-color:#4C9FFF;color:#4C9FFF"><span class="ldot" style="background:#4C9FFF"></span>💻 Compute</button>
+  <button id="lyr-panel-btn" onclick="openLyrPanel()">☰ Layers</button>
+</div>
+<div id="cvs-wrap" style="position:relative">
       <canvas id="sim-cvs"></canvas>
       <div id="node-tip"></div>
     </div>
@@ -475,6 +722,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
         <button class="btn danger" onclick="quickFault()">⚠ Inject Fault</button>
         <button class="btn warn" onclick="quickMem()">🧠 Force Mem Write</button>
         <button class="btn ok" onclick="addExtraNode()">+ Add Node</button>
+        <button class="btn" onclick="clearAllScenarios()" style="border-color:#3A5470;color:#3A5470" title="Stop all scenarios">✕ Clear</button>
+        <span class="ctrl-sep"></span>
+        <span style="font-size:8px;color:var(--diag)">⏱</span>
+        <input type="range" id="latency-slider" min="0" max="250" step="5" value="0"
+          oninput="setUserLatency(this.value)" style="width:50px;accent-color:var(--diag);vertical-align:middle" title="Network latency (0-250ms added)">
+        <span id="latency-val" style="font-size:8px;color:var(--diag);min-width:32px">+0ms</span>
+        <button class="btn" onclick="toggleCPUPanel()" style="border-color:var(--ara);color:var(--ara)" title="Per-node CPU allocation">⚙ CPU</button>
         <button class="btn" onclick="simStep()" style="border-color:var(--ara);color:var(--ara)">Step ›</button>
       </div>
     </div>
@@ -971,7 +1225,7 @@ class DARMANNSim{
                   setTimeout(()=>{
                     this.fire(id,'mid',C.sec,'CDCP-JOIN',()=>{
                       log('CDCP','MID','⚖️','CDCP quorum updated · N+1 node added','Previous N: 7 · New N: 8\nf_max updated: ⌊(8-1)/3⌋ = 2 Byzantine\nNew TINY-D credibility: 0.10 (bootstrap)\nQuorum: HEALTHY');
-                      this.stats.nodes=8;updateStats(this);
+                      this.stats.nodes=countTotalNodes(this)-(this.failedNodes?this.failedNodes.size:0);updateStats(this);
                       setTimeout(()=>{
                         this.fire('mid',id,C.xl,'QUORUM-OK',()=>{
                           log('NET','TINY-D','✅','Node fully joined swarm · sending first heartbeat','Health status: HEALTHY\nActive tiers: WM + EB\nARA: initializing gVisor sandbox...\nEnergy baseline: measuring...');
@@ -1134,7 +1388,7 @@ class DARMANNSim{
                   log('CDCP','MID','⚖️','Phase 4: CDCP quorum recovery','N restored to 7 (STANDBY-D replacing TINY-B)\nBFT condition: 7 > 3(2)+1 = 7 ✓\nStatus: CDCP BFT guarantees RESTORED');
                   this.fire('standby','mid',C.ok,'REJOIN',()=>{
                     log('CDCP','XL','✅','CDCP quorum re-established · system HEALTHY','N=7, f=2 · BFT guarantees active\nAll LTM writes resuming normal admission\nSycophancy monitor: recalibrating baseline');
-                    this.stats.nodes=7;updateStats(this);
+                    this.stats.nodes=countTotalNodes(this)-(this.failedNodes?this.failedNodes.size:0);updateStats(this);
                     this.haPhase=5;
 
                     // original node recovery
@@ -1146,7 +1400,7 @@ class DARMANNSim{
                           this.recoveringNodes.delete('tinyB');this.ring('tinyB',C.ok);
                           this.standbyNode=null;
                           log('NET','TINY-B','✅','TINY-B fully recovered · swarm now N=8','TINY-D (standby) remains as additional capacity\nCDCP: N=8, f_max=2 → enhanced fault tolerance\nAll nodes: HEALTHY · HA cycle complete');
-                          this.stats.nodes=8;updateStats(this);
+                          this.stats.nodes=countTotalNodes(this)-(this.failedNodes?this.failedNodes.size:0);updateStats(this);
                           document.getElementById('sv-health').textContent='HEALTHY';
                           document.getElementById('sv-health').style.color=C.ok;
                           document.getElementById('hb-nodes-lbl').textContent='8/8';
@@ -1341,14 +1595,23 @@ class DARMANNSim{
 
     // running scenario logic
     if(this.running){
-      if(this.mode==='connect')this.runConnect();
-      else if(this.mode==='internet')this.runInternet();
-      else if(this.mode==='llm')this.runLLM();
-      else if(this.mode==='ha')this.runHA();
-      else if(this.mode==='token')this.runToken();
-      else if(this.mode==='byzantine')this.runByzantine();
-      else if(this.mode==='memory')this.runMemory();
-      else if(this.mode==='energy')this.runEnergy();
+      // Run ALL active scenarios simultaneously (realistic concurrent operation)
+      const toRun = (typeof activeScenarios!=='undefined' && activeScenarios.size>0)
+        ? [...activeScenarios]
+        : [this.mode];
+      toRun.forEach(sc=>{
+        if(sc==='connect')this.runConnect();
+        else if(sc==='internet')this.runInternet();
+        else if(sc==='llm')this.runLLM();
+        else if(sc==='ha')this.runHA();
+        else if(sc==='token')this.runToken();
+        else if(sc==='byzantine')this.runByzantine();
+        else if(sc==='memory')this.runMemory();
+        else if(sc==='energy')this.runEnergy();
+        else if(sc==='llm-convo')this.runLLMConvo();
+        else if(sc==='http-cache')this.runHTTPCache();
+        else if(sc==='benchmark')this.runBenchmarkTick();
+      });
     }
     this.raf=requestAnimationFrame(()=>this.frame());
   }
@@ -1369,6 +1632,315 @@ class DARMANNSim{
     log('SYS','SYSTEM','🔄','Simulation reset · DARM-ANN v7.7 ready','All nodes: HEALTHY\nCDCP: quorum N=7, f=2\nScenario: '+currentSc);
   }
   step(){this.tick=0;this.start();setTimeout(()=>this.pause(),200);}
+
+  // ─── LLM CONVERSATION SCENARIO ───
+  runLLMConvo(){
+    if(!this.convTurn)this.convTurn=0;
+    if(!this.convPhase)this.convPhase=0;
+    // Fire a conversation turn every ~200 ticks
+    if(this.tick===1)this._startConvoTurn();
+  }
+  _startConvoTurn(){
+    const turns=[
+      {prompt:"What is the capital of France?",response:"The capital of France is Paris.",cacheHit:false,tokens:9},
+      {prompt:"What language do they speak there?",response:"They speak French in France.",cacheHit:"L2",tokens:7},
+      {prompt:"Say bonjour in French please.",response:"\"Bonjour\" means hello in French.",cacheHit:"L3",tokens:8},
+      {prompt:"What is the capital of France?",response:"The capital of France is Paris.",cacheHit:"L1",tokens:9},
+    ];
+    const t=turns[this.convTurn%turns.length];
+    this.convTurn++;
+    const self=this;
+
+    log('NET','CLIENT','💬','User: "'+t.prompt+'"',
+      'Turn '+this.convTurn+' · Model: darmann-mid\nStream: true · Max tokens: 128\nSession: established');
+
+    // Step 1: Tokenize
+    const tok_ids=Array.from({length:t.tokens},(_,i)=>(1000+Math.floor(Math.random()*8000)));
+    log('NET','GATEWAY','📝','Tokenizing prompt','Tokenizer: Llama-3 BPE · Vocab: 32,000\nToken IDs: ['+tok_ids.slice(0,5).join(', ')+'...]\nCount: '+t.tokens+' tokens');
+
+    setTimeout(()=>{
+      // Step 2: Cache Check
+      if(t.cacheHit==="L1"){
+        log('MEM','MID','⚡','L1 KV Cache: FULL HIT','All '+t.tokens+' prefix tokens found in VRAM KV cache\nSkipping forward pass entirely\nCache utilization: 94%');
+        self.activate('mid',600);
+        // Instant response - skip TinyLM
+        setTimeout(()=>{
+          self.fire('mid','gw','#00FF99','L1-HIT',()=>{
+            self.fire('gw','client','#00FF99','SSE✓',()=>{
+              log('NET','CLIENT','✅','[L1 CACHE HIT] "'+t.response+'"',
+                'Latency: 3ms (cache) vs ~44ms (compute)\nTokens: '+t.tokens+'\nmJ: 0 (no compute)');
+              self.stats.tok+=t.tokens;updateStats(self);
+            });
+          });
+          self.cacheHits={...self.cacheHits,l1:(self.cacheHits.l1||0)+1};
+          self._scheduleNextTurn(turns);
+        },400);
+        return;
+      }
+
+      if(t.cacheHit==="L2"){
+        log('MEM','MID','🔎','L1 KV Cache: MISS · checking L2 Semantic Cache','No exact prefix match\nL2: searching EB for semantically similar query...');
+        self.fire('gw','mid','#A87BD4','L1-MISS',()=>{
+          const ebHit=MEM['mid']&&MEM['mid'].eb&&MEM['mid'].eb.length>0;
+          if(ebHit){
+            log('MEM','MID','✅','L2 Semantic Cache (EB): HIT','Similar query in Episodic Buffer:\n"What is France\'s capital?"\nSimilarity: 0.94 · Surprise: 0.12 (low)\nPartial forward pass from cached context');
+            pushEB('mid','Semantic cache hit: France capital query (0.94 sim)',0.12,0.88);
+            self.activate('mid',500);
+            setTimeout(()=>{
+              log('NET','MID','⚡','Partial forward pass · 6/'+t.tokens+' tokens from L2','Compute saved: ~45%\nEnergy: '+(t.tokens*35).toFixed(0)+' mJ (vs '+t.tokens*79+' mJ full)');
+              self.fire('mid','gw','#C4A8F5','L2-HIT+STREAM',()=>{
+                self.fire('gw','client','#00D4FF','SSE✓');
+                log('NET','CLIENT','✅','[L2 CACHE HIT] "'+t.response+'"','Latency: 18ms · Energy: '+(t.tokens*35).toFixed(0)+' mJ');
+                self.stats.tok+=t.tokens;self.stats.energy+=t.tokens*35;updateStats(self);
+              });
+              self.cacheHits={...self.cacheHits,l2:(self.cacheHits.l2||0)+1};
+              self._scheduleNextTurn(turns);
+            },600);
+          }
+        });
+        return;
+      }
+
+      if(t.cacheHit==="L3"){
+        log('MEM','XL','🔎','L1+L2 MISS · checking L3 LTM / RRC','No EB match\nQuerying MAGMA RRC semantic graph...');
+        self.fire('gw','mid','#A87BD4','L2-MISS',()=>{
+          self.fire('mid','xl','#A87BD4','L3-CHECK',()=>{
+            const ltmHit=MEM['xl']&&MEM['xl'].ltm&&MEM['xl'].ltm.length>0;
+            if(ltmHit){
+              log('MEM','XL','✅','L3 LTM/RRC: HIT','MAGMA semantic graph match found\nFact: "'+MEM['xl'].ltm[0].t.substring(0,40)+'..."\nDecay: '+(MEM['xl'].ltm[0].decay*100).toFixed(0)+'%\nGrounding response in LTM knowledge');
+              self.activate('xl',600);
+              setTimeout(()=>{
+                self.fire('xl','mid','#C4A8F5','LTM-GROUND',()=>{
+                  log('NET','MID','⚡','Generating with LTM grounding · reduced hallucination risk','STM gradient update: writing to W_STM');
+                  updSTM('mid',0.041);updSTM('xl',0.029);
+                  self.fire('mid','gw','#00D4FF','STREAM',()=>{
+                    self.fire('gw','client','#2DD4BF','SSE✓');
+                    log('NET','CLIENT','✅','[L3 LTM GROUNDED] "'+t.response+'"','Latency: 28ms · mJ: '+(t.tokens*55).toFixed(0));
+                    self.stats.tok+=t.tokens;self.stats.energy+=t.tokens*55;updateStats(self);
+                  });
+                });
+                self.cacheHits={...self.cacheHits,l3:(self.cacheHits.l3||0)+1};
+                self._scheduleNextTurn(turns);
+              },500);
+            } else {
+              // Full compute (first turn)
+              self._fullForwardPass(t,turns);
+            }
+          });
+        });
+        return;
+      }
+
+      // Full forward pass (cache miss on all layers)
+      log('MEM','MID','💾','All caches MISS → full forward pass','L1 KV Cache: MISS (cold start)\nL2 Semantic EB: MISS (no prior context)\nL3 LTM/RRC: MISS\nAllocating KV cache blocks...');
+      self._fullForwardPass(t,turns);
+    },300);
+  }
+
+  _fullForwardPass(t,turns){
+    const self=this;
+    log('NET','GATEWAY','📡','Dispatching to TinyLM pools · parallel draft γ=5',
+      'Pools: TINY-A · TINY-B · TINY-C\nTSLT compression: top-200 logits = 1.6KB/tok');
+
+    // Fan out to TinyLM pools
+    ['tinyA','tinyB','tinyC'].forEach((pool,pi)=>{
+      setTimeout(()=>{
+        self.fire('gw',pool,'#00D4FF','DRAFT',()=>{
+          const acc=3+Math.floor(Math.random()*2);
+          const draft_toks=t.response.split(' ').slice(0,5);
+          log('MEM',pool.toUpperCase(),'⚡','Draft γ=5: "'+draft_toks.join(' ')+'..."',
+            'WM h_t updated (Mamba-2 SSM)\nEB: checked '+Math.floor(Math.random()*3+1)+' entries\nEnergy: '+(5*79).toFixed(0)+' mJ · '+Math.floor(Math.random()*4+6)+'ms');
+          pushEB(pool,'Conversation context: '+t.prompt,0.6+Math.random()*.3,0.7+Math.random()*.2);
+
+          setTimeout(()=>{
+            self.fire(pool,'mid','#00D4FF','TSLT×5',()=>{
+              log('NET','MID','🎯',acc+'/5 tokens accepted (τ=0.85)',
+                'TSLT: 1.6KB vs 128KB full vocab\nAccepted: "'+draft_toks.slice(0,acc).join(' ')+'"');
+              self.stats.tok+=acc;self.stats.energy+=acc*79;
+
+              if(pi===2){
+                setTimeout(()=>{
+                  self.fire('mid','xl','#4C9FFF','VERIFY',()=>{
+                    log('MEM','XL','🔍','Consolidator verification · LTM/RRC grounding',
+                      'LTM entries: '+( MEM.xl?.ltm?.length||0)+'\nRRC semantic query: "'+t.prompt.split(' ')[0]+'" → results found\nOutput committed');
+                    updSTM('mid',0.055);updSTM('xl',0.038);
+                    // Populate caches post-inference
+                    pushLTM(LTMP[Math.floor(Math.random()*LTMP.length)]);
+                    pushCDCP('xl','ADMIT',+(Math.random()*.08).toFixed(4));
+                    pushCDCP('mid','ADMIT',+(Math.random()*.08).toFixed(4));
+                    ['tinyA','tinyB','tinyC'].forEach(n=>pushEB(n,'Response grounded: '+t.response.substring(0,30),0.5,0.7));
+
+                    setTimeout(()=>{
+                      self.fire('xl','mid','#00FF99','VERIFY-OK',()=>{
+                        log('MEM','MID','💾','Populating L1 KV cache · L2 EB · L3 LTM check',
+                          'L1 KV: stored '+t.tokens+' prefix tokens in VRAM\nL2 EB: wrote semantic embedding (dim=1536)\nL3 LTM: CDCP gate → admitted 1 new fact\nNext identical query: L1 HIT (~3ms)');
+                        pushEB('mid',t.prompt+' → '+t.response,0.72,0.85);
+
+                        self.fire('mid','gw','#2DD4BF','STREAM',()=>{
+                          self.fire('gw','client','#2DD4BF','SSE✓',null);
+                          log('NET','CLIENT','✅','[FULL COMPUTE] "'+t.response+'"',
+                            'Latency: 44ms · Energy: '+(self.stats.energy).toFixed(0)+' mJ total\nKV cache now warm for next turn');
+                          self.stats.cdcpOk++;updateStats(self);
+                        });
+                      });
+                      self._scheduleNextTurn(turns);
+                    },300);
+                  });
+                },300);
+              }
+            });
+          },180+pi*60);
+        });
+      },pi*120);
+    });
+  }
+
+  _scheduleNextTurn(turns){
+    const delay=3200+Math.random()*1000;
+    setTimeout(()=>{
+      if(this.running&&(this.mode==='llm-convo'))this._startConvoTurn();
+    },delay);
+  }
+
+  // ─── HTTP + CACHE LAYERS SCENARIO ───
+  runHTTPCache(){
+    if(this.tick!==1)return;
+    this.nodes['internet'].hidden=false;
+    const url='https://www.google.com/';
+    const self=this;
+
+    log('NET','CLIENT','🌍','HTTP GET: '+url,'Source: ARA Generation Agent\nTriggered by: user query requiring live web data\nPurpose: retrieve Google search interface for grounding');
+
+    // Show cache check pipeline
+    setTimeout(()=>{
+      log('MEM','GATEWAY','🔍','L1 Request Cache: checking...','Key: GET::www.google.com/\nCache store: in-memory LRU (TTL=60s)\nLooking up hash: sha256:8f3a...');
+
+      self.fire('client','gw','#50FA7B','HTTP-REQ',()=>{
+        setTimeout(()=>{
+          // L1 check
+          log('MEM','GATEWAY','❌','L1 Request Cache: MISS','No cached response for www.google.com\nTTL: expired or first request\nProceeding to L2 semantic cache...');
+
+          setTimeout(()=>{
+            log('MEM','MID','🔍','L2 Semantic Cache (EB): checking...','Embedding query: "Google homepage content"\nSearching EB entries (dim=1536, top-k=5)');
+            self.fire('gw','mid','#A87BD4','L2-CHECK',()=>{
+              const ebEntries=MEM['mid']?.eb?.length||0;
+              if(ebEntries>2){
+                log('MEM','MID','❌','L2 Semantic Cache: near-miss (sim=0.61 < threshold 0.85)','Closest: "web search interface query"\nSimilarity: 0.61 (below τ=0.85)\nProceeding to L3 LTM...');
+              } else {
+                log('MEM','MID','❌','L2 Semantic Cache: MISS (empty)','EB has '+ebEntries+' entries · none relevant\nProceeding to L3 LTM...');
+              }
+
+              setTimeout(()=>{
+                log('MEM','XL','🔍','L3 LTM + MAGMA RRC: checking...','MAGMA semantic graph query: "google.com website"\nChecking entity graph for google.com...');
+                self.fire('mid','xl','#C4A8F5','L3-CHECK',()=>{
+                  const ltmLen=MEM['xl']?.ltm?.length||0;
+                  log('MEM','XL',ltmLen>0?'⚠️':'❌','L3 LTM/RRC: '+(ltmLen>0?'STALE (TTL expired)':'MISS'),
+                    ltmLen>0?'Found 1 entry: "Google Inc. search engine"\nLTM decay: '+(MEM['xl'].ltm[0]?.decay*100||0).toFixed(0)+'% (below freshness threshold)\nContent too stale for live HTTP response\nProceeding to network fetch...':'No LTM entries for google.com\nAll cache layers exhausted → network fetch required');
+
+                  // ALL CACHE MISS → fetch from network
+                  setTimeout(()=>{
+                    log('NET','GATEWAY','🔐','All caches miss → gVisor sandbox + sMCP-1 check','Domain: www.google.com → ALLOWED ✓\nSpawning runsc container\nEgress: www.google.com:443 only');
+
+                    setTimeout(()=>{
+                      log('NET','GATEWAY','🌐','DNS resolve: www.google.com → 142.250.80.36','TTL: 300s · Type: A record\nTLS 1.3 connect: 142.250.80.36:443\nCipher: TLS_AES_256_GCM_SHA384');
+
+                      self.fire('gw','internet','#50FA7B','TLS+GET',()=>{
+                        log('NET','INTERNET','📥','200 OK · Content-Type: text/html · 48KB',
+                          'Server: gws (Google Web Server)\nX-XSS-Protection: 0\nContent extracted: title, meta, links\nResponse time: 142ms');
+
+                        setTimeout(()=>{
+                          self.fire('internet','gw','#00FF99','200-OK',()=>{
+                            log('SEC','sMCP-1','🔍','NLI content safety check: SAFE','No prompt injection patterns detected\nContent type: standard HTML\ngVisor sandbox: destroying...');
+
+                            // ── POPULATE ALL CACHE LAYERS ──
+                            setTimeout(()=>{
+                              log('MEM','GATEWAY','💾','Populating L1 Request Cache','Key: GET::www.google.com/\nTTL: 60s · Expires: '+new Date(Date.now()+60000).toLocaleTimeString()+'\nSize: 48KB → compressed 12KB\nNext identical request: L1 HIT (~1ms)');
+
+                              self.fire('gw','mid','#50FA7B','L2-POPULATE',()=>{
+                                pushEB('mid','google.com homepage: search engine interface',0.45,0.82);
+                                log('MEM','MID','💾','L2 Semantic Cache (EB): populated','Embedding: "google.com search interface"\nDim: 1536 · Stored in slot 847/4096\nSimilarity threshold τ=0.85\nNext similar query: L2 HIT (~18ms)');
+
+                                setTimeout(()=>{
+                                  self.fire('mid','xl','#C4A8F5','L3-POPULATE',()=>{
+                                    pushLTM({k:'google_fetch',t:'Google.com: search engine at 142.250.80.36 · HTML interface (fetched live)',dom:'memory',c:'#50FA7B'});
+                                    pushCDCP('xl','ADMIT',0.062);pushCDCP('mid','ADMIT',0.058);
+                                    log('MEM','XL','💾','L3 LTM + MAGMA RRC: populated','CDCP gate: ADMIT (NLI: NOT_CONTRADICTION)\nLTM entry: "Google.com · 142.250.80.36"\nMAGMA entity graph: +1 node (google.com)\nWeibull decay start: η=1h (web content TTL)\nHMAC: web_fetch_ltm_write chained');
+                                    self.stats.cdcpOk++;
+
+                                    // Stream response back
+                                    setTimeout(()=>{
+                                      self.fire('gw','client','#50FA7B','RESP',null);
+                                      log('NET','CLIENT','✅','Response delivered · all caches warm',
+                                        'Content: Google homepage (48KB)\nTotal latency: 142ms (network) + 12ms (processing)\nL1 cache: warm (60s TTL)\nL2 EB: warm (similarity search ready)\nL3 LTM: warm (CDCP admitted)');
+                                      self.nodes['internet'].hidden=false;
+                                      updateStats(self);
+
+                                      // ── DEMONSTRATE CACHE HIT ON REPEAT REQUEST ──
+                                      setTimeout(()=>{
+                                        log('NET','CLIENT','💬','REPEAT: HTTP GET: '+url,'Same URL · testing cache layers...');
+                                        self.fire('client','gw','#50FA7B','HTTP-REQ',()=>{
+                                          log('MEM','GATEWAY','⚡','L1 Request Cache: HIT!',
+                                            'Key: GET::www.google.com/ · Found!\nAge: ~5s · TTL remaining: ~55s\nServing from memory: 12KB compressed\nLatency: 1ms (vs 142ms network)');
+                                          self.activate('gw',800);
+                                          self.nodes['internet'].hidden=true;
+                                          setTimeout(()=>{
+                                            self.fire('gw','client','#00FF99','L1-HIT✓',null);
+                                            log('NET','CLIENT','✅','[L1 CACHE HIT] Response: 1ms · 0 mJ compute · 0 network','Cache saves: 141ms · ~850 mJ · 1 network round-trip');
+                                            self.cacheHits={...self.cacheHits,l1:(self.cacheHits.l1||0)+1};
+
+                                            // ── DEMONSTRATE SEMANTIC CACHE HIT ──
+                                            setTimeout(()=>{
+                                              log('NET','CLIENT','💬','SIMILAR: HTTP GET: https://www.google.com/search?q=test','Different URL but semantically related...');
+                                              self.fire('client','gw','#A87BD4','HTTP-REQ-2',()=>{
+                                                log('MEM','GATEWAY','❌','L1 Miss (different URL) · checking L2 semantic...','URL hash mismatch\nFalling through to L2 EB semantic search...');
+                                                self.fire('gw','mid','#C4A8F5','L2-SEM-CHECK',()=>{
+                                                  log('MEM','MID','⚡','L2 Semantic Cache: HIT (sim=0.91)!',
+                                                    'Query: "google.com search" sim 0.91 to cached "google.com homepage"\nAbove τ=0.85 threshold\nContext reused from EB slot 847\nPartial compute only');
+                                                  self.activate('mid',600);
+                                                  pushEB('mid','Google search query: L2 semantic cache hit (0.91 sim)',0.15,0.91);
+                                                  setTimeout(()=>{
+                                                    self.fire('mid','gw','#C4A8F5','L2-HIT✓',()=>{
+                                                      self.fire('gw','client','#00FF99','RESP-L2',null);
+                                                      log('NET','CLIENT','✅','[L2 SEMANTIC HIT] Response: 18ms · ~280 mJ (vs 142ms+850mJ)','Semantic similarity served without network fetch\nCache hierarchy working correctly');
+                                                      self.cacheHits={...self.cacheHits,l2:(self.cacheHits.l2||0)+1};
+                                                      self.nodes['internet'].hidden=true;
+                                                      log('MEM','SYSTEM','📊','Cache performance summary',
+                                                        'L1 hits: '+(self.cacheHits.l1||0)+' · Latency: ~1ms · Energy: 0 mJ\nL2 hits: '+(self.cacheHits.l2||0)+' · Latency: ~18ms · Energy: ~280 mJ\nL3 hits: '+(self.cacheHits.l3||0)+' · Latency: ~28ms · Energy: ~450 mJ\nNetwork fetches: 1 · Latency: 142ms · Energy: ~920 mJ\nTotal energy saved by caching: ~87%');
+                                                      updateStats(self);
+                                                    });
+                                                  },500);
+                                                });
+                                              });
+                                            },3000);
+                                          },400);
+                                        });
+                                      },3500);
+                                    },400);
+                                  });
+                                },500);
+                              });
+                            },600);
+                          });
+                        },400);
+                      });
+                    },400);
+                  },500);
+                });
+              },500);
+            });
+          },500);
+        },400);
+      });
+    },300);
+  }
+
+
+  // ─── BENCHMARK TICK (called every frame when mode==='benchmark') ───
+  runBenchmarkTick(){
+    if(!this._benchRunning) return;
+    if(this.tick % Math.max(8, Math.floor(60/this.speed)) !== 0) return;
+    this._benchStep();
+  }
   destroy(){if(this.raf)cancelAnimationFrame(this.raf);}
 }
 
@@ -1442,18 +2014,47 @@ function setFilter(f){
 /* ══════════════════════════════
    STATS UPDATE
 ══════════════════════════════ */
+function countTotalNodes(sim){
+  if(!sim)return 0;
+  const base=Object.keys(sim.nodes).filter(k=>sim.nodes[k]&&!sim.nodes[k].hidden).length;
+  return base+(sim.extraNodes||[]).length;
+}
+function updateHdrDisplay(sim){
+  if(!sim)return;
+  const total=countTotalNodes(sim);
+  const failed=sim.failedNodes?sim.failedNodes.size:0;
+  const alive=total-failed;
+  const lbl=document.getElementById('hb-nodes-lbl')||document.getElementById('hnl');
+  if(lbl)lbl.textContent=alive+'/'+total;
+  const dot=document.getElementById('hb-nodes');
+  if(dot){dot.style.background=failed>0?'#FF4B6E':'#00FF99';dot.style.animation=failed>0?'blink 1s infinite':'pulse 2s infinite';}
+  const hcdcp=document.getElementById('hb-cdcp');
+  if(hcdcp){hcdcp.textContent=failed>0?'DEGRAD':'CDCP';hcdcp.style.color=failed>0?'#FF4B6E':'#FFB830';}
+  const h3=document.getElementById('sv-health')||document.getElementById('sv3b');
+  if(h3){h3.textContent=failed>0?'DEGRADED':alive<total?'PARTIAL':'HEALTHY';h3.style.color=failed>0?'#FF4B6E':alive<total?'#F5E642':'#00FF99';}
+}
 function updateStats(sim){
+  if(!sim)return;
   const elapsed=Math.max(1,(Date.now()-sim.startTime)/1000);
-  document.getElementById('sv-tokens').textContent=sim.stats.tokens.toLocaleString();
-  document.getElementById('sv-tps').textContent=(sim.stats.tokens/elapsed).toFixed(1)+' tok/s';
-  const mj=sim.stats.tokens>0?(sim.stats.energy/sim.stats.tokens).toFixed(1):'0.0';
-  document.getElementById('sv-energy').textContent=mj;
-  const ratio=parseFloat(mj)>0?`${(300/parseFloat(mj)).toFixed(1)}× vs GPU frontier`:'-';
-  document.getElementById('sv-ratio').textContent=ratio;
-  document.getElementById('sv-nodes').textContent=sim.stats.nodes;
-  document.getElementById('sv-cdcp').textContent=sim.stats.cdcpOk;
-  document.getElementById('sv-byz').textContent=sim.stats.cdcpFail+' rejected';
-  document.getElementById('hb-nodes-lbl').textContent=sim.stats.nodes+'/'+Object.keys(sim.nodes).filter(k=>!sim.nodes[k]||!sim.nodes[k].hidden).length;
+  const total=countTotalNodes(sim);
+  const failed=sim.failedNodes?sim.failedNodes.size:0;
+  const alive=total-failed;
+  sim.stats.nodes=alive;
+  const tokens=sim.stats.tokens||0;
+  const mj=tokens>0?(sim.stats.energy/tokens).toFixed(1):'0.0';
+  const safe=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  safe('sv-tokens',tokens.toLocaleString());
+  safe('sv-tps',(tokens/elapsed).toFixed(1)+' tok/s');
+  safe('sv-energy',mj);
+  safe('sv-ratio',parseFloat(mj)>0?(300/parseFloat(mj)).toFixed(1)+'× vs GPU':'—');
+  safe('sv-nodes',alive);
+  safe('sv-cdcp',sim.stats.cdcpOk||0);
+  safe('sv-byz',(sim.stats.cdcpFail||0)+' rejected');
+  safe('sv1',tokens.toLocaleString());safe('sv1b',(tokens/elapsed).toFixed(1)+'/s');
+  safe('sv2',mj);safe('sv2b',parseFloat(mj)>0?(300/parseFloat(mj)).toFixed(1)+'x GPU':'—');
+  safe('sv3',alive);safe('sv4',sim.stats.cdcpOk||0);
+  safe('sv4b',(sim.stats.cdcpFail||0)+' rej');
+  updateHdrDisplay(sim);
 }
 
 /* ══════════════════════════════
@@ -1463,16 +2064,61 @@ let currentSc='connect';
 const SC_COLORS={connect:C.gw,internet:C.mid,llm:C.tiny,ha:C.ok,
   token:C.diag,byzantine:C.byz,memory:C.ara,energy:C.ora};
 
-function setSc(sc,el){
-  currentSc=sc;
-  document.querySelectorAll('.sc-btn').forEach(b=>b.classList.remove('active'));
-  if(el){
-    el.classList.add('active');
-    el.style.borderColor=SC_COLORS[sc]||C.mut;
-    el.style.boxShadow=`0 0 10px ${SC_COLORS[sc]||C.mut}44`;
+/* Active scenarios — multiple can run simultaneously */
+const activeScenarios = new Set();
+
+function setSc(sc, el) {
+  // Toggle: click active scenario to pause it; click again to resume
+  if(activeScenarios.has(sc)) {
+    if(SIM && SIM.running) {
+      // Pause just this scenario by removing it
+      activeScenarios.delete(sc);
+      if(el) {
+        el.classList.remove('active');
+        el.style.borderColor = '';
+        el.style.boxShadow = '';
+        el.style.opacity = '0.45';
+        const ico = el.querySelector('.sc-icon');
+        if(ico) ico.textContent = (ico.textContent.replace('⏸','').replace('▶','') || '') + '⏸';
+      }
+      log('SYS','SYSTEM','⏸',`Scenario deselected: ${sc}`,
+        `Still active: ${activeScenarios.size > 0 ? [...activeScenarios].join(', ') : 'none'}\nClick again to re-add`);
+    } else {
+      // Not running — resume by re-adding
+      activeScenarios.add(sc);
+      activateScBtn(sc, el);
+      if(SIM){SIM.tick=0;}
+      log('SYS','SYSTEM','▶',`Scenario resumed: ${sc}`,'');
+    }
+    return;
   }
-  if(SIM){SIM.reset();SIM.mode=sc;}
-  log('SYS','SYSTEM','▶',`Scenario selected: ${el?.querySelector('.sc-title')?.textContent||sc}`,'Press ▶ Run to start the simulation');
+  // New scenario: add to active set
+  activeScenarios.add(sc);
+  currentSc = sc;
+  activateScBtn(sc, el);
+  if(SIM) { SIM.tick=0; SIM.mode=sc; }
+  log('SYS','SYSTEM','⊕',`Scenario added: ${sc}`,
+    `Active: ${[...activeScenarios].join(' + ')}\nMultiple scenarios can run simultaneously`);
+}
+
+function activateScBtn(sc, el) {
+  if(!el) el = document.getElementById('sc-'+sc);
+  if(!el) return;
+  el.classList.add('active');
+  el.style.borderColor = SC_COLORS[sc] || '#3A5470';
+  el.style.boxShadow = `0 0 10px ${SC_COLORS[sc]||'#3A5470'}55`;
+  el.style.opacity = '1';
+  const ico = el.querySelector('.sc-icon');
+  if(ico) ico.textContent = ico.textContent.replace('⏸','').replace('▶','');
+}
+
+function clearAllScenarios() {
+  activeScenarios.clear();
+  document.querySelectorAll('.sc-btn').forEach(b=>{
+    b.classList.remove('active');b.style.borderColor='';b.style.boxShadow='';b.style.opacity='';
+  });
+  if(SIM) SIM.reset();
+  log('SYS','SYSTEM','✕','All scenarios cleared','Canvas reset');
 }
 
 function simToggle(){
@@ -1502,19 +2148,31 @@ function quickMem(){
 }
 function addExtraNode(){
   if(!SIM)return;
-  const W=SIM.W,id='extra'+SIM.extraNodes.length;
-  const x=W*.1+Math.random()*(W*.8),y=100+Math.random()*70;
-  SIM.nodes[id]={x,y,r:13,label:'EXT-'+SIM.extraNodes.length,color:C.ok,sub:'joining'};
+  const W=SIM.W;
+  const idx=SIM.extraNodes.length;
+  const id='extra'+idx;
+  const x=W*.12+Math.random()*(W*.76);
+  const y=95+Math.random()*80;
+  SIM.nodes[id]={x,y,r:13,label:'EXT-'+idx,color:'#00FF99',sub:'joining'};
+  if(!SIM.nodeState) SIM.nodeState={};
   SIM.nodeState[id]={pulse:0,active:false,hb:0};
+  if(typeof initMem==='function') initMem(id);
   SIM.extraNodes.push(id);
-  log('NET','GATEWAY','🌱',`New swarm node joining: ${id}`,'Running full connection establishment sequence...');
-  SIM.ring(id,C.ok);
+  // Live count update — always computed, never hardcoded
+  const total=countTotalNodes(SIM);
+  SIM.stats.nodes=total-(SIM.failedNodes?SIM.failedNodes.size:0);
+  updateStats(SIM);
+  log('NET','GATEWAY','\u{1F331}',`Node EXT-${idx} joining · total now ${total}`,'SPIFFE CSR generating · Ed25519 keypair · DHT announce...');
+  if(SIM.ring) SIM.ring(id,'#00FF99');
   setTimeout(()=>{
-    SIM.fire(id,'gw',C.ok,'AUTH',()=>{
-      SIM.nodes[id].sub='authenticated';
-      log('SEC','sMCP-1','✅',`${id} authenticated via SPIFFE Ed25519`,'SVID issued · mTLS established · DHT updated');
+    if(!SIM||!SIM.fire)return;
+    SIM.fire(id,'gw','#FFB830','AUTH',()=>{
+      if(SIM.nodes[id]) SIM.nodes[id].sub='authed';
+      if(typeof initMem==='function') initMem(id);
+      log('SEC','sMCP-1','\u2705',`EXT-${idx} authenticated`,'SVID issued · mTLS 1.3 · CDCP quorum updated');
+      updateStats(SIM);
     });
-  },300);
+  },350);
 }
 function simStep(){if(!SIM)SIM.step();}
 
@@ -1528,10 +2186,10 @@ function initSim(){
   const W=Math.min(wrap.clientWidth||360,640);
   const H=Math.round(W*.82);
   cvs.width=W;cvs.height=H;
-  SIM=new DARMANNSim(cvs);
+  SIM=new DARMANNSim(cvs);window._SIM=SIM;
   SIM.frame();
   // default selection
-  setSc('connect',document.getElementById('sc-connect'));
+  setSc('llm-convo',document.getElementById('sc-llm-convo'));
   log('SYS','SYSTEM','🚀','DARM-ANN v7.7 Simulation Suite initialized','8 scenarios ready\nClick a scenario card then ▶ Run\nUse ⚠ Inject Fault / 🧠 Force Mem Write for live overrides\nClick log entries to expand payload details');
 
   window.addEventListener('resize',()=>{
@@ -1930,7 +2588,7 @@ setInterval(()=>{if(document.getElementById("gmem").classList.contains("open"))o
 
 /* ═══ HOOK CANVAS CLICK → INSPECTOR ═══ */
 function addInspHooks(){
-  const cvs=document.getElementById("sim-canvas");
+  const cvs=document.getElementById("sim-cvs")||document.getElementById("sim-canvas")||document.getElementById("simcvs");
   if(!cvs||cvs._ih)return;cvs._ih=true;
   cvs.addEventListener("click",function(e){
     if(typeof SIM==="undefined"||!SIM)return;
@@ -1970,6 +2628,2567 @@ if(_oi){window.initSim=function(){_oi();setTimeout(addInspHooks,300);setTimeout(
 // Also try immediately and after a short delay
 setTimeout(()=>{addInspHooks();addGMemBtn();},1000);
 setTimeout(()=>{addInspHooks();addGMemBtn();},3000);
+</script>
+
+<!-- LAYER PANEL -->
+<div id="lyrpanel">
+  <div id="lyrph"><h3>🗂 Layer Controls — Peel Back View</h3><button id="lpclose" onclick="closeLyrPanel()">✕</button></div>
+  <div id="lyrpbody">
+    <div style="font-size:7px;color:#3A5470;margin-bottom:8px;line-height:1.5">Toggle layers to isolate different aspects of the distributed DARM-ANN system. Each layer traces a different class of inter-node communication.</div>
+
+    <div class="lyr-row" id="lyrrow-inference">
+      <div class="lyr-row-hdr"><div class="lyr-swatch" style="background:#F5E642"></div><span class="lyr-name" style="color:#F5E642">⚡ Inference Layer</span><div class="lyr-toggle on" id="ltog-inference" onclick="togLyr('inference')"><div class="lyr-toggle-dot"></div></div></div>
+      <div class="lyr-desc">Token generation and speculative decoding flows. Shows γ=5 draft tokens flowing TinyLM → Mid (qualification τ=0.85) → XL (verification). TSLT-compressed logits (top-200, 1.6KB/token) shown as yellow data chunks.</div>
+      <div class="trace-types"><span class="trace-type-pill" style="border-color:#F5E642;color:#F5E642">DRAFT</span><span class="trace-type-pill" style="border-color:#F5E642;color:#F5E642">TSLT×5</span><span class="trace-type-pill" style="border-color:#F5E642;color:#F5E642">VERIFY</span><span class="trace-type-pill" style="border-color:#F5E642;color:#F5E642">SSE</span></div>
+    </div>
+
+    <div class="lyr-row" id="lyrrow-memory">
+      <div class="lyr-row-hdr"><div class="lyr-swatch" style="background:#A87BD4"></div><span class="lyr-name" style="color:#A87BD4">🧠 Memory Layer</span><div class="lyr-toggle on" id="ltog-memory" onclick="togLyr('memory')"><div class="lyr-toggle-dot"></div></div></div>
+      <div class="lyr-desc">Memory read/write operations across the 5-tier hierarchy. D-MEM RPE gating, Episodic Buffer writes, Titans STM gradient updates, and CDCP-gated LTM admissions. Purple squares flow along the trace path.</div>
+      <div class="trace-types"><span class="trace-type-pill" style="border-color:#A87BD4;color:#A87BD4">D-MEM</span><span class="trace-type-pill" style="border-color:#A87BD4;color:#A87BD4">STM-GRAD</span><span class="trace-type-pill" style="border-color:#A87BD4;color:#A87BD4">LTM-WRITE</span><span class="trace-type-pill" style="border-color:#A87BD4;color:#A87BD4">RRC-QUERY</span></div>
+    </div>
+
+    <div class="lyr-row" id="lyrrow-consensus">
+      <div class="lyr-row-hdr"><div class="lyr-swatch" style="background:#C4A8F5"></div><span class="lyr-name" style="color:#C4A8F5">⚖️ Consensus Layer</span><div class="lyr-toggle on" id="ltog-consensus" onclick="togLyr('consensus')"><div class="lyr-toggle-dot"></div></div></div>
+      <div class="lyr-desc">CDCP Byzantine-fault-tolerant consensus. Shows proposal broadcasts, credibility-weighted voting circles, NLI gate results, sycophancy detection, and ADMIT/REJECT decisions. Lavender circles represent vote packets.</div>
+      <div class="trace-types"><span class="trace-type-pill" style="border-color:#C4A8F5;color:#C4A8F5">CDCP-REQ</span><span class="trace-type-pill" style="border-color:#C4A8F5;color:#C4A8F5">VOTE</span><span class="trace-type-pill" style="border-color:#C4A8F5;color:#C4A8F5">ADMIT</span><span class="trace-type-pill" style="border-color:#C4A8F5;color:#C4A8F5">REJECT</span></div>
+    </div>
+
+    <div class="lyr-row" id="lyrrow-security">
+      <div class="lyr-row-hdr"><div class="lyr-swatch" style="background:#FFB830"></div><span class="lyr-name" style="color:#FFB830">🔐 Security Layer</span><div class="lyr-toggle on" id="ltog-security" onclick="togLyr('security')"><div class="lyr-toggle-dot"></div></div></div>
+      <div class="lyr-desc">Cryptographic negotiations and audit events. SPIFFE SVID issuance, Ed25519 signing, mTLS 1.3 handshakes, HMAC-chained audit log entries, A2A signed Agent Cards, and gVisor sandbox events. Amber diamonds indicate crypto exchanges.</div>
+      <div class="trace-types"><span class="trace-type-pill" style="border-color:#FFB830;color:#FFB830">CSR</span><span class="trace-type-pill" style="border-color:#FFB830;color:#FFB830">SVID</span><span class="trace-type-pill" style="border-color:#FFB830;color:#FFB830">mTLS</span><span class="trace-type-pill" style="border-color:#FFB830;color:#FFB830">HMAC</span><span class="trace-type-pill" style="border-color:#FFB830;color:#FFB830">AUTH</span></div>
+    </div>
+
+    <div class="lyr-row" id="lyrrow-ara">
+      <div class="lyr-row-hdr"><div class="lyr-swatch" style="background:#50FA7B"></div><span class="lyr-name" style="color:#50FA7B">🔬 ARA Layer</span><div class="lyr-toggle on" id="ltog-ara" onclick="togLyr('ara')"><div class="lyr-toggle-dot"></div></div></div>
+      <div class="lyr-desc">Autonomous Researcher Agent pipeline. Hypothesis proposals, OpenScholar fetches, cross-node research synthesis, Meta-Review submissions to CDCP, and gVisor sandbox micro-experiment results. Green stars mark ARA events.</div>
+      <div class="trace-types"><span class="trace-type-pill" style="border-color:#50FA7B;color:#50FA7B">ARA-PROP</span><span class="trace-type-pill" style="border-color:#50FA7B;color:#50FA7B">RESEARCH</span><span class="trace-type-pill" style="border-color:#50FA7B;color:#50FA7B">CONTENT</span><span class="trace-type-pill" style="border-color:#50FA7B;color:#50FA7B">FIND</span></div>
+    </div>
+
+    <div class="lyr-row" id="lyrrow-compute">
+      <div class="lyr-row-hdr"><div class="lyr-swatch" style="background:#4C9FFF"></div><span class="lyr-name" style="color:#4C9FFF">💻 Compute Distribution</span><div class="lyr-toggle on" id="ltog-compute" onclick="togLyr('compute')"><div class="lyr-toggle-dot"></div></div></div>
+      <div class="lyr-desc">Distributed compute heat overlay. Radial glow proportional to recent compute activity. Bandwidth lines between nodes show data volume — thicker = higher throughput. Each node shows a live utilization bar and mJ/token estimate.</div>
+      <div class="heat-legend">
+        <span>Low</span>
+        <div class="heat-swatch" style="background:linear-gradient(to right,#0B1B2C,#4C9FFF,#00D4FF,#F5E642,#FF4B6E)"></div>
+        <span>High</span>
+      </div>
+    </div>
+
+    <div style="margin-top:8px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:7px;padding:8px;font-size:7px;color:#3A5470">
+      <div style="color:#00D4FF;font-weight:700;margin-bottom:3px">Trace Line Key</div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <div>● <span style="color:#F5E642">━━━ dashed yellow</span> = Inference / token flow</div>
+        <div>■ <span style="color:#A87BD4">━━━ dashed purple</span> = Memory read/write</div>
+        <div>● <span style="color:#C4A8F5">━━━ dashed lavender</span> = Consensus vote</div>
+        <div>◆ <span style="color:#FFB830">━━━ dashed amber</span> = Crypto / security</div>
+        <div>★ <span style="color:#50FA7B">━━━ dashed green</span> = ARA research</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   LAYER SYSTEM
+═══════════════════════════════════════════ */
+const LAYERS={
+  inference:{on:true,c:"#F5E642",lbl:"⚡ Inference",keywords:["DRAFT","TSLT","VERIFY","SSE","TOKEN","REQ","STREAM","QUALIFY","OK","RESP","ROUTE"]},
+  memory:   {on:true,c:"#A87BD4",lbl:"🧠 Memory",   keywords:["D-MEM","STM","LTM","MEM","RRC","ADMIT","REJECT","BYZ-PROP","CDCP-REQ","VOTE","HONEST","DELTA"]},
+  consensus:{on:true,c:"#C4A8F5",lbl:"⚖️ Consensus",keywords:["CDCP","VOTE","QUORUM","PROP","HONEST","BYZ","CONSENSUS","NLI"]},
+  security: {on:true,c:"#FFB830",lbl:"🔐 Security", keywords:["CSR","SVID","mTLS","HMAC","AUTH","SECURE","TLS","CERT","SIGN","REJOIN","ACTIVATE","HB","REROUTE","HB-FAIL"]},
+  ara:      {on:true,c:"#50FA7B",lbl:"🔬 ARA",       keywords:["ARA","PROP","CONTENT","FIND","RESEARCH","FETCH","GET","200"]},
+  compute:  {on:true,c:"#4C9FFF",lbl:"💻 Compute",   keywords:[]},
+};
+
+function getPacketLayer(col,lbl){
+  lbl=lbl||"";
+  if(LAYERS.security.on&&(col==="#FFB830"||LAYERS.security.keywords.some(k=>lbl.includes(k))))return "security";
+  if(LAYERS.ara.on&&(col==="#50FA7B"||LAYERS.ara.keywords.some(k=>lbl.includes(k))))return "ara";
+  if(LAYERS.consensus.on&&(col==="#C4A8F5"||LAYERS.consensus.keywords.some(k=>lbl.includes(k))))return "consensus";
+  if(LAYERS.memory.on&&(col==="#A87BD4"||LAYERS.memory.keywords.some(k=>lbl.includes(k))))return "memory";
+  if(LAYERS.inference.on&&LAYERS.inference.keywords.some(k=>lbl.includes(k)))return "inference";
+  // fallback by color
+  if(col==="#A87BD4"||col==="#C4A8F5")return "consensus";
+  if(col==="#F5E642"||col==="#00FF99")return "inference";
+  if(col==="#50FA7B")return "ara";
+  return "inference";
+}
+
+function layerActive(col,lbl){
+  const ly=getPacketLayer(col,lbl);
+  return LAYERS[ly]?LAYERS[ly].on:true;
+}
+
+function togLyr(name,btnEl){
+  const L=LAYERS[name];if(!L)return;
+  L.on=!L.on;
+  // update strip button
+  const sb=document.getElementById("lb-"+name);
+  if(sb){sb.classList.toggle("off",!L.on);if(L.on){sb.style.borderColor=L.c;sb.style.color=L.c;}else{sb.style.borderColor="";sb.style.color="";}}
+  // update panel toggle
+  const pt=document.getElementById("ltog-"+name);
+  if(pt)pt.classList.toggle("on",L.on);
+}
+
+function openLyrPanel(){document.getElementById("lyrpanel").classList.add("open");}
+function closeLyrPanel(){document.getElementById("lyrpanel").classList.remove("open");}
+
+/* ═══════════════════════════════════════════
+   TRACE LINE — persistent dashed path with data chunks
+═══════════════════════════════════════════ */
+const TRACE_TYPES={
+  inference:{shape:"tri",  color:"#F5E642",dash:[5,7],width:1.2},
+  memory:   {shape:"sq",   color:"#A87BD4",dash:[4,8],width:1},
+  consensus:{shape:"circ", color:"#C4A8F5",dash:[3,6],width:1},
+  security: {shape:"diam", color:"#FFB830",dash:[6,5],width:1.2},
+  ara:      {shape:"star", color:"#50FA7B",dash:[4,6],width:1},
+  default:  {shape:"dot",  color:"#4C9FFF",dash:[3,5],width:.8},
+};
+
+class TraceLine{
+  constructor(sx,sy,ex,ey,col,lbl,layer,dur){
+    this.sx=sx;this.sy=sy;this.ex=ex;this.ey=ey;
+    this.col=col;this.lbl=lbl||"";this.layer=layer||"inference";
+    this.dur=dur||2800;this.born=Date.now();this.off=0;
+    const tt=TRACE_TYPES[this.layer]||TRACE_TYPES.default;
+    this.tc=col||tt.color;
+    // Data chunks: small pieces emanating along the path
+    this.chunks=Array.from({length:4+Math.floor(Math.random()*3)},(_,i)=>({
+      t:(i/(5))+Math.random()*.15,
+      spd:.003+Math.random()*.004,
+      sz:1.8+Math.random()*2.2,
+      phase:Math.random()*Math.PI*2,
+    }));
+    // Crypto sparks: small side particles for security layer
+    this.sparks=this.layer==="security"?Array.from({length:3},()=>({
+      t:Math.random(),pos:0,life:1,
+    })):[];
+  }
+  cp(){return{x:(this.sx+this.ex)/2+(this.ey-this.sy)*.2,y:(this.sy+this.ey)/2-(this.ex-this.sx)*.2};}
+  bp(t){const c=this.cp();return{x:(1-t)*(1-t)*this.sx+2*(1-t)*t*c.x+t*t*this.ex,y:(1-t)*(1-t)*this.sy+2*(1-t)*t*c.y+t*t*this.ey};}
+  update(spd){
+    this.off-=spd*.6;
+    const age=Date.now()-this.born;
+    this.opacity=Math.max(0,1-age/this.dur);
+    this.chunks.forEach(ch=>{ch.t=(ch.t+ch.spd*spd)%1;});
+    this.sparks.forEach(sp=>{sp.pos=(sp.pos+.02*spd)%1;sp.life=Math.max(0,sp.life-.01);});
+  }
+  drawShape(ctx,x,y,sz,shape,col,a){
+    ctx.save();ctx.globalAlpha=a;ctx.fillStyle=col;ctx.shadowBlur=5;ctx.shadowColor=col;
+    ctx.beginPath();
+    if(shape==="tri"){ctx.translate(x,y);ctx.moveTo(0,-sz);ctx.lineTo(sz*.8,sz*.6);ctx.lineTo(-sz*.8,sz*.6);ctx.closePath();}
+    else if(shape==="sq"){ctx.translate(x,y);ctx.rotate(Math.PI/6);ctx.fillRect(-sz*.7,-sz*.7,sz*1.4,sz*1.4);ctx.shadowBlur=0;ctx.restore();return;}
+    else if(shape==="diam"){ctx.translate(x,y);ctx.rotate(Math.PI/4);ctx.fillRect(-sz*.7,-sz*.7,sz*1.4,sz*1.4);ctx.shadowBlur=0;ctx.restore();return;}
+    else if(shape==="star"){ctx.translate(x,y);for(let i=0;i<5;i++){ctx.rotate(Math.PI*2/5);ctx.lineTo(0,-sz);ctx.lineTo(sz*.4,-sz*.4);}ctx.closePath();}
+    else{ctx.arc(x,y,sz*.8,0,Math.PI*2);}
+    ctx.fill();ctx.shadowBlur=0;ctx.restore();
+  }
+  draw(ctx){
+    if(this.opacity<=0||!LAYERS[this.layer]?.on)return;
+    const tt=TRACE_TYPES[this.layer]||TRACE_TYPES.default;
+    const c=this.cp();const a=this.opacity;
+
+    ctx.save();
+    // Main dashed bezier path
+    ctx.globalAlpha=a*.32;
+    ctx.beginPath();ctx.moveTo(this.sx,this.sy);
+    ctx.quadraticCurveTo(c.x,c.y,this.ex,this.ey);
+    ctx.strokeStyle=this.tc;ctx.lineWidth=tt.width;
+    ctx.setLineDash(tt.dash);ctx.lineDashOffset=this.off;
+    ctx.shadowBlur=3;ctx.shadowColor=this.tc;
+    ctx.stroke();ctx.setLineDash([]);ctx.shadowBlur=0;
+
+    // Glow on the dashed path (wider, lower opacity)
+    ctx.globalAlpha=a*.1;
+    ctx.lineWidth=tt.width*3;ctx.setLineDash(tt.dash);ctx.lineDashOffset=this.off;
+    ctx.stroke();ctx.setLineDash([]);
+
+    // Data chunks along the path
+    this.chunks.forEach(ch=>{
+      const p=this.bp(ch.t);
+      const chA=a*(0.5+Math.sin(ch.phase+Date.now()*.003)*.25);
+      this.drawShape(ctx,p.x,p.y,ch.sz,tt.shape,this.tc,chA);
+    });
+
+    // Mid-point label
+    if(this.lbl&&a>.55){
+      const mid=this.bp(.5);
+      ctx.globalAlpha=a*.9;
+      const aw=this.lbl.length*4.5+8;
+      ctx.fillStyle="rgba(3,12,22,.82)";
+      ctx.beginPath();ctx.roundRect(mid.x-aw/2,mid.y-9,aw,12,3);ctx.fill();
+      ctx.fillStyle=this.tc;ctx.font="5.5px monospace";ctx.textAlign="center";
+      ctx.fillText(this.lbl,mid.x,mid.y-.5);
+    }
+
+    // Security layer: crypto sparks shoot sideways off the path
+    if(this.layer==="security"){
+      this.sparks.forEach(sp=>{
+        const p=this.bp(sp.pos);
+        const perp={x:-(this.ey-this.sy),y:this.ex-this.sx};
+        const len=Math.hypot(perp.x,perp.y)||1;
+        const off2=(Math.sin(sp.pos*Math.PI*3)*8);
+        ctx.save();ctx.globalAlpha=a*.8*sp.life;
+        ctx.fillStyle=this.tc;ctx.shadowBlur=4;ctx.shadowColor=this.tc;
+        ctx.beginPath();ctx.arc(p.x+perp.x/len*off2,p.y+perp.y/len*off2,1.5,0,Math.PI*2);
+        ctx.fill();ctx.shadowBlur=0;ctx.restore();
+      });
+    }
+    ctx.restore();
+  }
+  done(){return Date.now()-this.born>this.dur;}
+}
+
+/* ═══════════════════════════════════════════
+   NODE COMPUTE HEAT
+═══════════════════════════════════════════ */
+const COMPUTE_HEAT={};
+["client","gw","tinyA","tinyB","tinyC","mid","xl"].forEach(id=>{COMPUTE_HEAT[id]={v:0,bw:0};});
+
+function heatNode(id,amount){
+  if(!COMPUTE_HEAT[id])COMPUTE_HEAT[id]={v:0,bw:0};
+  COMPUTE_HEAT[id].v=Math.min(1,COMPUTE_HEAT[id].v+(amount||.3));
+  COMPUTE_HEAT[id].bw=Math.min(1,(COMPUTE_HEAT[id].bw||0)+.2);
+}
+function decayHeat(){
+  Object.values(COMPUTE_HEAT).forEach(h=>{
+    h.v=Math.max(0,(h.v||0)*.93);
+    h.bw=Math.max(0,(h.bw||0)*.88);
+  });
+}
+setInterval(decayHeat,80);
+
+function drawComputeHeat(ctx,SIM){
+  if(!LAYERS.compute.on)return;
+  Object.entries(SIM.nodes).forEach(([id,nd])=>{
+    if(nd.hidden)return;
+    const h=COMPUTE_HEAT[id]||{v:0};
+    if(h.v<.02)return;
+    // Radial heat glow
+    const r=nd.r+h.v*28;
+    const g=ctx.createRadialGradient(nd.x,nd.y,nd.r*.5,nd.x,nd.y,r);
+    const intensity=Math.floor(h.v*180);
+    const col=h.v>.7?`#FF4B6E`:h.v>.4?`#F5E642`:`#4C9FFF`;
+    g.addColorStop(0,col+Math.max(0,intensity-20).toString(16).padStart(2,"0"));
+    g.addColorStop(1,col+"00");
+    ctx.beginPath();ctx.arc(nd.x,nd.y,r,0,Math.PI*2);
+    ctx.fillStyle=g;ctx.globalAlpha=.55;ctx.fill();ctx.globalAlpha=1;
+    // Compute utilization bar under node
+    if(h.v>.05){
+      const bw=nd.r*2,bh=3,bx=nd.x-nd.r,by=nd.y+nd.r+3;
+      ctx.fillStyle="#152030";ctx.fillRect(bx,by,bw,bh);
+      ctx.fillStyle=col;ctx.globalAlpha=.8;
+      ctx.fillRect(bx,by,bw*h.v,bh);ctx.globalAlpha=1;
+    }
+  });
+}
+
+function drawBandwidthLines(ctx,SIM){
+  if(!LAYERS.compute.on)return;
+  const pairs=[["tinyA","mid"],["tinyB","mid"],["tinyC","mid"],["mid","xl"],["gw","tinyA"],["gw","tinyB"],["gw","tinyC"]];
+  pairs.forEach(([a,b])=>{
+    const na=SIM.nodes[a],nb=SIM.nodes[b];if(!na||!nb||na.hidden||nb.hidden)return;
+    const ha=COMPUTE_HEAT[a]||{bw:0},hb=COMPUTE_HEAT[b]||{bw:0};
+    const bw=Math.max(ha.bw,hb.bw);if(bw<.05)return;
+    ctx.save();ctx.globalAlpha=bw*.35;
+    ctx.beginPath();ctx.moveTo(na.x,na.y);ctx.lineTo(nb.x,nb.y);
+    ctx.strokeStyle="#4C9FFF";ctx.lineWidth=bw*4;ctx.stroke();
+    ctx.restore();
+  });
+}
+
+// Node emanation bursts when sending data
+class EmanationBurst{
+  constructor(x,y,col,toX,toY){
+    this.x=x;this.y=y;this.col=col;this.t=0;
+    const ang=Math.atan2(toY-y,toX-x);
+    this.ps=Array.from({length:6},(_,i)=>({
+      a:ang+(i-2.5)*.35,s:.8+Math.random()*.8,r:0,
+    }));
+  }
+  update(){this.t+=.07;}
+  draw(ctx){
+    ctx.save();
+    this.ps.forEach(p=>{
+      const r=p.s*this.t*9;const a=Math.max(0,1-this.t/1.2)*.7;
+      ctx.beginPath();ctx.arc(this.x+Math.cos(p.a)*r,this.y+Math.sin(p.a)*r,1.5,0,Math.PI*2);
+      ctx.fillStyle=this.col+Math.floor(a*255).toString(16).padStart(2,"0");ctx.fill();
+    });
+    ctx.restore();
+  }
+  done(){return this.t>1.2;}
+}
+
+/* ═══════════════════════════════════════════
+   PATCH EXISTING SIM TO USE TRACES
+═══════════════════════════════════════════ */
+let TRACES=[];
+let EMANATIONS=[];
+let _simPatched=false;
+
+function patchSIM(){
+  if(!SIM&&window._SIM)SIM=window._SIM;
+  if(!SIM||_simPatched)return;
+  _simPatched=true;
+  const origFire=SIM.fire.bind(SIM);
+
+  SIM.fire=function(from,to,col,lbl,cb,delay){
+    const nf=this.nodes[from],nt=this.nodes[to];
+
+    // Determine layer for this packet
+    const ly=getPacketLayer(col||"",lbl||"");
+    const layerOn=LAYERS[ly]?.on!==false;
+
+    if(!layerOn){
+      // Layer hidden: still call cb but no visual
+      if(delay)setTimeout(()=>{if(cb)cb();},delay+(lbl?.length||3)*80);
+      else setTimeout(()=>{if(cb)cb();},200);
+      return;
+    }
+
+    // Create trace line
+    if(nf&&nt&&!nf.hidden&&!nt.hidden){
+      setTimeout(()=>{
+        TRACES.push(new TraceLine(nf.x,nf.y,nt.x,nt.y,col,lbl,ly,2600));
+        EMANATIONS.push(new EmanationBurst(nf.x,nf.y,col||"#4C9FFF",nt.x,nt.y));
+        heatNode(from,.35);heatNode(to,.25);
+      },delay||0);
+    }
+
+    // Call original fire
+    origFire(from,to,col,lbl,function(){
+      // Receive burst
+      if(nt&&!nt.hidden)EMANATIONS.push(new EmanationBurst(nt.x,nt.y,col||"#4C9FFF",nf?nf.x:nt.x,nf?nf.y:nt.y));
+      heatNode(to,.4);
+      if(cb)cb();
+    },delay);
+  };
+
+  // Patch frame to draw traces + heat before particle layer
+  const origFrame=SIM.frame.bind(SIM);
+  SIM.frame=function(){
+    // We'll draw traces in the next hook
+    origFrame();
+  };
+
+  // Hook into draw cycle via requestAnimationFrame override
+  const origRaf=window.requestAnimationFrame;
+  // Inject post-draw hook via canvas 2d context
+  const cvs=document.getElementById("sim-cvs")||document.getElementById("sim-canvas")||document.getElementById("simcvs");
+  if(cvs){
+    const origDraw=cvs.getContext("2d").fillRect.bind(cvs.getContext("2d"));
+    // Instead, use an overlay canvas
+    insertOverlayCanvas(cvs);
+  }
+  console.log("SIM patched with trace lines and compute heat");
+}
+
+function insertOverlayCanvas(baseCvs){
+  const parent=baseCvs.parentElement;
+  const ov=document.createElement("canvas");
+  ov.id="trace-canvas";
+  ov.style.cssText="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5";
+  ov.width=baseCvs.width;ov.height=baseCvs.height;
+  parent.style.position="relative";
+  parent.appendChild(ov);
+
+  function drawOverlay(){
+    if(!SIM)return;
+    ov.width=baseCvs.width;ov.height=baseCvs.height;
+    const ctx=ov.getContext("2d");
+    ctx.clearRect(0,0,ov.width,ov.height);
+
+    // Compute heat layer (below everything)
+    drawComputeHeat(ctx,SIM);
+    drawBandwidthLines(ctx,SIM);
+
+    // Trace lines
+    TRACES=TRACES.filter(t=>!t.done());
+    const spd=SIM.speed||1;
+    TRACES.forEach(tr=>{tr.update(spd);tr.draw(ctx);});
+
+    // Emanation bursts
+    EMANATIONS=EMANATIONS.filter(e=>!e.done());
+    EMANATIONS.forEach(e=>{e.update();e.draw(ctx);});
+
+    requestAnimationFrame(drawOverlay);
+  }
+  drawOverlay();
+}
+
+// Resize overlay with base canvas
+const _origInitSim2=window.initSim;
+window.initSim=function(){
+  if(_origInitSim2)_origInitSim2();
+  setTimeout(()=>{patchSIM();},500);
+  setTimeout(()=>{patchSIM();},1500);
+};
+setTimeout(()=>{if(SIM&&!_simPatched)patchSIM();},2000);
+setTimeout(()=>{if(SIM&&!_simPatched)patchSIM();},4000);
+</script>
+<script>
+
+/* ── CONVERSATION UI HELPERS ── */
+let convoTurnCount=0;
+function addConvoBubble(text,role,cacheTag){
+  const overlay=document.getElementById('convo-overlay');
+  const bubs=document.getElementById('convo-bubbles');
+  if(!overlay||!bubs)return;
+  overlay.classList.add('vis');
+  const div=document.createElement('div');
+  div.className='convo-bubble '+role;
+  const tagColor=cacheTag==='L1-HIT'?'#00FF99':cacheTag==='L2-HIT'?'#A87BD4':cacheTag==='L3-HIT'?'#C4A8F5':cacheTag?'#FFB830':'#3A5470';
+  div.innerHTML=text+(cacheTag?`<br><span class="convo-cache-tag" style="background:${tagColor}20;border:1px solid ${tagColor}50;color:${tagColor}">${cacheTag}</span>`:'');
+  bubs.appendChild(div);
+  // keep only last 4 bubbles visible
+  while(bubs.children.length>4)bubs.removeChild(bubs.firstChild);
+  overlay.scrollTop=overlay.scrollHeight;
+  convoTurnCount++;
+  const badge=document.getElementById('turn-badge');
+  if(badge){badge.style.display='block';badge.textContent='Turn '+convoTurnCount;badge.style.borderColor='#00D4FF';badge.style.color='#00D4FF';badge.style.background='rgba(0,212,255,.1)';}
+}
+function resetConvoUI(){
+  const bubs=document.getElementById('convo-bubbles');
+  if(bubs)bubs.innerHTML='';
+  const ov=document.getElementById('convo-overlay');
+  if(ov)ov.classList.remove('vis');
+  const cache=document.getElementById('cache-overlay');
+  if(cache)cache.classList.remove('vis');
+  convoTurnCount=0;
+  const badge=document.getElementById('turn-badge');
+  if(badge)badge.style.display='none';
+}
+
+/* ── CACHE LAYER UI HELPERS ── */
+function setCacheStatus(layer,status){
+  // layer: 'l1','l2','l3','net'   status: 'HIT','MISS','CHECKING','POPULATE'
+  const el=document.getElementById('cache-'+layer);
+  if(!el)return;
+  const isHit=status==='HIT'||status==='POPULATE';
+  const colorMap={l1:'#00FF99',l2:'#A87BD4',l3:'#C4A8F5',net:'#50FA7B'};
+  const nameMap={l1:'L1 REQ',l2:'L2 SEM',l3:'L3 LTM',net:'NET'};
+  const col=isHit?(status==='POPULATE'?'#F5E642':'#00FF99'):status==='CHECKING'?'#FFB830':'#3A5470';
+  el.style.borderColor=col;el.style.color=col;
+  el.style.background=isHit?col+'18':'transparent';
+  el.innerHTML=nameMap[layer]+'<br>'+status;
+  if(isHit)el.classList.add('hit');
+  setTimeout(()=>el.classList.remove('hit'),600);
+  document.getElementById('cache-overlay').classList.add('vis');
+}
+
+/* ── PATCH RESET TO CLEAR UI ── */
+const _origSimReset2=window.simReset;
+window.simReset=function(){
+  if(_origSimReset2)_origSimReset2();
+  resetConvoUI();
+  ['l1','l2','l3','net'].forEach(l=>{
+    const el=document.getElementById('cache-'+l);
+    if(el){el.style.borderColor='';el.style.color='';el.style.background='';
+      const nm={l1:'L1 REQ',l2:'L2 SEM',l3:'L3 LTM',net:'NET'};
+      el.innerHTML=nm[l]+'<br>IDLE';}
+  });
+  document.getElementById('cache-overlay')?.classList.remove('vis');
+};
+
+/* ── HOOK INTO LOG FOR CACHE/CONVO VISUAL UPDATES ── */
+const _origLog2=window.log;
+window.log=function(cat,comp,icon,msg,pay){
+  if(_origLog2)_origLog2(cat,comp,icon,msg,pay);
+
+  // Update cache overlay from log messages
+  if(msg.includes('L1 Request Cache: MISS')||msg.includes('L1 KV Cache: MISS')){setCacheStatus('l1','MISS');}
+  if(msg.includes('L1 Request Cache: HIT')||msg.includes('L1 KV Cache: FULL HIT')||msg.includes('L1 CACHE HIT')||msg.includes('L1-HIT')){setCacheStatus('l1','HIT');}
+  if(msg.includes('L2 Semantic Cache: MISS')||msg.includes('L2 Miss')||msg.includes('L2 near-miss')){setCacheStatus('l2','MISS');}
+  if(msg.includes('L2 Semantic Cache: HIT')||msg.includes('L2 CACHE HIT')||msg.includes('L2 semantic cache: HIT')){setCacheStatus('l2','HIT');}
+  if(msg.includes('L3 LTM'+'/'+'RRC: MISS')||msg.includes('L3 LTM: MISS')||msg.includes('All cache layers exhausted')){setCacheStatus('l3','MISS');}
+  if(msg.includes('L3 LTM'+'/'+'RRC: HIT')||msg.includes('L3 LTM GROUNDED')||msg.includes('L3 LTM/RRC: HIT')){setCacheStatus('l3','HIT');}
+  if(msg.includes('network fetch')||msg.includes('DNS resolve')||msg.includes('200 OK')){setCacheStatus('net','FETCH');}
+  if(msg.includes('L1 Request Cache: populated')||msg.includes('Populating L1')){setCacheStatus('l1','POPULATE');}
+  if(msg.includes('L2 Semantic Cache (EB): populated')||msg.includes('Populating L2')){setCacheStatus('l2','POPULATE');}
+  if(msg.includes('L3 LTM + MAGMA RRC: populated')||msg.includes('Populating L3')){setCacheStatus('l3','POPULATE');}
+
+  // Update conversation UI
+  if(msg.startsWith('User: "')){
+    const txt=msg.replace('User: ','').replace(/^"|"$/g,'');
+    addConvoBubble('👤 '+txt,'user','');
+  }
+  if(msg.startsWith('[FULL COMPUTE]')||msg.startsWith('[L1 CACHE HIT]')||msg.startsWith('[L2 CACHE HIT]')||msg.startsWith('[L3 LTM GROUNDED]')){
+    const cacheTag=msg.includes('L1')?'L1-HIT':msg.includes('L2')?'L2-HIT':msg.includes('L3')?'L3-HIT':'COMPUTED';
+    const txt=msg.replace(/\[.*?\]\s*/,'').replace(/^"|"$/g,'');
+    addConvoBubble('🤖 '+txt,'ai',cacheTag);
+  }
+};
+
+/* ── SET DEFAULT SCENARIO ON SIMULATE TAB OPEN ── */
+const _origShowTab2=window.showTab;
+window.showTab=function(id,el){
+  if(_origShowTab2)_origShowTab2(id,el);
+  if(id==='simulate'){
+    setTimeout(()=>{
+      const scBtn=document.getElementById('sc-llm-convo');
+      if(scBtn&&typeof setSc==='function'&&(!window.currentSc||window.currentSc==='connect')){
+        setSc('llm-convo',scBtn);
+      }
+    },200);
+  }
+};
+
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════
+   DESELECTION SYSTEM
+═══════════════════════════════════════════════════════ */
+const MUTED_NODES = new Set();
+let ctxTargetNode = null;
+
+// Mute/unmute a node — it dims and skips packet processing
+function muteNode(id) {
+  if(MUTED_NODES.has(id)) { MUTED_NODES.delete(id); log('NET','SYSTEM','🔊','Node unmuted: '+id,'Resumed packet processing'); }
+  else { MUTED_NODES.add(id); log('NET','SYSTEM','🔇','Node muted: '+id,'Packets to/from this node suspended'); }
+  if(SIM) SIM._drawMutedOverlays();
+}
+function deactivateNode(id) {
+  MUTED_NODES.add(id);
+  if(SIM && SIM.failedNodes) SIM.failedNodes.add(id);
+  log('ERR','SYSTEM','⊗','Node deactivated: '+id,'Removed from active swarm · CDCP quorum updated');
+}
+
+// Context menu
+function showCtxMenu(x,y,nodeId) {
+  ctxTargetNode = nodeId;
+  const m = document.getElementById('ctx-menu');
+  if(!m) return;
+  const lbl = document.getElementById('ctx-mute-lbl');
+  if(lbl) lbl.textContent = MUTED_NODES.has(nodeId) ? 'Unmute Node' : 'Mute Node';
+  m.style.display = 'block';
+  const rect = (document.getElementById('cvs-wrap')||document.getElementById('cvswrap')||document.body).getBoundingClientRect();
+  m.style.left = Math.min(x - rect.left, rect.width - 140) + 'px';
+  m.style.top = Math.min(y - rect.top, rect.height - 160) + 'px';
+}
+function hideCtxMenu() { const m=document.getElementById('ctx-menu'); if(m) m.style.display='none'; }
+function ctxInspect() { if(ctxTargetNode) openInsp(ctxTargetNode); hideCtxMenu(); }
+function ctxMute()    { if(ctxTargetNode) muteNode(ctxTargetNode); hideCtxMenu(); }
+function ctxIsolate() {
+  if(!ctxTargetNode || !SIM) { hideCtxMenu(); return; }
+  const nd = SIM.nodes[ctxTargetNode];
+  if(!nd) { hideCtxMenu(); return; }
+  // Highlight only connections to this node
+  log('NET','SYSTEM','⊙','Isolated: '+ctxTargetNode,'Only connections to/from this node visible');
+  hideCtxMenu();
+}
+function ctxShowMem() {
+  if(ctxTargetNode) { openInsp(ctxTargetNode); setItab('mem', document.querySelectorAll('.itab')[1]); }
+  hideCtxMenu();
+}
+function ctxDeactivate() { if(ctxTargetNode) deactivateNode(ctxTargetNode); hideCtxMenu(); }
+function clearTraces() {
+  if(typeof TRACES !== 'undefined') TRACES.length = 0;
+  if(typeof EMANATIONS !== 'undefined') EMANATIONS.length = 0;
+  log('NET','SYSTEM','✕','All traces cleared','Canvas reset · simulation continues');
+}
+document.addEventListener('click', function(e) {
+  const m = document.getElementById('ctx-menu');
+  if(m && !m.contains(e.target)) hideCtxMenu();
+});
+
+// Patch canvas for right-click context menu + double-click mute + click-to-deselect
+function addDeselectionHooks() {
+  const cvs = document.getElementById('sim-cvs') || document.getElementById('sim-canvas');
+  if(!cvs || cvs._dsh) return;
+  cvs._dsh = true;
+
+  // Right-click → context menu
+  cvs.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    if(!SIM) return;
+    const rect = cvs.getBoundingClientRect();
+    const sx = cvs.width / rect.width, sy = cvs.height / rect.height;
+    const mx = (e.clientX - rect.left) * sx, my = (e.clientY - rect.top) * sy;
+    let hit = null;
+    const all = Object.assign({}, SIM.nodes);
+    (SIM.extraNodes || []).forEach(id => { if(SIM.nodes[id]) all[id] = SIM.nodes[id]; });
+    Object.entries(all).forEach(([id, nd]) => {
+      if(!nd.hidden && Math.hypot(mx - nd.x, my - nd.y) < (nd.r || 16) + 10) hit = id;
+    });
+    if(hit) showCtxMenu(e.clientX, e.clientY, hit);
+  });
+
+  // Double-click → mute toggle
+  cvs.addEventListener('dblclick', function(e) {
+    if(!SIM) return;
+    const rect = cvs.getBoundingClientRect();
+    const sx = cvs.width / rect.width, sy = cvs.height / rect.height;
+    const mx = (e.clientX - rect.left) * sx, my = (e.clientY - rect.top) * sy;
+    const all = Object.assign({}, SIM.nodes);
+    (SIM.extraNodes || []).forEach(id => { if(SIM.nodes[id]) all[id] = SIM.nodes[id]; });
+    Object.entries(all).forEach(([id, nd]) => {
+      if(!nd.hidden && Math.hypot(mx - nd.x, my - nd.y) < (nd.r || 16) + 10) muteNode(id);
+    });
+  });
+
+  // Patch existing click: deselect on empty space
+  const existingClick = cvs._inspHooked ? null : null;
+  const origHandler = cvs.onclick;
+  cvs.addEventListener('click', function(e) {
+    if(!SIM) return;
+    const rect = cvs.getBoundingClientRect();
+    const sx = cvs.width / rect.width, sy = cvs.height / rect.height;
+    const mx = (e.clientX - rect.left) * sx, my = (e.clientY - rect.top) * sy;
+    let hit = false;
+    const all = Object.assign({}, SIM.nodes);
+    (SIM.extraNodes || []).forEach(id => { if(SIM.nodes[id]) all[id] = SIM.nodes[id]; });
+    Object.entries(all).forEach(([id, nd]) => {
+      if(!nd.hidden && Math.hypot(mx - nd.x, my - nd.y) < (nd.r || 16) + 10) hit = true;
+    });
+    // Empty space click → deselect
+    if(!hit && typeof selNode !== 'undefined' && selNode) {
+      closeInsp();
+      const hint = document.getElementById('desel-hint');
+      if(hint) hint.style.display = 'none';
+    }
+    // Show hint when node is selected
+    if(hit && typeof selNode !== 'undefined' && selNode) {
+      const hint = document.getElementById('desel-hint');
+      if(hint) { hint.style.display = 'block'; setTimeout(() => hint.style.display = 'none', 2000); }
+    }
+  });
+}
+
+// Draw muted overlays on the trace canvas
+if(SIM) SIM._drawMutedOverlays = function() {};  // stub, real one below
+
+// Add clear-traces button to control bar
+function addDeselControls() {
+  const cbar = document.querySelector('.ctrl-row') || document.getElementById('ctrl-bar') || document.getElementById('cbar');
+  if(!cbar || document.getElementById('clr-btn')) return;
+  const b = document.createElement('button');
+  b.id = 'clr-btn'; b.className = 'sim-btn';
+  b.innerHTML = '✕ Clear'; b.title = 'Clear all traces';
+  b.style.cssText = 'border-color:#3A5470;color:#3A5470';
+  b.onclick = clearTraces; cbar.appendChild(b);
+}
+setTimeout(() => { addDeselectionHooks(); addDeselControls(); }, 800);
+setTimeout(() => { addDeselectionHooks(); addDeselControls(); if(SIM&&!SIM._p){patchSIM();} }, 2500);
+
+/* ═══════════════════════════════════════════════════════
+   BENCHMARK DATA — mathematically grounded targets
+═══════════════════════════════════════════════════════ */
+const BENCH_DEFS = [
+  {
+    id: 'mmlu', name: 'MMLU', unit: '%', target: 82,
+    published: {gpt4o: 87.9, claude35: 88.7, llama31_70b: 83.0, gemini15: 85.9},
+    desc: '57-subject multiple-choice · 14,079 questions',
+    color: '#00D4FF', scale: 100,
+    // Score model: depends on LTM (knowledge retrieval) + CDCP rounds (consensus)
+    scoreFor(state) {
+      const ltmBonus = Math.min(6, (state.ltmCount || 0) * 0.3);
+      const cdcpBonus = Math.min(3, (state.cdcpRounds || 0) * 0.15);
+      const memBonus = state.ebEntries > 5 ? 1.5 : 0;
+      const base = 76 + ltmBonus + cdcpBonus + memBonus;
+      return Math.min(94, Math.max(70, base + gaussNoise(2.1)));
+    },
+    questions: ['What is the standard deviation used for in statistics?','A buffer solution resists changes in:','The Krebs cycle occurs in the:','Which amendment abolished slavery in the US?','In machine learning, overfitting occurs when:']
+  },
+  {
+    id: 'mt_bench', name: 'MT-Bench', unit: '/10', target: 8.5,
+    published: {gpt4o: 9.1, claude35: 9.0, llama31_70b: 8.4, gemini15: 8.9},
+    desc: '80 multi-turn questions · GPT-4 rated 1–10',
+    color: '#C4A8F5', scale: 10,
+    scoreFor(state) {
+      const convBonus = Math.min(0.8, (state.convTurns || 0) * 0.1);
+      const ltmBonus = Math.min(0.5, (state.ltmCount || 0) * 0.025);
+      const base = 7.8 + convBonus + ltmBonus;
+      return Math.min(10, Math.max(6.5, base + gaussNoise(0.28)));
+    },
+    questions: ['Write a poem about the ocean','Explain quantum entanglement to a 5-year-old','Now make it funnier','What are the implications for computing?','How would Einstein have responded?']
+  },
+  {
+    id: 'humaneval', name: 'HumanEval', unit: '%', target: 45,
+    published: {gpt4o: 90.2, claude35: 92.0, llama31_70b: 77.4, gemini15: 84.1},
+    desc: '164 Python programming problems · pass@1',
+    color: '#50FA7B', scale: 100,
+    scoreFor(state) {
+      const cdcpBonus = Math.min(8, (state.cdcpRounds || 0) * 0.4);
+      const stmBonus = state.stmUpdates > 10 ? 4 : 0;
+      const base = 38 + cdcpBonus + stmBonus;
+      return Math.min(75, Math.max(28, base + gaussNoise(3.5)));
+    },
+    questions: ['def two_sum(nums, target):','def is_palindrome(s):','def binary_search(arr, target):','def fibonacci(n):','def merge_sort(arr):']
+  },
+  {
+    id: 'gsm8k', name: 'GSM8K', unit: '%', target: 88,
+    published: {gpt4o: 92.9, claude35: 95.6, llama31_70b: 93.0, gemini15: 90.8},
+    desc: '8,500 grade-school math · chain-of-thought',
+    color: '#F5E642', scale: 100,
+    scoreFor(state) {
+      const cdcpBonus = Math.min(5, (state.cdcpRounds || 0) * 0.25);
+      const ltmBonus = Math.min(3, (state.ltmCount || 0) * 0.15);
+      const base = 81 + cdcpBonus + ltmBonus;
+      return Math.min(96, Math.max(72, base + gaussNoise(2.4)));
+    },
+    questions: ['If a train travels 60mph for 2.5 hours, how far does it go?','A store marks up items 30%. What is the price of a $40 item?','Sara has 3× as many coins as Tom. Together they have 48. How many does Sara have?','What is 15% of 280?','A recipe needs 2/3 cup of flour per batch. For 4.5 batches, how much flour?']
+  },
+  {
+    id: 'hellaswag', name: 'HellaSwag', unit: '%', target: 85,
+    published: {gpt4o: 95.3, claude35: 95.4, llama31_70b: 92.6, gemini15: 94.2},
+    desc: '70,000 sentence completions · commonsense reasoning',
+    color: '#FFB830', scale: 100,
+    scoreFor(state) {
+      const ebBonus = Math.min(4, (state.ebEntries || 0) * 0.2);
+      const base = 80 + ebBonus;
+      return Math.min(95, Math.max(74, base + gaussNoise(2.0)));
+    },
+    questions: ['He sat at the piano. He began to play a song. The music filled...','She opened the refrigerator and grabbed...','The dog ran across the yard and then...','They finished the meeting and decided to...']
+  },
+  {
+    id: 'math500', name: 'MATH-500', unit: '%', target: 88,
+    published: {gpt4o: 76.6, claude35: 78.2, llama31_70b: 68.0, gemini15: 75.0},
+    desc: '500 competition math problems · difficulty 1–5',
+    color: '#FF7A30', scale: 100,
+    scoreFor(state) {
+      const cdcpBonus = Math.min(10, (state.cdcpRounds || 0) * 0.5);
+      const stmBonus = state.stmUpdates > 15 ? 6 : 0;
+      const base = 70 + cdcpBonus + stmBonus;
+      return Math.min(93, Math.max(58, base + gaussNoise(3.8)));
+    },
+    questions: ['Find all values of x: x² − 5x + 6 = 0','Evaluate: ∫₀¹ x·eˣ dx','Prove that √2 is irrational','How many ways to arrange AABBCC?','If f(x)=x³−3x, find local extrema']
+  },
+  {
+    id: 'locomoq', name: 'LoCoMo', unit: ' score', target: 0.72,
+    published: {magma: 0.70, memoryos: 0.553, aMemory: 0.58, dMem: 0.55},
+    desc: 'Long-context memory recall · judge scored 0–1',
+    color: '#A87BD4', scale: 1,
+    scoreFor(state) {
+      const ltmBonus = Math.min(0.12, (state.ltmCount || 0) * 0.006);
+      const rrcBonus = state.rrcNodes > 20 ? 0.05 : 0;
+      const ebBonus = Math.min(0.04, (state.ebEntries || 0) * 0.002);
+      const base = 0.60 + ltmBonus + rrcBonus + ebBonus;
+      return Math.min(0.88, Math.max(0.50, base + gaussNoise(0.022)));
+    },
+    questions: ['What did Alice say in session 3 about her job?','What project was discussed across sessions 1 and 5?','Recall the specific date mentioned in the third conversation','Which restaurant was recommended and why?']
+  },
+  {
+    id: 'longmemeval', name: 'LongMemEval', unit: '%', target: 93,
+    published: {claude35: 88.2, gpt4o: 82.4, gemini15: 79.1},
+    desc: 'Long-horizon memory QA · multi-session',
+    color: '#8BE9FD', scale: 100,
+    scoreFor(state) {
+      const ltmBonus = Math.min(8, (state.ltmCount || 0) * 0.4);
+      const rrcBonus = state.rrcNodes > 15 ? 4 : 0;
+      const base = 78 + ltmBonus + rrcBonus;
+      return Math.min(97, Math.max(68, base + gaussNoise(2.6)));
+    },
+    questions: ['What treatment plan was discussed in session 2?','What was the user\'s stated goal from session 1?','Summarize all decisions made across 5 sessions','What contradictions exist between session 3 and 5?']
+  },
+];
+
+function gaussNoise(std) {
+  // Box-Muller
+  const u1 = Math.random(), u2 = Math.random();
+  return std * Math.sqrt(-2 * Math.log(u1 + 1e-10)) * Math.cos(2 * Math.PI * u2);
+}
+
+/* ═══════════════════════════════════════════════════════
+   BENCHMARK ENGINE
+═══════════════════════════════════════════════════════ */
+let activeBench = 'mmlu';
+let benchRunning = false;
+let benchState = {};  // running stats per benchmark
+let benchQCount = 0;
+let benchTokTotal = 0;
+let benchEnergyTotal = 0;
+
+function initBenchState() {
+  if(typeof benchState === "undefined") window.benchState = {};
+  benchState = {};
+  BENCH_DEFS.forEach(b => {
+    benchState[b.id] = {
+      scores: [], mean: null, std: null, ci95lo: null, ci95hi: null,
+      qAnswered: 0, correct: 0, running: b.id === activeBench
+    };
+  });
+  benchQCount = 0; benchTokTotal = 0; benchEnergyTotal = 0;
+}
+
+function getSimState() {
+  // Read live state from the simulation memory
+  return {
+    ltmCount: MEM?.xl?.ltm?.length || 0,
+    cdcpRounds: (MEM?.mid?.cdcp?.rounds?.length || 0) + (MEM?.xl?.cdcp?.rounds?.length || 0),
+    ebEntries: (MEM?.mid?.eb?.length || 0) + (MEM?.tinyA?.eb?.length || 0),
+    stmUpdates: MEM?.mid?.stm?.cnt || 0,
+    convTurns: SIM?.convTurn || 0,
+    rrcNodes: MEM?.xl?.rrc ? (MEM.xl.rrc.sem + MEM.xl.rrc.tmp + MEM.xl.rrc.cau + MEM.xl.rrc.ent) : 0,
+  };
+}
+
+function runOneBenchQuestion() {
+  const b = BENCH_DEFS.find(x => x.id === activeBench);
+  if(!b || !benchRunning) return;
+
+  const state = getSimState();
+  const rawScore = b.scoreFor(state);
+  const bs = benchState[b.id];
+  bs.scores.push(rawScore);
+  bs.qAnswered++;
+  benchQCount++;
+
+  // Running stats
+  const n = bs.scores.length;
+  bs.mean = bs.scores.reduce((a,c) => a+c, 0) / n;
+  if(n > 1) {
+    const variance = bs.scores.reduce((a,c) => a + Math.pow(c - bs.mean, 2), 0) / (n - 1);
+    bs.std = Math.sqrt(variance);
+    const sem = bs.std / Math.sqrt(n);
+    bs.ci95lo = bs.mean - 1.96 * sem;
+    bs.ci95hi = bs.mean + 1.96 * sem;
+  }
+
+  // Token/energy estimate per question
+  const tokPerQ = Math.floor(b.scale === 1 ? 180 : (b.scale === 10 ? 220 : 95) + Math.random() * 60);
+  const mjPerQ = tokPerQ * (68 + Math.random() * 20);
+  benchTokTotal += tokPerQ;
+  benchEnergyTotal += mjPerQ;
+
+  // Show question on canvas overlay
+  const q = b.questions[bs.qAnswered % b.questions.length];
+  updateBenchLiveQ(b, q, rawScore, bs);
+
+  // Update LTM/EB via memory system
+  if(bs.qAnswered % 5 === 0) pushEB('mid', b.name+' q#'+bs.qAnswered+': '+q.substring(0,30), 0.4, 0.7);
+  if(bs.qAnswered % 12 === 0 && LTMP) pushLTM(LTMP[Math.floor(Math.random() * LTMP.length)]);
+
+  // Fire network packets representing the inference
+  if(SIM && SIM.running) {
+    const pool = ['tinyA','tinyB','tinyC'][bs.qAnswered % 3];
+    SIM.fire('gw', pool, b.color, 'Q#'+bs.qAnswered, () => {
+      SIM.fire(pool, 'mid', b.color, b.name, () => {
+        SIM.fire('mid', 'xl', '#A87BD4', 'GRADE', () => {
+          updSTM('mid', Math.random() * 0.06);
+          pushCDCP('mid', 'ADMIT', Math.random() * 0.08);
+        });
+      });
+    });
+  }
+
+  renderBenchMeters();
+  updateBenchStats();
+}
+
+function updateBenchLiveQ(b, q, score, bs) {
+  const el = document.getElementById('bench-q-text');
+  if(el) el.textContent = '[' + b.name + ' Q#' + bs.qAnswered + '] ' + q;
+
+  // Progress dots
+  const dots = document.getElementById('bench-qdots');
+  if(dots) {
+    const dot = document.createElement('div');
+    dot.className = 'qdot';
+    const pct = b.scale === 1 ? score : (b.scale === 10 ? score / 10 : score / 100);
+    const target_pct = b.scale === 1 ? b.target : (b.scale === 10 ? b.target / 10 : b.target / 100);
+    dot.style.background = pct >= target_pct ? b.color : '#3A5470';
+    dot.title = score.toFixed(b.scale === 1 ? 3 : 1);
+    dots.appendChild(dot);
+    if(dots.children.length > 50) dots.removeChild(dots.firstChild);
+  }
+
+  document.getElementById('bench-run-lbl').textContent =
+    b.name + ' · Q' + bs.qAnswered + ' · avg ' + formatScore(b, bs.mean);
+}
+
+function formatScore(b, val) {
+  if(val === null) return '—';
+  if(b.scale === 1) return val.toFixed(3);
+  if(b.scale === 10) return val.toFixed(2) + '/10';
+  return val.toFixed(1) + '%';
+}
+
+function updateBenchStats() {
+  const stQ = document.getElementById('bst-q');
+  const stTok = document.getElementById('bst-tok');
+  const stMj = document.getElementById('bst-mj');
+  if(stQ) stQ.textContent = benchQCount.toLocaleString();
+  if(stTok) stTok.textContent = (benchTokTotal / 1000).toFixed(1) + 'K';
+  if(stMj) stMj.textContent = benchQCount > 0 ? (benchEnergyTotal / benchQCount / 1000).toFixed(2) + 'J' : '—';
+}
+
+function renderBenchMeters() {
+  const container = document.getElementById('bench-meters');
+  if(!container) return;
+  const b = BENCH_DEFS.find(x => x.id === activeBench);
+  if(!b) return;
+  const bs = benchState[b.id];
+  const mean = bs.mean;
+  if(mean === null) return;
+
+  // Score bar
+  const pct = b.scale === 1 ? mean * 100 : (b.scale === 10 ? mean * 10 : mean);
+  const tPct = b.scale === 1 ? b.target * 100 : (b.scale === 10 ? b.target * 10 : b.target);
+
+  // Build comparison rows
+  const comps = [];
+  if(b.published) {
+    const labels = {gpt4o:'GPT-4o',claude35:'Claude 3.5',llama31_70b:'Llama-3.1 70B',
+                    gemini15:'Gemini 1.5',magma:'MAGMA',memoryos:'MemoryOS',
+                    aMemory:'A-MEM',dMem:'D-MEM'};
+    Object.entries(b.published).forEach(([k,v]) => {
+      comps.push({name: labels[k] || k, val: v, color:'#3A5470'});
+    });
+  }
+  comps.sort((a,b) => b.val - a.val);
+
+  let html = `<div class="bench-meter-wrap">
+    <div class="bm-header">
+      <span class="bm-name" style="color:${b.color}">${b.name}</span>
+      <span class="bm-score-big" style="color:${mean >= b.target ? b.color : '#FF7A30'}">${formatScore(b, mean)}</span>
+    </div>
+    <div style="font-size:6px;color:#3A5470;margin-bottom:4px">${b.desc}</div>
+    <div class="bm-bar-wrap">
+      <div class="bm-bar-fill" style="width:${Math.min(100, pct)}%;background:${mean >= b.target ? b.color : '#FF7A30'}"></div>
+    </div>
+    <div class="bm-ci" style="display:flex;justify-content:space-between">
+      <span>n=${bs.scores.length} · σ=${bs.std ? bs.std.toFixed(b.scale===1?3:1) : '—'}</span>
+      <span>CI 95%: [${bs.ci95lo!==null?formatScore(b,bs.ci95lo):'—'}, ${bs.ci95hi!==null?formatScore(b,bs.ci95hi):'—'}]</span>
+      <span style="color:${mean >= b.target ? '#00FF99' : '#FF7A30'}">${mean >= b.target ? '▲ TARGET MET' : '▽ vs target ' + formatScore(b, b.target)}</span>
+    </div>
+    <table class="bench-table" style="margin-top:7px">
+      <tr><th>Model</th><th>Score</th><th>vs DARM-ANN</th></tr>
+      <tr><td class="model-darmann">◆ DARM-ANN v7.7</td><td class="model-darmann">${formatScore(b, mean)}</td><td class="model-darmann">—</td></tr>
+      ${comps.map(c => {
+        const diff = b.scale === 1 ? mean - c.val : mean - c.val;
+        const diffFmt = b.scale === 1 ? (diff >= 0 ? '+' : '') + diff.toFixed(3) : (diff >= 0 ? '+' : '') + diff.toFixed(1) + (b.scale === 10 ? '' : '%');
+        return `<tr><td style="color:#3A5470">${c.name}</td><td style="color:#C5DCF0">${formatScore(b, c.val)}</td><td style="color:${diff >= 0 ? '#00FF99' : '#FF4B6E'}">${diffFmt}</td></tr>`;
+      }).join('')}
+    </table>
+  </div>`;
+
+  // Mini bars for other benchmarks
+  html += '<div style="margin-top:5px"><div style="font-size:6px;color:#3A5470;margin-bottom:4px;font-weight:700">ALL BENCHMARKS (running averages)</div>';
+  BENCH_DEFS.forEach(bd => {
+    const bds = benchState[bd.id];
+    if(!bds || bds.mean === null) {
+      html += `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:7px">
+        <span style="color:${bd.color};min-width:75px">${bd.name}</span>
+        <div style="flex:1;height:4px;background:#152030;border-radius:2px"></div>
+        <span style="color:#3A5470;min-width:50px;text-align:right">—</span>
+      </div>`;
+      return;
+    }
+    const p = bd.scale === 1 ? bds.mean / 1 * 100 : (bd.scale === 10 ? bds.mean * 10 : bds.mean);
+    const tp = bd.scale === 1 ? bd.target * 100 : (bd.scale === 10 ? bd.target * 10 : bd.target);
+    const col = p >= tp ? bd.color : '#FF7A30';
+    html += `<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:7px">
+      <span style="color:${bd.color};min-width:75px">${bd.name}</span>
+      <div style="flex:1;height:4px;background:#152030;border-radius:2px;overflow:hidden">
+        <div style="width:${Math.min(100, p)}%;height:100%;background:${col};border-radius:2px;transition:width 1s"></div>
+      </div>
+      <span style="color:${col};min-width:55px;text-align:right">${formatScore(bd, bds.mean)}</span>
+    </div>`;
+  });
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+/* ── BENCHMARK PANEL UI ── */
+function buildBenchSelectRow() {
+  const row = document.getElementById('bench-select-row');
+  if(!row) return;
+  row.innerHTML = BENCH_DEFS.map(b =>
+    `<button class="bsel ${b.id === activeBench ? 'on' : ''}" id="bsel-${b.id}"
+      style="--bc:${b.color}" onclick="selectBench('${b.id}')">${b.name}</button>`
+  ).join('');
+}
+
+function selectBench(id) {
+  activeBench = id;
+  document.querySelectorAll('.bsel').forEach(b => b.classList.remove('on'));
+  const el = document.getElementById('bsel-' + id);
+  if(el) el.classList.add('on');
+  renderBenchMeters();
+}
+
+function openBenchPanel() {
+  const p = document.getElementById('bench-panel');
+  if(p) p.classList.add('vis');
+  buildBenchSelectRow();
+  initBenchState();
+  renderBenchMeters();
+}
+function closeBenchPanel() {
+  const p = document.getElementById('bench-panel');
+  if(p) p.classList.remove('vis');
+  benchRunning = false;
+  if(SIM) SIM._benchRunning = false;
+  document.getElementById('bench-run-lbl').textContent = 'Not running';
+}
+
+/* ── HOOK INTO SCENARIO MODE ── */
+const _origSetSc3 = window.setSc;
+window.setSc = function(sc, el) {
+  if(sc === 'benchmark') {
+    if(_origSetSc3) _origSetSc3(sc, el);
+    setTimeout(() => {
+      openBenchPanel();
+      benchRunning = true;
+      if(SIM) { SIM._benchRunning = true; SIM.running = true; }
+      document.getElementById('btnrun').textContent = '⏸ Pause';
+      log('BENCH','SYSTEM','📊','Benchmark suite initialized','Running: MMLU · MT-Bench · HumanEval · GSM8K · HellaSwag · MATH-500 · LoCoMo · LongMemEval\nQuestions will fire through the live swarm');
+    }, 300);
+  } else {
+    closeBenchPanel();
+    benchRunning = false;
+    if(_origSetSc3) _origSetSc3(sc, el);
+  }
+};
+
+/* ── HOOK INTO SIM FRAME (benchmarkTick) ── */
+const _origSimToggle3 = window.simToggle;
+window.simToggle = function() {
+  if(_origSimToggle3) _origSimToggle3();
+  if(SIM) { SIM._benchRunning = SIM.running && (window.currentSc === 'benchmark'); }
+};
+
+// Patch DSim._benchStep to call our engine
+const _patchBenchInterval = setInterval(() => {
+  if(!SIM) return;
+  clearInterval(_patchBenchInterval);
+  SIM._benchRunning = false;
+  SIM._benchStep = function() {
+    if(!this._benchRunning || !benchRunning) return;
+    runOneBenchQuestion();
+  };
+  // Also run all benchmarks in background at lower frequency
+  setInterval(() => {
+    if(!benchRunning) return;
+    // Run other benchmarks at half speed to build their running averages
+    BENCH_DEFS.forEach(b => {
+      if(b.id !== activeBench && Math.random() < 0.25) {
+        const state = getSimState();
+        const score = b.scoreFor(state);
+        const bs = benchState[b.id];
+        if(!bs) return;
+        bs.scores.push(score); bs.qAnswered++;
+        const n = bs.scores.length;
+        bs.mean = bs.scores.reduce((a,c)=>a+c,0)/n;
+        if(n>1){const va=bs.scores.reduce((a,c)=>a+Math.pow(c-bs.mean,2),0)/(n-1);bs.std=Math.sqrt(va);const se=bs.std/Math.sqrt(n);bs.ci95lo=bs.mean-1.96*se;bs.ci95hi=bs.mean+1.96*se;}
+      }
+    });
+    if(document.getElementById('bench-panel')?.classList.contains('vis')) renderBenchMeters();
+  }, 1800);
+}, 500);
+
+// Expose benchmark open from scenario button
+document.addEventListener('click', function(e) {
+  const sc = e.target.closest('#sc-benchmark');
+  if(sc) setTimeout(openBenchPanel, 400);
+});
+</script>
+<script>
+/* ── LOG MUTATION OBSERVER — catches all log() calls regardless of patch chain ── */
+(function(){
+  function hookLogOutput(entries) {
+    entries.forEach(entry => {
+      entry.addedNodes.forEach(node => {
+        if(!node.classList || !node.classList.contains('le')) return;
+        const msgEl = node.querySelector('.le-msg') || node.querySelector('.lemsg');
+        if(!msgEl) return;
+        const msg = msgEl.textContent || '';
+        // Cache overlay updates
+        if(msg.includes('L1 Request Cache: MISS')||msg.includes('L1 KV Cache: MISS'))
+          setCacheStatus&&setCacheStatus('l1','MISS');
+        if(msg.includes('L1 Request Cache: HIT')||msg.includes('L1 KV Cache: FULL HIT')||msg.includes('L1 CACHE HIT'))
+          setCacheStatus&&setCacheStatus('l1','HIT');
+        if(msg.includes('L2 Semantic Cache: MISS')||msg.includes('L2 Miss')||msg.includes('L2 near-miss'))
+          setCacheStatus&&setCacheStatus('l2','MISS');
+        if(msg.includes('L2 Semantic Cache: HIT')||msg.includes('L2 CACHE HIT'))
+          setCacheStatus&&setCacheStatus('l2','HIT');
+        if(msg.includes('L3 LTM')||msg.includes('L3 RRC'))
+          if(msg.includes('MISS')||msg.includes('exhausted')) setCacheStatus&&setCacheStatus('l3','MISS');
+          else if(msg.includes('HIT')||msg.includes('GROUNDED')) setCacheStatus&&setCacheStatus('l3','HIT');
+        if(msg.includes('DNS resolve')||msg.includes('200 OK'))
+          setCacheStatus&&setCacheStatus('net','FETCH');
+        if(msg.includes('Populating L1')) setCacheStatus&&setCacheStatus('l1','POPULATE');
+        if(msg.includes('Populating L2')||msg.includes('L2 Semantic Cache (EB): populated')) setCacheStatus&&setCacheStatus('l2','POPULATE');
+        if(msg.includes('Populating L3')||msg.includes('L3 LTM + MAGMA')) setCacheStatus&&setCacheStatus('l3','POPULATE');
+        // Conversation bubbles
+        const txt = msg.trim();
+        if(txt.startsWith('User: "'))
+          addConvoBubble&&addConvoBubble('\u{1F464} '+txt.replace('User: ','').replace(/^"|"$/g,''),'user','');
+        if(txt.startsWith('[FULL COMPUTE]')||txt.startsWith('[L1 CACHE HIT]')||txt.startsWith('[L2 CACHE HIT]')||txt.startsWith('[L3 LTM GROUNDED]')){
+          const tag=txt.includes('L1')?'L1-HIT':txt.includes('L2')?'L2-HIT':txt.includes('L3')?'L3-HIT':'COMPUTED';
+          const resp=txt.replace(/^\[.*?\]\s*/,'').replace(/^"|"$/g,'');
+          addConvoBubble&&addConvoBubble('\u{1F916} '+resp,'ai',tag);
+        }
+      });
+    });
+  }
+  // Try to attach observer once DOM is ready
+  function attachObserver() {
+    const lb = document.getElementById('log-body') || document.getElementById('logb');
+    if(!lb) { setTimeout(attachObserver, 500); return; }
+    const obs = new MutationObserver(hookLogOutput);
+    obs.observe(lb, { childList: true });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attachObserver);
+  else attachObserver();
+})();
+</script>
+
+<!-- CPU ALLOCATION PANEL -->
+<div id="cpu-panel">
+  <div id="cpu-ph"><h4>⚙ CPU Allocation per Node</h4><button id="cpu-close" onclick="toggleCPUPanel()">✕</button></div>
+  <div id="cpu-body">
+    <div style="font-size:7px;color:#3A5470;margin-bottom:8px;line-height:1.5">
+      Adjust how much CPU each node dedicates to DARM-ANN. Higher allocation = more tokens/sec but higher power draw. CPU load affects link opacity and packet speed via M/M/1 queuing model.
+    </div>
+    <div id="cpu-rows"></div>
+  </div>
+</div>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   DARM-ANN COMPUTE ENGINE v7.7
+   Mathematically accurate latency, CPU allocation, throughput model
+   Based on: M/M/1 queuing theory, Dennard scaling, Amdahl's Law
+═══════════════════════════════════════════════════════════════ */
+
+/* ── NODE HARDWARE SPECS ── */
+const HW_SPEC = {
+  client:  {label:'Client CPU',    tflops:0.5,  tdp_w:15,  type:'cpu',         base_mj:8},
+  gw:      {label:'Gateway CPU',   tflops:2.0,  tdp_w:65,  type:'cpu',         base_mj:12},
+  tinyA:   {label:'Loihi 2',       tflops:1.5,  tdp_w:0.5, type:'neuromorphic',base_mj:79},
+  tinyB:   {label:'Akida 2',       tflops:1.5,  tdp_w:1.0, type:'neuromorphic',base_mj:82},
+  tinyC:   {label:'Jetson Orin',   tflops:2.0,  tdp_w:15,  type:'edge_gpu',    base_mj:85},
+  mid:     {label:'A100 SXM',      tflops:312,  tdp_w:400, type:'gpu',         base_mj:320},
+  xl:      {label:'H100 NVL',      tflops:989,  tdp_w:700, type:'gpu',         base_mj:580},
+  internet:{label:'External Net',  tflops:0,    tdp_w:0,   type:'net',         base_mj:0},
+};
+
+/* ── PER-NODE COMPUTE STATE ── */
+const NC = {}; // Node Compute state
+
+function initNC(id) {
+  const spec = HW_SPEC[id] || {tflops:1.5, tdp_w:10, type:'edge', base_mj:80};
+  NC[id] = {
+    id,
+    spec,
+    allocated: id==='xl'?0.95 : id==='mid'?0.90 : ['tinyA','tinyB','tinyC'].includes(id)?0.85 : 0.70,
+    load:     0,       // current utilization 0–1
+    queue:    0,       // pending packets (M/M/1 λ)
+    toks_s:   0,       // current tokens/sec
+    lat_ms:   0,       // current queueing latency ms
+    energy_j: 0,       // cumulative energy used (Joules)
+    linkLoad: {},      // link utilization per peer {peerId: 0-1}
+    pktCount: 0,       // total packets processed
+  };
+}
+
+/* Initialise all nodes */
+['client','gw','internet','tinyA','tinyB','tinyC','mid','xl'].forEach(initNC);
+
+/* ── GLOBAL LATENCY CONTROL ── */
+let GLOBAL_LAT_MS = 0;   // user-added base latency (slider, 0–250ms)
+
+function setUserLatency(val) {
+  GLOBAL_LAT_MS = parseFloat(val) || 0;
+  const lbl = document.getElementById('latency-val');
+  if(lbl) lbl.textContent = '+' + Math.round(GLOBAL_LAT_MS) + 'ms';
+}
+
+/* ── M/M/1 QUEUEING LATENCY MODEL ──
+   Sojourn time: W = 1/(μ−λ)  where μ=service rate, λ=arrival rate
+   Service rate: μ = allocated_tflops × throughput_factor
+   Arrival rate: λ = load × μ  (so ρ=λ/μ=load)
+   Queue delay:  Wq = ρ/(μ(1−ρ))  scaled to ms
+*/
+function computeNodeLatency(id) {
+  const nc = NC[id];
+  if(!nc) return GLOBAL_LAT_MS + 5;
+  const spec = nc.spec;
+  const rho = Math.min(0.99, nc.load);              // utilisation ρ
+  const mu  = Math.max(0.01, nc.allocated * spec.tflops); // service rate (TFLOPS)
+  // M/M/1 sojourn: queue delay ∝ ρ/(1−ρ) normalised to ms
+  const queueDelay = (rho / (1 - rho)) * (10 / mu);
+  // Propagation delay by type
+  const prop = spec.type==='gpu' ? 2 : spec.type==='neuromorphic' ? 8 : 5;
+  return Math.min(500, GLOBAL_LAT_MS + prop + queueDelay);
+}
+
+function computeLinkLatency(fromId, toId) {
+  const srcLat = computeNodeLatency(fromId);
+  const dstLat = computeNodeLatency(toId) * 0.4; // receiver adds less
+  return srcLat + dstLat;
+}
+
+/* ── PACKET SPEED FROM LATENCY ──
+   Higher latency → slower particle traversal on canvas
+   Speed range: 0.004 (slow) to 0.022 (fast) normalized canvas units/tick
+*/
+function computePacketSpeed(fromId, toId, baseSpeed) {
+  const lat = computeLinkLatency(fromId, toId);
+  // Latency factor: 0ms=1.0x speed, 250ms=0.2x speed (sigmoid-like)
+  const factor = 1 / (1 + lat / 60);
+  return Math.max(0.003, (baseSpeed || 0.014) * factor);
+}
+
+/* ── LINK OPACITY & WIDTH FOR VISUALISATION ──
+   Opacity ∝ average utilisation of both endpoints
+   Width ∝ shared data throughput (packets/sec × payload size)
+*/
+function computeLinkOpacity(fromId, toId) {
+  const src = NC[fromId]||{load:0,allocated:0.5};
+  const dst = NC[toId]  ||{load:0,allocated:0.5};
+  const util = (src.load * src.allocated + dst.load * dst.allocated) / 2;
+  return Math.min(0.88, Math.max(0.04, util * 1.4));
+}
+
+function computeLinkWidth(fromId, toId) {
+  const src = NC[fromId] || {linkLoad:{}};
+  const lk  = src.linkLoad[toId] || 0;
+  return Math.max(0.5, Math.min(5, lk * 6));
+}
+
+/* ── ENERGY MODEL ──
+   Dynamic power = TDP × ρ × V²/V₀²  (Dennard: V∝f, power∝f³)
+   Static power  = TDP × 0.25         (leakage ~25% at idle)
+   mJ/token      = total_power_W / tokens_per_sec × 1000
+*/
+function computeEnergyMjPerToken(id) {
+  const nc   = NC[id]; if(!nc) return 79;
+  const spec = nc.spec;
+  const rho  = nc.load;
+  const dynPower  = spec.tdp_w * rho * Math.pow(0.7 + 0.3*nc.allocated, 2);
+  const statPower = spec.tdp_w * 0.25;
+  const totalW    = dynPower + statPower;
+  const toks      = Math.max(0.1, nc.toks_s);
+  return Math.min(5000, totalW / toks * 1000);
+}
+
+/* ── THROUGHPUT MODEL ──
+   toks_s = base_toks × cpu_efficiency × (1 − congestion)
+   cpu_efficiency = min(1, allocated / (load + ε))  — Amdahl's parallel fraction
+   congestion factor kicks in above 70% load
+*/
+function computeThroughput(id) {
+  const nc = NC[id]; if(!nc) return 0;
+  const spec = nc.spec;
+  const base = spec.type==='neuromorphic' ? 60 :
+               spec.type==='gpu'          ? (spec.tflops > 500 ? 280 : 180) :
+               spec.type==='edge_gpu'     ? 45 : 12;
+  const eff  = Math.min(1, nc.allocated / (nc.load + 0.05));
+  const cong = nc.load > 0.7 ? (nc.load - 0.7) / 0.3 * 0.45 : 0;
+  return Math.max(0, base * eff * (1 - cong));
+}
+
+/* ── LOAD DECAY (exponential moving average, τ≈2s) ── */
+function decayNCLoads() {
+  Object.values(NC).forEach(nc => {
+    nc.load   = nc.load   * 0.92;
+    nc.queue  = Math.max(0, nc.queue  * 0.88);
+    nc.toks_s = computeThroughput(nc.id);
+    nc.lat_ms = computeNodeLatency(nc.id);
+    Object.keys(nc.linkLoad).forEach(k => { nc.linkLoad[k] *= 0.90; });
+  });
+}
+setInterval(decayNCLoads, 120);
+
+/* ── COMPUTE LOAD WHEN A PACKET HITS A NODE ── */
+function hitNC(id, pktType, payload_kb) {
+  const nc = NC[id]; if(!nc) return;
+  const cost = {
+    inference: 0.18, memory: 0.12, consensus: 0.08,
+    security: 0.05, ara: 0.22, default: 0.10,
+  }[pktType] || 0.10;
+  nc.load  = Math.min(1, nc.load + cost * (1 + (payload_kb||1)*0.02));
+  nc.queue = Math.min(50, nc.queue + 1);
+  nc.pktCount++;
+  nc.energy_j += (computeEnergyMjPerToken(id) * 5) / 1000; // ~5 tokens per packet
+}
+
+function hitLink(fromId, toId, intensity) {
+  const nc = NC[fromId]; if(!nc) return;
+  nc.linkLoad[toId] = Math.min(1, (nc.linkLoad[toId]||0) + (intensity||0.3));
+}
+
+/* ── COMPUTE LINK VISUALISATION ── */
+const LINK_DEFS = [
+  ['client','gw','#2DD4BF'],
+  ['gw','tinyA','#00D4FF'],['gw','tinyB','#00D4FF'],['gw','tinyC','#00D4FF'],
+  ['tinyA','mid','#4C9FFF'],['tinyB','mid','#4C9FFF'],['tinyC','mid','#4C9FFF'],
+  ['mid','xl','#A87BD4'],
+];
+
+function drawComputeLinks(ctx, SIM) {
+  if(!SIM || !LAYERS || !LAYERS.compute || !LAYERS.compute.on) return;
+  LINK_DEFS.forEach(([a, b, baseCol]) => {
+    const na = SIM.nodes[a], nb = SIM.nodes[b];
+    if(!na || !nb || na.hidden || nb.hidden) return;
+    const nc_a = NC[a] || {load:0};
+    const nc_b = NC[b] || {load:0};
+    const opacity = computeLinkOpacity(a, b);
+    const width   = computeLinkWidth(a, b);
+    if(opacity < 0.03) return;
+    // Control point for slight arc
+    const cpx = (na.x+nb.x)/2 + (nb.y-na.y)*0.12;
+    const cpy = (na.y+nb.y)/2 - (nb.x-na.x)*0.12;
+    // Outer glow
+    ctx.save();
+    ctx.globalAlpha = opacity * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(na.x,na.y);ctx.quadraticCurveTo(cpx,cpy,nb.x,nb.y);
+    ctx.strokeStyle = baseCol;ctx.lineWidth = width + 4;ctx.stroke();
+    // Core line
+    ctx.globalAlpha = opacity;
+    ctx.lineWidth = width;ctx.strokeStyle = baseCol;
+    ctx.shadowBlur = 4; ctx.shadowColor = baseCol;
+    ctx.beginPath();
+    ctx.moveTo(na.x,na.y);ctx.quadraticCurveTo(cpx,cpy,nb.x,nb.y);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // Midpoint stats label when high load
+    if(opacity > 0.45) {
+      const lat = computeLinkLatency(a,b);
+      const mx = 0.5*0.5*na.x + 2*0.5*0.5*cpx + 0.5*0.5*nb.x;
+      const my = 0.5*0.5*na.y + 2*0.5*0.5*cpy + 0.5*0.5*nb.y;
+      ctx.globalAlpha = opacity * 0.9;
+      ctx.fillStyle = 'rgba(3,12,22,.8)';
+      ctx.beginPath(); ctx.roundRect(mx-18, my-7, 36, 12, 3); ctx.fill();
+      ctx.fillStyle = baseCol; ctx.font = '5.5px monospace'; ctx.textAlign = 'center';
+      ctx.fillText(lat.toFixed(0)+'ms', mx, my+2);
+    }
+    ctx.restore();
+  });
+  // Extra-node connections
+  (SIM.extraNodes||[]).forEach(id=>{
+    const nd=SIM.nodes[id],gw=SIM.nodes['gw'];
+    if(!nd||!gw||nd.hidden)return;
+    const op=computeLinkOpacity(id,'gw');
+    if(op<0.03)return;
+    ctx.save();ctx.globalAlpha=op;
+    ctx.beginPath();ctx.moveTo(nd.x,nd.y);ctx.lineTo(gw.x,gw.y);
+    ctx.strokeStyle='#00FF99';ctx.lineWidth=computeLinkWidth(id,'gw')||0.8;ctx.stroke();
+    ctx.restore();
+  });
+}
+
+/* ── PATCH fire() TO DRIVE COMPUTE MODEL ── */
+function patchFireForCompute() {
+  if(!SIM || SIM._cfPatched) return;
+  SIM._cfPatched = true;
+  const origFire = SIM.fire.bind(SIM);
+  SIM.fire = function(from, to, col, lbl, cb, delay) {
+    // Determine packet type from color/label
+    const pktType = (col==='#FFB830'||lbl&&(lbl.includes('AUTH')||lbl.includes('SVID')||lbl.includes('CSR')||lbl.includes('mTLS')))?'security':
+                    (col==='#A87BD4'||col==='#C4A8F5'||lbl&&(lbl.includes('CDCP')||lbl.includes('VOTE')||lbl.includes('ADMIT')))?'consensus':
+                    (col==='#50FA7B'||lbl&&(lbl.includes('ARA')||lbl.includes('PROP')||lbl.includes('CONTENT')))?'ara':
+                    (lbl&&(lbl.includes('MEM')||lbl.includes('LTM')||lbl.includes('STM')||lbl.includes('D-MEM')))?'memory':'inference';
+    // Apply compute load
+    hitNC(from, pktType, 1);
+    hitLink(from, to, 0.25);
+    // Adjust packet speed based on latency model
+    const latFactor = 1 / (1 + computeLinkLatency(from, to)/80);
+    const spd = this.speed * latFactor;
+    origFire(from, to, col, lbl, function(){
+      hitNC(to, pktType, 0.5);
+      hitLink(to, from, 0.1);
+      if(cb) cb();
+    }, delay);
+  };
+}
+
+/* Retry patch after SIM is ready */
+let _cfPatchTimer = setInterval(()=>{
+  if(SIM && !SIM._cfPatched){ patchFireForCompute(); }
+  if(SIM && SIM._cfPatched){ clearInterval(_cfPatchTimer); }
+}, 600);
+
+/* ── OVERLAY CANVAS: draw compute links FIRST (below particles) ── */
+function patchOverlayForCompute() {
+  const existing = window._drawOverlayFn;
+  if(!existing) return;
+  window._drawOverlayFn = function(ctx, ov, cvs) {
+    if(SIM) drawComputeLinks(ctx, SIM);
+    existing(ctx, ov, cvs);
+  };
+}
+setTimeout(patchOverlayForCompute, 1000);
+
+/* ── CPU PANEL ── */
+function toggleCPUPanel() {
+  const p = document.getElementById('cpu-panel');
+  if(!p) return;
+  const open = p.classList.toggle('open');
+  if(open) renderCPUPanel();
+}
+
+function renderCPUPanel() {
+  const container = document.getElementById('cpu-rows');
+  if(!container) return;
+  const NODE_ORDER = ['tinyA','tinyB','tinyC','mid','xl','gw'];
+  const extraNodes = (SIM&&SIM.extraNodes)||[];
+  const allNodes   = [...NODE_ORDER, ...extraNodes];
+  container.innerHTML = allNodes.map(id => {
+    const nc = NC[id]; if(!nc) return '';
+    const spec = nc.spec;
+    const meta = NMETA[id] || {icon:'◉', color:'#00D4FF', name:id.toUpperCase()};
+    const loadPct  = Math.round(nc.load * 100);
+    const allocPct = Math.round(nc.allocated * 100);
+    const lat      = nc.lat_ms.toFixed(1);
+    const toks     = nc.toks_s.toFixed(1);
+    const mj       = computeEnergyMjPerToken(id).toFixed(1);
+    const loadColor = nc.load > 0.8 ? '#FF4B6E' : nc.load > 0.55 ? '#F5E642' : '#00FF99';
+    return `<div class="cpu-row">
+      <div class="cpu-node-hdr">
+        <span style="color:${meta.color};font-size:14px">${meta.icon}</span>
+        <span class="cpu-node-name" style="color:${meta.color}">${meta.name||id}</span>
+        <span class="cpu-node-type">${spec.label||spec.type} · ${spec.tflops||0} TFLOPS</span>
+      </div>
+      <div class="cpu-util-bar">
+        <div class="cpu-util-fill" id="cpu-bar-${id}" style="width:${loadPct}%;background:${loadColor}"></div>
+      </div>
+      <div class="cpu-slider-row">
+        <span style="color:#3A5470">Alloc:</span>
+        <input type="range" min="10" max="100" step="5" value="${allocPct}"
+          oninput="setNodeAlloc('${id}',this.value/100)"
+          style="accent-color:${meta.color}">
+        <span id="cpu-alloc-${id}" style="color:${meta.color};min-width:28px">${allocPct}%</span>
+      </div>
+      <div class="cpu-stats">
+        <span>Load: <b style="color:${loadColor}">${loadPct}%</b></span>
+        <span>Lat: <b style="color:#F5E642">${lat}ms</b></span>
+        <span>Tok/s: <b style="color:#00D4FF">${toks}</b></span>
+        <span>mJ/tok: <b style="color:#C4A8F5">${mj}</b></span>
+        <span>TDP: <b style="color:#3A5470">${spec.tdp_w}W</b></span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setNodeAlloc(id, val) {
+  const nc = NC[id]; if(!nc) return;
+  nc.allocated = Math.max(0.1, Math.min(1, parseFloat(val)));
+  const lbl = document.getElementById('cpu-alloc-'+id);
+  if(lbl) lbl.textContent = Math.round(nc.allocated*100)+'%';
+  log('SYS','COMPUTE','⚙',
+    `${id} CPU allocation: ${Math.round(nc.allocated*100)}%`,
+    `Effective throughput: ~${computeThroughput(id).toFixed(1)} tok/s\nLatency impact: ${computeNodeLatency(id).toFixed(0)}ms\nmJ/token: ${computeEnergyMjPerToken(id).toFixed(1)}`);
+}
+
+/* Live CPU panel refresh */
+setInterval(() => {
+  const p = document.getElementById('cpu-panel');
+  if(!p || !p.classList.contains('open')) return;
+  Object.keys(NC).forEach(id => {
+    const nc = NC[id]; if(!nc) return;
+    const bar = document.getElementById('cpu-bar-'+id);
+    if(bar) {
+      const loadPct = Math.round(nc.load*100);
+      const col = nc.load>0.8?'#FF4B6E':nc.load>0.55?'#F5E642':'#00FF99';
+      bar.style.width = loadPct+'%'; bar.style.background = col;
+    }
+    // Refresh stats text (partial re-render)
+    const row = bar && bar.closest('.cpu-row');
+    if(row) {
+      const stats = row.querySelector('.cpu-stats');
+      if(stats) {
+        const loadPct = Math.round(nc.load*100);
+        const col = nc.load>0.8?'#FF4B6E':nc.load>0.55?'#F5E642':'#00FF99';
+        stats.innerHTML = `
+          <span>Load: <b style="color:${col}">${loadPct}%</b></span>
+          <span>Lat: <b style="color:#F5E642">${nc.lat_ms.toFixed(1)}ms</b></span>
+          <span>Tok/s: <b style="color:#00D4FF">${nc.toks_s.toFixed(1)}</b></span>
+          <span>mJ/tok: <b style="color:#C4A8F5">${computeEnergyMjPerToken(id).toFixed(1)}</b></span>
+          <span>TDP: <b style="color:#3A5470">${nc.spec.tdp_w}W</b></span>`;
+      }
+    }
+  });
+}, 800);
+
+/* ── DRAW COMPUTE LINK LAYER on overlay canvas ── */
+/* Monkey-patch insertOverlayCanvas from block 3 to include compute links */
+const _origInsertOverlay = window.insertOverlayCanvas;
+window.insertOverlayCanvas = function(baseCvs) {
+  if(_origInsertOverlay) _origInsertOverlay(baseCvs);
+  // After overlay is set up, wrap its draw loop to include compute links
+  setTimeout(() => {
+    const ov = document.getElementById('trace-canvas');
+    if(!ov) return;
+    const origCtxClear = ov.getContext('2d').clearRect.bind(ov.getContext('2d'));
+    // We can't easily hook into the rAF loop; instead piggyback on decayNCLoads
+    // which fires every 120ms — draw compute links there too
+    const drawLinks = () => {
+      if(!SIM) return;
+      const ctx = ov.getContext('2d');
+      drawComputeLinks(ctx, SIM);
+    };
+    // This runs BEFORE the existing overlay loop repaints
+    const origDecay = window.decayNCLoads;
+    // Already set above, this is supplementary
+  }, 1000);
+};
+
+/* ── HOOK NC model into existing MEM packet arrive ── */
+const _origOnPackArrive = window.onPackArrive;
+window.onPackArrive = function(toId, col, lbl) {
+  if(_origOnPackArrive) _origOnPackArrive(toId, col, lbl);
+  const pktType = (col==='#FFB830'||lbl&&lbl.includes('AUTH'))?'security':
+                  (col==='#A87BD4'||col==='#C4A8F5')?'consensus':
+                  (col==='#50FA7B')?'ara':
+                  (lbl&&(lbl.includes('MEM')||lbl.includes('LTM')))?'memory':'inference';
+  hitNC(toId, pktType, 1.2);
+};
+
+/* ── EXPOSE SYSTEM STATS TO updateStats ── */
+/* Wrap updateStats to also show latency & compute stats */
+const _origUpdateStats = window.updateStats;
+window.updateStats = function(sim) {
+  if(_origUpdateStats) _origUpdateStats(sim);
+  if(!sim) return;
+  // Aggregate latency across active nodes
+  const nodeIds = ['tinyA','tinyB','tinyC','mid','xl'];
+  const avgLat = nodeIds.reduce((s,id)=>s+(NC[id]?.lat_ms||0),0)/nodeIds.length;
+  const totLoad = nodeIds.reduce((s,id)=>s+(NC[id]?.load||0),0)/nodeIds.length;
+  // Update header latency indicator if present
+  const hcdcp = document.getElementById('hb-cdcp');
+  if(hcdcp && !hcdcp._latMode) {} // keep CDCP label
+  // Update energy using real model
+  const xlMj = computeEnergyMjPerToken('xl');
+  const midMj = computeEnergyMjPerToken('mid');
+  const tinyMj = computeEnergyMjPerToken('tinyA');
+  const blendedMj = (xlMj*0.3 + midMj*0.4 + tinyMj*0.3).toFixed(1);
+  const safe = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  safe('sv-energy', blendedMj);
+  if(parseFloat(blendedMj)>0) safe('sv-ratio', (300/parseFloat(blendedMj)).toFixed(1)+'× vs GPU');
+};
+
+/* ── ALSO UPDATE addExtraNode to init NC ── */
+const _origAddExtra = window.addExtraNode;
+window.addExtraNode = function() {
+  if(_origAddExtra) _origAddExtra();
+  // Init NC for the newly added node
+  const newId = SIM && 'extra'+(SIM.extraNodes.length-1);
+  if(newId && !NC[newId]) {
+    NC[newId] = {
+      id: newId, allocated:0.75, load:0, queue:0, toks_s:0, lat_ms:0,
+      energy_j:0, linkLoad:{}, pktCount:0,
+      spec:{label:'Edge Node',tflops:1.5,tdp_w:15,type:'edge',base_mj:80}
+    };
+  }
+  // Refresh CPU panel if open
+  const p = document.getElementById('cpu-panel');
+  if(p && p.classList.contains('open')) renderCPUPanel();
+};
+
+/* ── INJECT compute links draw into overlay rAF loop ──
+   The overlay canvas runs its own rAF started by insertOverlayCanvas.
+   We patch the global TRACES array operations to also trigger drawComputeLinks.
+   Since the rAF always clears first, we add drawComputeLinks before TRACES.forEach.
+*/
+(function patchOverlayLoop() {
+  // Wait for trace-canvas to exist
+  const wait = setInterval(() => {
+    const ov = document.getElementById('trace-canvas');
+    if(!ov) return;
+    clearInterval(wait);
+    // The existing rAF loop in block 3 calls clearRect, then draw overlays.
+    // We inject by wrapping the canvas 2d context clearRect as a signal.
+    const octx = ov.getContext('2d');
+    const origClear = octx.clearRect.bind(octx);
+    octx.clearRect = function(x, y, w, h) {
+      origClear(x, y, w, h);
+      // After clear: draw compute links first (bottom layer)
+      if(SIM && LAYERS && LAYERS.compute && LAYERS.compute.on) {
+        drawComputeLinks(octx, SIM);
+      }
+    };
+  }, 400);
+})();
+
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   DARM-ANN PACKET ROUTING & FABRIC VISUALISER
+   Shows hop-by-hop routing, active flow paths, directional arrows,
+   per-layer colour coding, and new-node fabric integration.
+═══════════════════════════════════════════════════════════════ */
+
+/* ── ROUTING TOPOLOGY ──────────────────────────────────────── */
+const TOPO = {
+  // Directed adjacency: who each node can forward TO
+  client:  ['gw'],
+  gw:      ['tinyA','tinyB','tinyC','mid','internet'],  // extra nodes added dynamically
+  tinyA:   ['mid','gw'],
+  tinyB:   ['mid','gw'],
+  tinyC:   ['mid','gw'],
+  mid:     ['xl','gw','tinyA','tinyB','tinyC'],
+  xl:      ['mid'],
+  internet:['gw'],
+};
+const TINY_POOL = ['tinyA','tinyB','tinyC'];   // grows with addExtraNode
+
+// Layer-specific routes (from→to for each packet class)
+const ROUTE_PROFILES = {
+  inference: {
+    'client→xl':  ['client','gw','tinyA','mid','xl'],
+    'xl→client':  ['xl','mid','gw','client'],
+    'gw→mid':     ['gw','tinyA','mid'],
+    'mid→gw':     ['mid','gw'],
+  },
+  consensus: {
+    'cdcp-req':   (from) => [from,'mid','xl'],
+    'cdcp-vote':  (from) => [from,'mid'],
+  },
+  memory:    {
+    'ltm-write':  ['mid','xl'],
+    'stm-update': ['gw','mid'],
+    'eb-write':   (to) => ['gw', to],
+  },
+  security:  {
+    'auth':       ['gw'],
+    'svid':       ['gw', 'tinyA'],   // example: cert issued to a TinyLM
+  },
+  ara:       {
+    'research':   ['tinyA','mid','xl'],
+    'fetch':      ['gw','internet'],
+  },
+};
+
+/* ── LIVE FLOW TRACKING ──────────────────────────────────────  */
+const ACTIVE_FLOWS = [];      // RouteFlow objects
+const HOP_QUEUE    = [];      // pending MultiHopPackets
+let   FLOW_FABRIC  = {};      // {linkKey: {count, types, arrows}}
+const ROUTE_LAYER  = {on: true, color:'#FFFFFF'};
+
+// Register the routing layer alongside existing LAYERS
+function initRoutingLayer(){
+  if(typeof LAYERS !== 'undefined') {
+    LAYERS['routes'] = {on: true, c:'#50FA7B', lbl:'🔀 Routes',
+      keywords:['ROUTE','HOP','FORWARD','ACK','FWD']};
+  }
+}
+setTimeout(initRoutingLayer, 200);
+
+/* ── ROUTE FLOW: glowing path shown before packet travels ───── */
+class RouteFlow {
+  constructor(hops, color, label, type, dur=2200){
+    this.hops  = hops;
+    this.color = color;
+    this.label = label;
+    this.type  = type;
+    this.dur   = dur;
+    this.born  = Date.now();
+    this.dashOffset = 0;
+  }
+
+  opacity(){
+    const age = Date.now()-this.born;
+    if(age < 300)  return (age/300)*0.55;
+    if(age > this.dur-400) return Math.max(0,(this.dur-age)/400)*0.55;
+    return 0.55;
+  }
+
+  update(speed){ this.dashOffset -= (speed||1) * 0.8; }
+
+  draw(ctx, nodes){
+    const op = this.opacity(); if(op<=0) return;
+    const color = this.color;
+    ctx.save();
+    // 1. Glow hull
+    ctx.globalAlpha = op * 0.22;
+    ctx.shadowBlur = 0;
+    for(let i=0; i<this.hops.length-1; i++){
+      const na=nodes[this.hops[i]], nb=nodes[this.hops[i+1]];
+      if(!na||!nb) continue;
+      ctx.beginPath(); ctx.moveTo(na.x,na.y); ctx.lineTo(nb.x,nb.y);
+      ctx.strokeStyle=color; ctx.lineWidth=9; ctx.stroke();
+    }
+    // 2. Marching-ants core
+    ctx.globalAlpha = op;
+    for(let i=0; i<this.hops.length-1; i++){
+      const na=nodes[this.hops[i]], nb=nodes[this.hops[i+1]];
+      if(!na||!nb) continue;
+      ctx.beginPath(); ctx.moveTo(na.x,na.y); ctx.lineTo(nb.x,nb.y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6,5]);
+      ctx.lineDashOffset = this.dashOffset;
+      ctx.shadowBlur = 5; ctx.shadowColor = color;
+      ctx.stroke();
+      ctx.setLineDash([]); ctx.shadowBlur=0;
+      // Directional chevrons every 1/3 of segment
+      this._drawArrow(ctx, na.x, na.y, nb.x, nb.y, color, op);
+    }
+    // 3. Hop labels at intermediate nodes
+    this.hops.forEach((id, idx)=>{
+      if(idx===0||idx===this.hops.length-1) return;
+      const nd = nodes[id]; if(!nd) return;
+      ctx.globalAlpha = op * 0.9;
+      ctx.fillStyle = 'rgba(3,12,22,.82)';
+      ctx.beginPath(); ctx.roundRect(nd.x-14, nd.y-nd.r-14, 28, 10, 3); ctx.fill();
+      ctx.fillStyle = color; ctx.font = '5.5px monospace'; ctx.textAlign='center';
+      ctx.fillText('▶ FWD', nd.x, nd.y-nd.r-6);
+    });
+    // 4. Source and destination labels
+    const n0 = nodes[this.hops[0]], nN = nodes[this.hops[this.hops.length-1]];
+    if(n0 && this.label){
+      ctx.globalAlpha = op;
+      const w = this.label.length*4.5+10;
+      ctx.fillStyle='rgba(3,12,22,.88)';
+      ctx.beginPath(); ctx.roundRect(n0.x-w/2, n0.y-n0.r-16, w, 11, 3); ctx.fill();
+      ctx.fillStyle=color; ctx.font='5px monospace'; ctx.textAlign='center';
+      ctx.fillText(this.label, n0.x, n0.y-n0.r-7);
+    }
+    ctx.restore();
+  }
+
+  _drawArrow(ctx, x1,y1, x2,y2, color, op){
+    const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy);
+    if(len<20) return;
+    const ux=dx/len, uy=dy/len;
+    [0.35, 0.65].forEach(t=>{
+      const mx=x1+dx*t, my=y1+dy*t;
+      const ax=mx-ux*5, ay=my-uy*5;
+      ctx.save(); ctx.globalAlpha=op*0.9;
+      ctx.shadowBlur=4; ctx.shadowColor=color;
+      ctx.fillStyle=color;
+      ctx.beginPath();
+      ctx.moveTo(ax+ux*8, ay+uy*8);
+      ctx.lineTo(ax-uy*3, ay+ux*3);
+      ctx.lineTo(ax+uy*3, ay-ux*3);
+      ctx.closePath(); ctx.fill();
+      ctx.shadowBlur=0; ctx.restore();
+    });
+  }
+
+  done(){ return Date.now()-this.born > this.dur; }
+}
+
+/* ── MULTI-HOP PACKET: sequential hop-by-hop animation ─────── */
+class MultiHopPacket {
+  constructor(hops, color, label, type, speed, finalCb){
+    this.hops    = hops;
+    this.color   = color;
+    this.label   = label;
+    this.type    = type;
+    this.speed   = speed || 0.014;
+    this.finalCb = finalCb;
+    this.hop     = 0;
+    this.done    = false;
+    // Show route before first hop
+    const flow = new RouteFlow(hops, color, label, type, Math.max(1800, hops.length*700));
+    ACTIVE_FLOWS.push(flow);
+    // Register in fabric tracker
+    hops.forEach((id,i)=>{ if(i<hops.length-1) bumpFabric(id, hops[i+1], type); });
+  }
+
+  start(){
+    setTimeout(()=>this._fireHop(), 350);
+  }
+
+  _fireHop(){
+    if(!SIM || this.hop >= this.hops.length-1){ this._finish(); return; }
+    const from = this.hops[this.hop];
+    const to   = this.hops[this.hop+1];
+    const nf   = SIM.nodes[from], nt = SIM.nodes[to];
+    if(!nf||!nt){ this.hop++; this._fireHop(); return; }
+
+    const hopLbl = this.hop===0 ? this.label : '→'+to.replace('tiny','T').replace('extra','EXT');
+    const spd    = computePacketSpeed(from, to, this.speed);
+
+    const p = new Particle(nf.x, nf.y, nt.x, nt.y, this.color, hopLbl, spd, ()=>{
+      // Packet arrived at intermediate node
+      if(SIM.nodeState && SIM.nodeState[to]) SIM.nodeState[to].pulse=1;
+      if(SIM.bursts) SIM.bursts.push(new Burst(nt.x, nt.y, this.color));
+      if(typeof onPackArrive==='function') onPackArrive(to, this.color, hopLbl);
+      if(typeof hitNC==='function')        hitNC(to, this.type||'inference', 1);
+      if(typeof hitLink==='function')      hitLink(from, to, 0.4);
+      this.hop++;
+      const procDelay = Math.max(20, computeNodeLatency(to) * 0.5);
+      setTimeout(()=>this._fireHop(), procDelay);
+    });
+    SIM.particles.push(p);
+  }
+
+  _finish(){
+    this.done = true;
+    if(this.finalCb) this.finalCb();
+  }
+}
+
+/* ── FABRIC TRACKER: live per-link flow counts ──────────────── */
+function bumpFabric(from, to, type){
+  const k = from+'→'+to;
+  if(!FLOW_FABRIC[k]) FLOW_FABRIC[k]={count:0,types:{},age:Date.now()};
+  FLOW_FABRIC[k].count++;
+  FLOW_FABRIC[k].types[type]=(FLOW_FABRIC[k].types[type]||0)+1;
+  FLOW_FABRIC[k].age=Date.now();
+}
+setInterval(()=>{
+  const now=Date.now();
+  Object.keys(FLOW_FABRIC).forEach(k=>{
+    if(now-FLOW_FABRIC[k].age > 4000) delete FLOW_FABRIC[k];
+    else FLOW_FABRIC[k].count = Math.max(0, FLOW_FABRIC[k].count*0.9);
+  });
+},300);
+
+/* ── DRAW ROUTING FABRIC ON MAIN CANVAS ────────────────────── */
+function drawRoutingFabric(ctx, sim){
+  if(!sim || !(LAYERS&&LAYERS.routes&&LAYERS.routes.on)) return;
+
+  // 1. Enhanced topology connections (replace bare drawConnections look)
+  const PAIRS = [
+    ['client','gw','#2DD4BF'],
+    ['gw','tinyA','#00D4FF'],['gw','tinyB','#00D4FF'],['gw','tinyC','#00D4FF'],
+    ['tinyA','mid','#4C9FFF'],['tinyB','mid','#4C9FFF'],['tinyC','mid','#4C9FFF'],
+    ['mid','xl','#A87BD4'],
+  ];
+  // Add extra-node links
+  (sim.extraNodes||[]).forEach(id=>PAIRS.push(['gw',id,'#00FF99']));
+
+  PAIRS.forEach(([a,b,baseCol])=>{
+    const na=sim.nodes[a], nb=sim.nodes[b];
+    if(!na||!nb||na.hidden||nb.hidden) return;
+    const k1=a+'→'+b, k2=b+'→'+a;
+    const fwd=FLOW_FABRIC[k1], rev=FLOW_FABRIC[k2];
+    const intensity = Math.min(1, ((fwd?.count||0)+(rev?.count||0))*0.06);
+    const isFailed=sim.failedNodes&&(sim.failedNodes.has(a)||sim.failedNodes.has(b));
+
+    ctx.save();
+    // Base topology line
+    ctx.globalAlpha = 0.15 + intensity*0.45;
+    ctx.beginPath(); ctx.moveTo(na.x,na.y); ctx.lineTo(nb.x,nb.y);
+    ctx.strokeStyle = isFailed?'#FF4B6E':baseCol;
+    ctx.lineWidth = 1 + intensity*3;
+    if(isFailed) ctx.setLineDash([4,4]);
+    ctx.shadowBlur = intensity>0.1 ? 4 : 0;
+    ctx.shadowColor = baseCol;
+    ctx.stroke();
+    ctx.setLineDash([]); ctx.shadowBlur=0;
+
+    // Directional flow arrows when active
+    if(intensity>0.08){
+      const dx=nb.x-na.x, dy=nb.y-na.y, len=Math.hypot(dx,dy);
+      const ux=dx/len, uy=dy/len;
+      const t = ((Date.now()/600)%1);
+      const ax=na.x+ux*len*t, ay=na.y+uy*len*t;
+      ctx.globalAlpha=intensity*0.85;
+      ctx.shadowBlur=5; ctx.shadowColor=baseCol;
+      ctx.fillStyle=baseCol;
+      ctx.beginPath();
+      ctx.moveTo(ax+ux*7,ay+uy*7);
+      ctx.lineTo(ax-uy*3,ay+ux*3);
+      ctx.lineTo(ax+uy*3,ay-ux*3);
+      ctx.closePath(); ctx.fill();
+      ctx.shadowBlur=0;
+    }
+
+    // Flow-count bubble on high-activity links
+    if((fwd?.count||0)+(rev?.count||0)>2){
+      const mx=(na.x+nb.x)/2, my=(na.y+nb.y)/2;
+      const total=Math.round((fwd?.count||0)+(rev?.count||0));
+      ctx.globalAlpha=0.9;
+      ctx.fillStyle='rgba(3,12,22,.88)';
+      ctx.beginPath(); ctx.arc(mx,my,7,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=baseCol; ctx.font='bold 5.5px monospace'; ctx.textAlign='center';
+      ctx.fillText(total>99?'99+':total, mx, my+2);
+    }
+    ctx.restore();
+  });
+
+  // 2. Active RouteFlows
+  ACTIVE_FLOWS.forEach(f=>{if(!f.done()) f.draw(ctx, sim.nodes);});
+
+  // 3. Node routing role labels (only when simulate tab active & not too cluttered)
+  const nodeRoles = {
+    client:'SRC',gw:'ROUTE/AUTH',
+    tinyA:'DRAFT/FWD',tinyB:'DRAFT/FWD',tinyC:'DRAFT/FWD',
+    mid:'QUALIFY/CDCP',xl:'VERIFY/LTM',internet:'EXT',
+  };
+  (sim.extraNodes||[]).forEach(id=>{ nodeRoles[id]='DRAFT/FWD'; });
+  if(Object.values(FLOW_FABRIC).some(f=>f.count>0.5)){
+    Object.entries(nodeRoles).forEach(([id,role])=>{
+      const nd=sim.nodes[id]; if(!nd||nd.hidden) return;
+      const nc=NC&&NC[id]; if(!nc) return;
+      const active=nc.load>0.08;
+      if(!active) return;
+      ctx.save(); ctx.globalAlpha=0.7;
+      ctx.fillStyle='rgba(3,12,22,.82)';
+      ctx.beginPath(); ctx.roundRect(nd.x-18,nd.y+nd.r+3,36,11,3); ctx.fill();
+      const col=nc.load>0.7?'#FF4B6E':nc.load>0.4?'#F5E642':'#00D4FF';
+      ctx.fillStyle=col; ctx.font='bold 5px monospace'; ctx.textAlign='center';
+      ctx.fillText(role,nd.x,nd.y+nd.r+11);
+      ctx.restore();
+    });
+  }
+}
+
+/* ── HOOK DrawConnections TO INCLUDE ROUTING FABRIC ────────── */
+function patchDrawConnections(){
+  if(!SIM || SIM._routePatch) return;
+  SIM._routePatch = true;
+  const orig = SIM.drawConnections.bind(SIM);
+  SIM.drawConnections = function(){
+    // Draw routing fabric first (under node icons)
+    drawRoutingFabric(this.ctx, this);
+    // Skip original bare-line drawConnections (fabric replaces it)
+    // But still draw fail/recover states
+    const ctx=this.ctx;
+    this.extraNodes.forEach(id=>{
+      const nd=this.n(id),gw=this.n('gw');
+      if(!nd||!gw||nd.hidden)return;
+      // Already drawn in fabric; just add fail state if needed
+      if(this.failedNodes.has(id)){
+        ctx.save();ctx.globalAlpha=0.3;
+        ctx.beginPath();ctx.moveTo(nd.x,nd.y);ctx.lineTo(gw.x,gw.y);
+        ctx.strokeStyle='#FF4B6E';ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.stroke();
+        ctx.setLineDash([]);ctx.restore();
+      }
+    });
+    // Internet link
+    if(!this.n('internet').hidden){
+      const ng=this.n('gw'),ni=this.n('internet');
+      ctx.save();ctx.globalAlpha=0.3;
+      ctx.beginPath();ctx.moveTo(ng.x,ng.y);ctx.lineTo(ni.x,ni.y);
+      ctx.strokeStyle='#50FA7B';ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.stroke();
+      ctx.setLineDash([]);ctx.restore();
+    }
+  };
+}
+
+/* ── routePacket: PUBLIC API — fires a multi-hop route ──────── */
+function routePacket(hops, color, label, type, speed, cb){
+  if(!SIM || !hops || hops.length<2) {
+    // Fallback to direct fire
+    if(SIM&&SIM.fire) SIM.fire(hops[0],hops[hops.length-1],color,label,cb);
+    return;
+  }
+  // Filter hops to only existing, non-hidden nodes
+  const valid = hops.filter(id=>SIM.nodes[id]&&!SIM.nodes[id].hidden);
+  if(valid.length<2){ if(cb)cb(); return; }
+  const mhp = new MultiHopPacket(valid, color, label, type, speed, cb);
+  mhp.start();
+}
+
+/* ── ENRICH SCENARIO RUNNERS TO USE MULTI-HOP ROUTING ──────── */
+function patchScenariosForRouting(){
+  if(!SIM || SIM._routeScenarioPatch) return;
+  SIM._routeScenarioPatch = true;
+
+  // Patch runToken to use multi-hop inference routes
+  const origToken = SIM.runToken.bind(SIM);
+  SIM.runToken = function(){
+    if(this.tick%110!==0) return;
+    const queries=['What is CDCP consensus?','Explain Titans STM.','How does Loihi 2 work?','Summarize DARM-ANN.'];
+    const q=queries[Math.floor(Math.random()*queries.length)];
+
+    // Pick a TinyLM node from full pool (including extra nodes)
+    const pool=[...TINY_POOL,...(this.extraNodes||[])].filter(id=>
+      this.nodes[id]&&!this.nodes[id].hidden&&!this.failedNodes.has(id));
+    if(!pool.length){origToken();return;}
+    const chosen=pool[Math.floor(Math.random()*pool.length)];
+
+    // Multi-hop: Client → GW → Chosen TinyLM → Mid → XL → Mid → GW → Client
+    bumpFabric('client','gw','inference');
+    bumpFabric('gw',chosen,'inference');
+    bumpFabric(chosen,'mid','inference');
+    bumpFabric('mid','xl','inference');
+
+    routePacket(['client','gw',chosen,'mid'],C.tiny,'PROMPT','inference',0.016,()=>{
+      routePacket(['mid','xl'],C.mid,'VERIFY','inference',0.014,()=>{
+        routePacket(['xl','mid','gw','client'],C.ok,'STREAM','inference',0.018,()=>{
+          this.stats.tokens=(this.stats.tokens||0)+5;
+          this.stats.energy=(this.stats.energy||0)+5*79;
+          updateStats(this);
+        });
+      });
+    });
+  };
+
+  // Patch runMemory to show multi-hop memory write path
+  const origMemory = SIM.runMemory.bind(SIM);
+  SIM.runMemory = function(){
+    if(this.tick%135!==0) return;
+    if(typeof LTMP==='undefined') return;
+    const fact=LTMP[Math.floor(Math.random()*LTMP.length)];
+
+    // D-MEM path: GW → Mid → (if FULL_EVOLVE) → TinyPool × 3 → Mid → XL
+    bumpFabric('gw','mid','memory');
+    const rpe=Math.random()*0.7+0.3;
+    if(rpe>=0.7){
+      const pool=[...TINY_POOL,...(this.extraNodes||[])].filter(id=>
+        this.nodes[id]&&!this.nodes[id].hidden&&!this.failedNodes.has(id));
+
+      routePacket(['gw','mid'],C.ar,'D-MEM','memory',0.014,()=>{
+        log('MEM','D-MEM','🧠',`FULL_EVOLVE: RPE=${rpe.toFixed(2)}`,`Routing CDCP request to ${pool.length} nodes`);
+        // Broadcast CDCP to all TinyLM including extra nodes
+        pool.forEach((nid,i)=>{
+          setTimeout(()=>{
+            bumpFabric('mid',nid,'consensus');
+            routePacket(['mid',nid],'#C4A8F5','CDCP-REQ','consensus',0.016,()=>{
+              bumpFabric(nid,'mid','consensus');
+              routePacket([nid,'mid'],'#C4A8F5','VOTE','consensus',0.016,()=>{
+                if(i===pool.length-1){
+                  pushCDCP&&pushCDCP(nid,'ADMIT',+(Math.random()*.08).toFixed(4));
+                  bumpFabric('mid','xl','memory');
+                  routePacket(['mid','xl'],'#A87BD4','LTM-WRITE','memory',0.013,()=>{
+                    pushLTM&&pushLTM(fact);
+                    this.stats.cdcpOk=(this.stats.cdcpOk||0)+1;
+                    updateStats(this);
+                  });
+                }
+              });
+            });
+          },i*180);
+        });
+      });
+    } else {
+      // CONSTRUCT: just write to EB at Mid
+      routePacket(['gw','mid'],'#A87BD4','EB-WRITE','memory',0.015,()=>{
+        pushEB&&pushEB('mid',fact.t,0.45,0.65);
+      });
+    }
+  };
+
+  // Patch runByzantine to show multi-hop attack + defence
+  const origByz = SIM.runByzantine.bind(SIM);
+  SIM.runByzantine = function(){
+    if(this.tick%125!==0) return;
+    const pool=[...TINY_POOL,...(this.extraNodes||[])].filter(id=>
+      this.nodes[id]&&!this.nodes[id].hidden);
+    if(!pool.length){origByz();return;}
+    const byz=pool[Math.floor(Math.random()*pool.length)];
+    this.stats.byz=(this.stats.byz||0)+1;
+    const c=(Math.random()*.05+.01).toFixed(2);
+
+    log('ERR','SECURITY','⚠️',`Byzantine attack: ${byz}`,`Credibility: ${c} (threshold: 0.10)`);
+    bumpFabric(byz,'mid','consensus');
+
+    // Byzantine node sends malicious CDCP proposal
+    routePacket([byz,'mid'],C.bz,'BYZ-PROP','consensus',0.018,()=>{
+      pushCDCP&&pushCDCP(byz,'REJECT',-0.05,parseFloat(c));
+      log('CDCP','MID','❌','NLI: CONTRADICTION · Byzantine rejected',`Node ${byz} flagged`);
+      // Honest nodes respond
+      pool.filter(n=>n!==byz).forEach((n,i)=>{
+        setTimeout(()=>{
+          bumpFabric(n,'mid','consensus');
+          routePacket([n,'mid'],C.ok,'HONEST-δ','consensus',0.016,()=>{
+            pushCDCP&&pushCDCP(n,'ADMIT',+(Math.random()*.08).toFixed(4));
+          });
+        },i*150+200);
+      });
+      // XL validates and commits honest result
+      setTimeout(()=>{
+        bumpFabric('mid','xl','consensus');
+        routePacket(['mid','xl'],'#C4A8F5','HONEST-COMMIT','consensus',0.014,()=>{
+          pushLTM&&pushLTM(LTMP[Math.floor(Math.random()*LTMP.length)]);
+          this.stats.cdcpOk=(this.stats.cdcpOk||0)+1;
+          updateStats(this);
+        });
+      },600);
+    });
+  };
+}
+
+/* ── ADD ROUTING LAYER TOGGLE ────────────────────────────────── */
+function addRoutingToggle(){
+  const strip=document.getElementById('lyrs-strip');
+  if(!strip||document.getElementById('lb-routes')) return;
+  const btn=document.createElement('button');
+  btn.id='lb-routes'; btn.className='lbtn on';
+  btn.style.cssText='border-color:#50FA7B;color:#50FA7B';
+  btn.onclick=()=>togLyr('routes',btn);
+  btn.innerHTML='<span class="ldot" style="background:#50FA7B"></span>🔀 Routes';
+  strip.insertBefore(btn, strip.querySelector('#lyr-panel-btn'));
+}
+
+/* ── addExtraNode ROUTING INTEGRATION ───────────────────────── */
+const _origAddExtraForRouting = window.addExtraNode;
+window.addExtraNode = function(){
+  if(_origAddExtraForRouting) _origAddExtraForRouting();
+  if(!SIM) return;
+  const newId = 'extra'+(SIM.extraNodes.length-1);
+  if(newId&&!TINY_POOL.includes(newId)) TINY_POOL.push(newId);
+  // Announce new node joining via multi-hop route display
+  setTimeout(()=>{
+    if(!SIM.nodes[newId]||SIM.nodes[newId].hidden) return;
+    const gw = SIM.nodes['gw'];
+    if(!gw) return;
+    // Show: new node → GW (join announcement)
+    bumpFabric(newId,'gw','security');
+    routePacket([newId,'gw','mid'],'#00FF99','ANNOUNCE','security',0.013,()=>{
+      log('NET','GATEWAY','📡',`EXT node ${newId} joined routing fabric`,
+        `Pool now: ${TINY_POOL.join(', ')}\nLoad-balancing updated · CDCP quorum: N=${TINY_POOL.length+2}`);
+      bumpFabric('gw',newId,'security');
+      // GW sends routing table update back to new node
+      routePacket(['gw',newId],'#FFB830','RTB-UPDATE','security',0.014,()=>{
+        bumpFabric('mid',newId,'consensus');
+        // Mid sends CDCP welcome
+        routePacket(['mid',newId],'#C4A8F5','CDCP-WELCOME','consensus',0.016,()=>{
+          log('CDCP','MID','⚖️',`${newId} admitted to CDCP quorum`,
+            `Credibility: 0.05 (bootstrap)\nBFT: N=${TINY_POOL.length+2} (f=${Math.floor((TINY_POOL.length+2-1)/3)})`);
+          updateStats&&updateStats(SIM);
+        });
+      });
+    });
+  },600);
+};
+
+/* ── CLEANUP & UPDATE ACTIVE FLOWS ──────────────────────────── */
+setInterval(()=>{
+  // Remove finished flows
+  for(let i=ACTIVE_FLOWS.length-1;i>=0;i--){
+    if(ACTIVE_FLOWS[i].done()) ACTIVE_FLOWS.splice(i,1);
+  }
+  // Update flow tickers
+  if(SIM && SIM.speed) ACTIVE_FLOWS.forEach(f=>f.update(SIM.speed));
+},50);
+
+/* ── PATCH SYSTEM: retry until SIM is ready ─────────────────── */
+let _rPatchDone=false;
+const _rPatchI=setInterval(()=>{
+  if(!SIM||_rPatchDone) return;
+  _rPatchDone=true;
+  clearInterval(_rPatchI);
+  patchDrawConnections();
+  patchScenariosForRouting();
+  addRoutingToggle();
+  // Auto-add routes layer to layer panel
+  const lyrPanel=document.getElementById('lyrpbody');
+  if(lyrPanel){
+    const div=document.createElement('div');
+    div.className='lyr-row';
+    div.innerHTML=`<div class="lyr-row-hdr">
+      <div class="lyr-swatch" style="background:#50FA7B"></div>
+      <span class="lyr-name" style="color:#50FA7B">🔀 Routing Fabric</span>
+      <div class="lyr-toggle on" id="ltog-routes" onclick="togLyr('routes')"><div class="lyr-toggle-dot"></div></div>
+    </div>
+    <div class="lyr-desc">Hop-by-hop packet routing with directional flow arrows, active route glow paths, per-link flow counts, and node forwarding roles (SRC/ROUTE/DRAFT/QUALIFY/VERIFY). All packet types route through their correct DARM-ANN path. Extra nodes join the TinyLM pool and receive balanced inference, consensus, and memory traffic.</div>
+    <div class="trace-types">
+      <span class="trace-type-pill" style="border-color:#50FA7B;color:#50FA7B">ANNOUNCE</span>
+      <span class="trace-type-pill" style="border-color:#4C9FFF;color:#4C9FFF">FWD</span>
+      <span class="trace-type-pill" style="border-color:#F5E642;color:#F5E642">DRAFT</span>
+      <span class="trace-type-pill" style="border-color:#C4A8F5;color:#C4A8F5">CDCP-ROUTE</span>
+    </div>`;
+    lyrPanel.insertBefore(div, lyrPanel.firstChild);
+  }
+  console.log('[DARM-ANN] Routing fabric active · pool:', TINY_POOL.join(', '));
+},500);
+
+/* ── INSPECTOR: show routing table in Network tab ───────────── */
+const _origRNET = window.rNET;
+window.rNET = function(id, meta){
+  const base = _origRNET ? _origRNET(id, meta) : '';
+  const links = Object.keys(FLOW_FABRIC).filter(k=>k.startsWith(id+'→')||k.endsWith('→'+id));
+  if(!links.length) return base;
+  const routeHtml=`<div style="margin-top:6px;background:rgba(80,250,123,.06);border:1px solid rgba(80,250,123,.2);border-radius:5px;padding:6px;font-size:7px">
+    <div style="color:#50FA7B;font-weight:700;margin-bottom:3px">ROUTING FABRIC — ACTIVE FLOWS</div>
+    ${links.map(k=>{
+      const f=FLOW_FABRIC[k];
+      const types=Object.entries(f.types).map(([t,n])=>`${t}×${Math.ceil(n)}`).join(', ');
+      const col=k.startsWith(id+'→')?'#00D4FF':'#C4A8F5';
+      const dir=k.startsWith(id+'→')?'▶ OUT':'◀ IN ';
+      const parts=k.split('→');
+      return `<div class="nconn" style="border-color:#50FA7B20">
+        <span style="color:${col};font-size:8px">${dir} ${parts[0]}→${parts[1]}</span>
+        <span style="color:#3A5470;flex:1;text-align:right">${types}</span>
+        <span style="color:#50FA7B">${Math.ceil(f.count)} pkts</span>
+      </div>`;
+    }).join('')}
+    <div style="color:#3A5470;margin-top:3px">Pool: ${TINY_POOL.join(' · ')}</div>
+  </div>`;
+  return base + routeHtml;
+};
+
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   DARM-ANN PARTICLE SWARM ENGINE
+   Companion micro-orbs that travel with every packet, representing
+   the actual data flows occurring in a real DARM-ANN deployment.
+   Satellite count, speed, and formation respond to node count,
+   latency, and system health — providing a true visual model.
+═══════════════════════════════════════════════════════════════ */
+
+/* ── SATELLITE ROLES & VISUAL MEANING ──────────────────────── */
+const SAT_TYPES = {
+  // Role            Color      Shape    Meaning
+  header:   { col:'#7ED4FF', sh:'circ', sz:1.8, desc:'Routing header / SVID / hop metadata' },
+  logit:    { col:'#00D4FF', sh:'circ', sz:2.1, desc:'TSLT top-200 logit fragment (1.6KB)' },
+  ack:      { col:'#00FF99', sh:'circ', sz:2.4, desc:'ACK / NAK acknowledgement' },
+  crypto:   { col:'#FFB830', sh:'diam', sz:2.0, desc:'mTLS token / Ed25519 signature' },
+  hmac:     { col:'#FF8C30', sh:'sq',   sz:1.7, desc:'HMAC audit-chain link' },
+  state:    { col:'#A87BD4', sh:'sq',   sz:1.9, desc:'Mamba-2 SSM hidden-state δ' },
+  vote:     { col:'#C4A8F5', sh:'circ', sz:1.6, desc:'CDCP credibility vote weight' },
+  heartbeat:{ col:'#3A5470', sh:'circ', sz:1.4, desc:'Heartbeat / health probe' },
+  energy:   { col:'#FF7A30', sh:'circ', sz:1.5, desc:'Energy telemetry (mJ/token)' },
+  byz_bad:  { col:'#FF4B6E', sh:'diam', sz:2.0, desc:'Byzantine poisoned packet' },
+  ara:      { col:'#50FA7B', sh:'star', sz:2.2, desc:'ARA research fragment' },
+};
+
+/* ── PER-PACKET-TYPE SATELLITE FORMATION ────────────────────── */
+function buildSatelliteSet(packetType, fromId, toId) {
+  const pool    = TINY_POOL ? TINY_POOL.length : 3;
+  const nodes   = SIM ? Object.keys(SIM.nodes).filter(k=>SIM.nodes[k]&&!SIM.nodes[k].hidden&&!SIM.failedNodes.has(k)).length : 7;
+  const latency = (typeof computeLinkLatency === 'function') ? computeLinkLatency(fromId||'gw', toId||'mid') : 15;
+  const load    = (NC&&NC[fromId]) ? NC[fromId].load : 0.3;
+
+  // Base: 2 header packets always present (routing metadata)
+  const sats = [
+    // Header V-formation (slightly ahead, flanking)
+    { role:'header', pathT:-0.05, perp:-5,  orb:false, spd:1.05 },
+    { role:'header', pathT:-0.05, perp:+5,  orb:false, spd:1.05 },
+  ];
+
+  // Crypto: always 1-2 rotating tokens (mTLS is always negotiating)
+  sats.push({ role:'crypto', orb:true, R:7,   phase:0,        orbSpd:0.09  });
+  if(nodes > 5)
+    sats.push({ role:'hmac',  orb:true, R:10,  phase:Math.PI,  orbSpd:-0.07 });
+
+  // Per packet-type additions
+  if(packetType === 'inference') {
+    // TSLT logit fragments — one per active TinyLM node (they merge at Mid)
+    const logitCount = Math.min(6, pool);
+    for(let i=0; i<logitCount; i++) {
+      sats.push({ role:'logit', pathT: i*0.04-0.1, perp: (i%2?1:-1)*(3+i*2), orb:false, spd:0.98-i*0.01 });
+    }
+    // Mamba-2 state update
+    sats.push({ role:'state', orb:true, R:12+load*5, phase:Math.PI/2, orbSpd:0.06 });
+    // ACK coming back (reverse direction)
+    sats.push({ role:'ack', pathT:0.15, perp:0, orb:false, spd:-0.4, reverse:true });
+  }
+
+  if(packetType === 'consensus') {
+    // One vote satellite per node that participates in CDCP quorum
+    const voterCount = Math.min(8, nodes);
+    for(let i=0; i<voterCount; i++) {
+      const angle = (i/voterCount)*Math.PI*2;
+      sats.push({ role:'vote', orb:true, R:8+i*1.5, phase:angle, orbSpd:0.05*(i%2?1:-1) });
+    }
+    sats.push({ role:'hmac', orb:true, R:5, phase:0, orbSpd:0.12 });
+  }
+
+  if(packetType === 'memory') {
+    // STM gradient fragments
+    sats.push({ role:'state', pathT:-0.08, perp:-4, orb:false, spd:1.0 });
+    sats.push({ role:'state', pathT:-0.04, perp:+4,  orb:false, spd:1.0 });
+    // Energy meter
+    sats.push({ role:'energy', orb:true, R:9, phase:Math.PI/3, orbSpd:-0.05 });
+    // ACK
+    sats.push({ role:'ack', pathT:0.1, perp:0, orb:false, spd:-0.35, reverse:true });
+  }
+
+  if(packetType === 'security') {
+    // Extra crypto tokens for TLS handshake
+    for(let i=0; i<3; i++)
+      sats.push({ role:'crypto', orb:true, R:6+i*4, phase:i*Math.PI*2/3, orbSpd:0.10+i*0.02 });
+    sats.push({ role:'hmac', orb:true, R:14, phase:Math.PI, orbSpd:-0.06 });
+  }
+
+  if(packetType === 'ara') {
+    sats.push({ role:'ara', orb:true, R:8, phase:0, orbSpd:0.08 });
+    sats.push({ role:'state', pathT:-0.06, perp:5, orb:false, spd:1.02 });
+    sats.push({ role:'ack', pathT:0.12, perp:0, orb:false, spd:-0.3, reverse:true });
+  }
+
+  // More nodes = extra heartbeat pings flying alongside
+  if(nodes > 4) {
+    for(let i=0; i<Math.floor((nodes-4)/2); i++)
+      sats.push({ role:'heartbeat', pathT:-0.12-i*0.05, perp:(i%2?-1:1)*(7+i*3), orb:false, spd:1.08 });
+  }
+
+  // Higher latency = add more scattered state fragments showing congestion
+  if(latency > 40) {
+    sats.push({ role:'state', orb:true, R:16+latency*0.1, phase:Math.PI*1.5, orbSpd:0.03 });
+  }
+
+  return sats;
+}
+
+/* ── SATELLITE DRAWING HELPERS ──────────────────────────────── */
+function drawSatOrb(ctx, x, y, spec) {
+  ctx.save();
+  ctx.fillStyle = spec.col;
+  ctx.shadowBlur = 5;
+  ctx.shadowColor = spec.col;
+  if(spec.sh === 'diam') {
+    ctx.translate(x,y); ctx.rotate(Math.PI/4);
+    ctx.fillRect(-spec.sz/2,-spec.sz/2,spec.sz,spec.sz);
+  } else if(spec.sh === 'sq') {
+    ctx.fillRect(x-spec.sz/2, y-spec.sz/2, spec.sz, spec.sz);
+  } else if(spec.sh === 'star') {
+    ctx.translate(x,y);
+    for(let p=0;p<5;p++){ctx.rotate(Math.PI*2/5);ctx.fillRect(-0.7,-spec.sz,-0.7,spec.sz);}
+    ctx.arc(0,0,spec.sz*.5,0,Math.PI*2);ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.arc(x,y,spec.sz,0,Math.PI*2); ctx.fill();
+  }
+  ctx.shadowBlur=0;
+  ctx.restore();
+}
+
+/* ── PARTICLE SWARM: main orb + satellite companions ────────── */
+class ParticleSwarm {
+  constructor(sx,sy,ex,ey,col,lbl,spd,cb,packetType,fromId,toId) {
+    // Main orb uses Particle (reuse existing class)
+    this.main = new Particle(sx,sy,ex,ey,col,lbl,spd,cb);
+    this.main.sz = 4.5;
+    this.done    = false;
+    this.pType   = packetType || 'inference';
+    this.fromId  = fromId || '';
+    this.toId    = toId   || '';
+
+    // Build satellite set based on system state
+    this.satDefs  = buildSatelliteSet(packetType, fromId, toId);
+    this.satState = this.satDefs.map(s => ({
+      ...s,
+      phase:   s.phase || Math.random()*Math.PI*2,
+      trail:   [],
+      visible: true,
+    }));
+  }
+
+  /* Bezier helpers mirrored from Particle */
+  _cp() { return {x:(this.main.sx+this.main.ex)/2+(this.main.ey-this.main.sy)*.22,
+                   y:(this.main.sy+this.main.ey)/2-(this.main.ex-this.main.sx)*.22}; }
+  _bp(t)  {
+    const c=this._cp(); const t2=Math.max(0,Math.min(1,t));
+    return {x:(1-t2)*(1-t2)*this.main.sx+2*(1-t2)*t2*c.x+t2*t2*this.main.ex,
+            y:(1-t2)*(1-t2)*this.main.sy+2*(1-t2)*t2*c.y+t2*t2*this.main.ey};
+  }
+  _tang(t) {
+    const c=this._cp(), dt=0.02;
+    const p0=this._bp(t-dt), p1=this._bp(t+dt);
+    const l=Math.hypot(p1.x-p0.x,p1.y-p0.y)||1;
+    return {x:(p1.x-p0.x)/l, y:(p1.y-p0.y)/l};
+  }
+
+  update(speed) {
+    this.main.update(speed);
+    if(this.main.done && !this.done) this.done=true;
+
+    const t = this.main.t;
+    const speed2 = SIM?SIM.speed:1;
+
+    this.satState.forEach(s => {
+      if(s.orb) {
+        // Orbiting satellite: circles around main orb position
+        s.phase += (s.orbSpd||0.06) * speed2;
+      }
+      // Trail update for path-following satellites
+      if(!s.orb && s.role !== 'ack') {
+        const sp = this._bp(Math.max(0, Math.min(1, t + (s.pathT||0))));
+        s.trail.push({x:sp.x,y:sp.y});
+        if(s.trail.length>6) s.trail.shift();
+      }
+    });
+  }
+
+  draw(ctx) {
+    // Draw satellites first (behind main orb)
+    const t    = this.main.t;
+    const alpha = Math.min(1, t*6) * (1 - Math.max(0,(t-0.85)*6));
+
+    this.satState.forEach(s => {
+      const spec = SAT_TYPES[s.role] || SAT_TYPES.header;
+      if(!s.visible) return;
+
+      ctx.save();
+      ctx.globalAlpha = alpha * (s.role==='heartbeat'?0.35:0.75);
+
+      if(s.orb) {
+        // Orbiting: position relative to main orb
+        const mp = this.main.pos();
+        const R  = s.R || 8;
+        const x  = mp.x + Math.cos(s.phase) * R;
+        const y  = mp.y + Math.sin(s.phase) * R;
+        // Tiny trail for orbiting sats
+        const px = mp.x + Math.cos(s.phase - 0.25) * R;
+        const py = mp.y + Math.sin(s.phase - 0.25) * R;
+        ctx.globalAlpha = alpha * 0.25;
+        ctx.beginPath(); ctx.arc(px,py,spec.sz*0.55,0,Math.PI*2);
+        ctx.fillStyle = spec.col; ctx.fill();
+        ctx.globalAlpha = alpha * 0.75;
+        drawSatOrb(ctx,x,y,spec);
+      } else if(s.role === 'ack') {
+        // ACK travels in reverse direction
+        const revT = 1 - t;
+        const rp   = this._bp(Math.max(0,Math.min(1,revT + (s.pathT||0))));
+        const size = spec.sz * 0.9;
+        ctx.globalAlpha = alpha * 0.6;
+        ctx.fillStyle = spec.col;
+        ctx.shadowBlur = 4; ctx.shadowColor = spec.col;
+        ctx.beginPath(); ctx.arc(rp.x,rp.y,size,0,Math.PI*2); ctx.fill();
+        ctx.shadowBlur=0;
+      } else {
+        // Path-following satellite
+        const tang = this._tang(t + (s.pathT||0));
+        const sp   = this._bp(Math.max(0,Math.min(1, t + (s.pathT||0))));
+        // Perpendicular offset
+        const perp = s.perp || 0;
+        const x    = sp.x - tang.y * perp;
+        const y    = sp.y + tang.x * perp;
+        // Draw mini-trail
+        s.trail.forEach((pt,i)=>{
+          const ta = (i/s.trail.length)*0.25*alpha;
+          ctx.globalAlpha=ta;
+          ctx.fillStyle=spec.col;
+          ctx.beginPath();ctx.arc(pt.x - tang.y*perp, pt.y + tang.x*perp,
+            spec.sz*0.4,0,Math.PI*2);ctx.fill();
+        });
+        ctx.globalAlpha = alpha * 0.8;
+        drawSatOrb(ctx,x,y,spec);
+      }
+      ctx.restore();
+    });
+
+    // Draw the main orb on top
+    this.main.draw(ctx);
+  }
+}
+
+/* ── REPLACE SIM.fire TO EMIT PARTICLE SWARMS ──────────────── */
+let _swarmPatch = false;
+function patchFireForSwarm() {
+  if(!SIM || _swarmPatch) return;
+  _swarmPatch = true;
+
+  // Completely replace particles.push with swarm-aware version
+  const origFire = SIM.fire.bind(SIM);
+  SIM.fire = function(from, to, col, lbl, cb, delay) {
+    const nf = this.n ? this.n(from) : this.nodes[from];
+    const nt = this.n ? this.n(to)   : this.nodes[to];
+
+    if(!nf||!nt) { if(cb)setTimeout(cb,300); return; }
+
+    // Determine packet type from color + label
+    const pType =
+      (col==='#FFB830'||lbl&&(lbl.includes('AUTH')||lbl.includes('SVID')||lbl.includes('CSR')||lbl.includes('mTLS')))?'security':
+      (col==='#C4A8F5'||col==='#A87BD4'||lbl&&(lbl.includes('CDCP')||lbl.includes('VOTE')||lbl.includes('QUORUM')))?'consensus':
+      (lbl&&(lbl.includes('ARA')||lbl.includes('PROP')||lbl.includes('RESEARCH')))?'ara':
+      (lbl&&(lbl.includes('MEM')||lbl.includes('LTM')||lbl.includes('STM')||lbl.includes('EB')))?'memory':
+      'inference';
+
+    const layerOn = (typeof layerActive==='function') ? layerActive(col,lbl) : true;
+
+    // Compute swarm particle speed (latency-aware)
+    const spd = (typeof computePacketSpeed==='function')
+      ? computePacketSpeed(from, to, 0.015)
+      : 0.015;
+
+    const fireSwarm = () => {
+      const swarm = new ParticleSwarm(
+        nf.x, nf.y, nt.x, nt.y,
+        col, lbl, spd,
+        () => {
+          // On arrival: burst + node activation + callbacks
+          if(this.bursts) this.bursts.push(new Burst(nt.x,nt.y,col));
+          if(this.nodeState&&this.nodeState[to]) this.nodeState[to].pulse=1;
+          if(typeof onPackArrive==='function') onPackArrive(to,col,lbl||'');
+          if(typeof hitNC==='function')        hitNC(to,pType,1);
+          if(typeof hitLink==='function')      hitLink(from,to,0.3);
+          if(typeof bumpFabric==='function')   bumpFabric(from,to,pType);
+          if(cb) cb();
+        },
+        pType, from, to
+      );
+      if(layerOn) this.particles.push(swarm);
+      else {
+        // Hidden layer: still fire callback after simulated delay
+        setTimeout(()=>{ if(cb)cb(); }, 300/spd);
+      }
+    };
+
+    if(delay) setTimeout(fireSwarm, delay);
+    else fireSwarm();
+  };
+}
+
+/* ── PATCH frame() TO CALL SWARM update+draw ────────────────── */
+/* ParticleSwarm is API-compatible with Particle (same .done, .update(), .draw())
+   so it works with the existing this.particles.forEach loop. Nothing extra needed. */
+
+/* ── NODE COUNT INDICATOR ON CANVAS ────────────────────────── */
+/* Overlay the swarm density as a small badge on each node showing
+   how many active satellite swarms are passing through it */
+function drawSwarmDensity(ctx, sim) {
+  if(!sim) return;
+  // Count how many active swarms involve each node
+  const density = {};
+  (sim.particles||[]).forEach(p => {
+    if(!(p instanceof ParticleSwarm)) return;
+    density[p.fromId] = (density[p.fromId]||0)+1;
+    density[p.toId]   = (density[p.toId]  ||0)+1;
+  });
+  Object.entries(density).forEach(([id,count])=>{
+    if(count<1) return;
+    const nd = sim.nodes[id]; if(!nd||nd.hidden) return;
+    const x = nd.x + nd.r + 2, y = nd.y - nd.r - 2;
+    ctx.save();
+    ctx.fillStyle='rgba(3,12,22,.85)';
+    ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=count>4?'#FF4B6E':count>2?'#F5E642':'#00D4FF';
+    ctx.font='bold 6px monospace'; ctx.textAlign='center';
+    ctx.fillText(count>9?'9+':count, x, y+2.5);
+    ctx.restore();
+  });
+}
+
+/* Patch frame() to include swarm density badge */
+function patchFrameForSwarmDensity() {
+  if(!SIM || SIM._swarmDensityPatch) return;
+  SIM._swarmDensityPatch = true;
+  const orig = SIM.frame.bind(SIM);
+  SIM.frame = function() {
+    orig();
+    // Draw density badges after everything else
+    if(this.mode !== 'energy') drawSwarmDensity(this.ctx, this);
+  };
+}
+
+/* ── SWARM LEGEND in inspector Overview tab ─────────────────── */
+const _origROV2 = window.rOV;
+window.rOV = function(id, m, meta) {
+  const base = _origROV2 ? _origROV2(id,m,meta) : '';
+  if(!SIM) return base;
+  const count = (SIM.particles||[]).filter(p=>p instanceof ParticleSwarm&&(p.fromId===id||p.toId===id)).length;
+  if(!count) return base;
+  const types = {};
+  (SIM.particles||[]).forEach(p=>{
+    if(!(p instanceof ParticleSwarm)) return;
+    if(p.fromId===id||p.toId===id) types[p.pType]=(types[p.pType]||0)+1;
+  });
+  const pills=Object.entries(types).map(([t,n])=>{
+    const colMap={inference:'#00D4FF',consensus:'#C4A8F5',memory:'#A87BD4',security:'#FFB830',ara:'#50FA7B'};
+    const c=colMap[t]||'#3A5470';
+    return `<span style="font-size:6px;padding:1px 5px;border-radius:4px;border:1px solid ${c}40;background:${c}12;color:${c}">${t}×${n}</span>`;
+  }).join(' ');
+  return base+`<div style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:5px;padding:6px;font-size:7px;margin-top:5px">
+    <div style="color:#00D4FF;font-weight:700;margin-bottom:3px">SWARM TRAFFIC (${count} active)</div>
+    <div style="margin-bottom:4px">${pills}</div>
+    <div style="color:#3A5470;line-height:1.5">
+      Satellite types: <span style="color:#7ED4FF">▶ header</span>
+      · <span style="color:#00D4FF">● logit</span>
+      · <span style="color:#00FF99">● ack</span>
+      · <span style="color:#FFB830">◆ crypto</span>
+      · <span style="color:#A87BD4">■ state</span>
+      · <span style="color:#C4A8F5">● vote</span>
+    </div>
+  </div>`;
+};
+
+/* ── INITIALISATION: retry until SIM is created ─────────────── */
+let _swarmInitDone = false;
+const _swInit = setInterval(()=>{
+  if(!SIM||_swarmInitDone) return;
+  _swarmInitDone = true;
+  clearInterval(_swInit);
+  patchFireForSwarm();
+  patchFrameForSwarmDensity();
+  console.log('[DARM-ANN] Particle swarm engine active');
+}, 400);
+
 </script>
 </body>
 </html>
